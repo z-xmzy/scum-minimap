@@ -5,9 +5,9 @@ using DrawingPoint=System.Drawing.PointF;
 
 namespace ScumMiniMap {
     internal sealed partial class WpfFieldConsoleRuntime {
-        readonly SquadRoutePlanner ownRoutePlanner=new SquadRoutePlanner((a,b,mode)=>NavigationRouter.FindRoute(a,b,mode));
-        readonly SquadRoutePlanner squadRoutePlanner=new SquadRoutePlanner((a,b,mode)=>NavigationRouter.FindRoute(a,b,mode));
-        sealed class RemoteRoute { internal string Signature;internal DrawingPoint? Origin;internal DateTime Requested;internal readonly SquadRoutePlanner Planner=new SquadRoutePlanner((a,b,mode)=>NavigationRouter.FindRoute(a,b,mode)); }
+        readonly SquadRoutePlanner ownRoutePlanner=new SquadRoutePlanner(NavigationRouter.FindCurrentRoute);
+        readonly SquadRoutePlanner squadRoutePlanner=new SquadRoutePlanner(NavigationRouter.FindCurrentRoute);
+        sealed class RemoteRoute { internal string Signature;internal DrawingPoint? Origin;internal DateTime Requested;internal readonly SquadRoutePlanner Planner=new SquadRoutePlanner(NavigationRouter.FindCurrentRoute); }
         readonly Dictionary<string,RemoteRoute> remoteRoutes=new Dictionary<string,RemoteRoute>(StringComparer.Ordinal);
         string ownRouteSignature,activeRouteSignature;DrawingPoint? ownPlanOrigin,activePlanOrigin;DateTime ownPlanRequested,activePlanRequested;
         static string StopSignature(SharedMapMarker[] stops) { return string.Join(";",stops.Select(m=>m.Id+":"+m.X.ToString("R",System.Globalization.CultureInfo.InvariantCulture)+":"+m.Y.ToString("R",System.Globalization.CultureInfo.InvariantCulture)+":"+m.Name)); }

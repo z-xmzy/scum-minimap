@@ -1726,7 +1726,7 @@ namespace ScumMiniMap {
 
 
 
-        public const string VersionString = "2.4.2";
+        public const string VersionString = "2.4.3";
 
 
 
@@ -7626,7 +7626,7 @@ namespace ScumMiniMap {
             RoadRouteMode requestedMode=wpfRouteMode;
             ThreadPool.QueueUserWorkItem(state=> {
                 RoadRoute result=null; Exception failure=null;
-                try { result=NavigationRouter.FindRoute(playerPt,targetPoint,requestedMode); }
+                try { result=NavigationRouter.FindCurrentRoute(playerPt,targetPoint,requestedMode,()=>!closing && Interlocked.Read(ref routeGeneration)==request); }
                 catch(Exception ex) { failure=ex; }
                 try {
                     if(IsDisposed) return;

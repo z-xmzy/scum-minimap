@@ -25,13 +25,17 @@ namespace ScumMiniMap {
         static GridRouter gridInstance;
 
         internal static RoadRoute FindRoute(PointF playerPt, PointF targetPt, RoadRouteMode mode) {
+            return FindCurrentRoute(playerPt,targetPt,mode,null);
+        }
+
+        internal static RoadRoute FindCurrentRoute(PointF playerPt,PointF targetPt,RoadRouteMode mode,Func<bool> current) {
             GridRouter grid = gridInstance;
             if (ready && grid != null && grid.IsLoaded) {
                 // Grid loaded: it is the authoritative router for all four modes.  No
                 // legacy fallback here - a failed terrain-aware route must stay a failure
                 // (or be rescued inside GridRouter) instead of silently switching to a
                 // road-graph route that ignores terrain, cliffs and the dam wall.
-                return grid.FindRoute(playerPt, targetPt, mode);
+                return grid.FindCurrentRoute(playerPt,targetPt,mode,current);
             }
             // No valid world layers are available.
             return new RoadRoute { Mode=mode, PlayerPoint=playerPt, TargetPoint=targetPt, Polyline=new PointF[0] };

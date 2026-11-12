@@ -1,4 +1,8 @@
-﻿# Changelog
+# Changelog
+
+## [2.4.3] - 2026-11-12
+
+- Resolve failed vehicle routes against island-wide static collision geometry in the background.
 
 ## [2.4.2] - 2026-11-12
 

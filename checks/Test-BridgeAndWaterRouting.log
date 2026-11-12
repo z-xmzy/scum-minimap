@@ -1,0 +1,210 @@
+Compiling standalone bridge and water avoidance test harness...
+Running Test-BridgeAndWaterRouter.exe...
+PASS: Captured classified road network loads
+PASS: Runtime loads classified roads, split junctions and audited connectors
+PASS: Main drivable network connects over 94 percent of compiled road nodes
+PASS: Saved 39-segment server-test route remains connected at approximately 2.1 km
+PASS: Demo uses actual captured road endpoints
+PASS: Water coverage loads
+PASS: Northern B2 approach 1 reaches the actual Z4 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: B2-to-western-Z routing uses the Rogoznica road bridge rather than circling the island
+PASS: Northern B2 approach 1 reaches the actual Z3 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: B2-to-western-Z routing uses the Rogoznica road bridge rather than circling the island
+PASS: Northern B2 approach 1 reaches the actual Z2 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: Northern B2 approach 1 reaches the actual Z1 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: Northern B2 approach 1 reaches the actual Z0 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: Northern B2 approach 2 reaches the actual Z4 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: B2-to-western-Z routing uses the Rogoznica road bridge rather than circling the island
+PASS: Northern B2 approach 2 reaches the actual Z3 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: B2-to-western-Z routing uses the Rogoznica road bridge rather than circling the island
+PASS: Northern B2 approach 2 reaches the actual Z2 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: Northern B2 approach 2 reaches the actual Z1 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: Northern B2 approach 2 reaches the actual Z0 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: Northern B2 approach 3 reaches the actual Z4 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: B2-to-western-Z routing uses the Rogoznica road bridge rather than circling the island
+PASS: Northern B2 approach 3 reaches the actual Z3 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: B2-to-western-Z routing uses the Rogoznica road bridge rather than circling the island
+PASS: Northern B2 approach 3 reaches the actual Z2 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: Northern B2 approach 3 reaches the actual Z1 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: Northern B2 approach 3 reaches the actual Z0 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: Short lake crossing is rejected
+PASS: Offshore route is rejected
+PASS: Rail-adjacent targets require classified road travel and dry approaches
+Trip distance: 17184 m (direct 9128 m)
+PASS: Normal mainland/island journey has a connected road route: {X=0.62767, Y=0.63618} -> {X=0.6727, Y=0.03878}
+PASS: Road approaches stay inside the bounded search radius
+PASS: Normal journey avoids the disconnected-junction detour regression
+PASS: Normal journey approaches do not cross mapped water
+Trip distance: 12082 m (direct 6552 m)
+PASS: Normal mainland/island journey has a connected road route: {X=0.67542, Y=0.47654} -> {X=0.27907, Y=0.30848}
+PASS: Road approaches stay inside the bounded search radius
+PASS: Normal journey avoids the disconnected-junction detour regression
+PASS: Normal journey approaches do not cross mapped water
+Trip distance: 1190 m (direct 1093 m)
+PASS: Normal mainland/island journey has a connected road route: {X=0.28624, Y=0.75685} -> {X=0.29397, Y=0.82816}
+PASS: Road approaches stay inside the bounded search radius
+PASS: Normal journey avoids the disconnected-junction detour regression
+PASS: Normal journey approaches do not cross mapped water
+Trip distance: 1142 m (direct 1139 m)
+PASS: Normal mainland/island journey has a connected road route: {X=0.64612, Y=0.72455} -> {X=0.62606, Y=0.79659}
+PASS: Road approaches stay inside the bounded search radius
+PASS: Normal journey avoids the disconnected-junction detour regression
+PASS: Normal journey approaches do not cross mapped water
+Trip distance: 8832 m (direct 5925 m)
+PASS: Normal mainland/island journey has a connected road route: {X=0.35, Y=0.45} -> {X=0.295, Y=0.835}
+PASS: Road approaches stay inside the bounded search radius
+PASS: Normal journey avoids the disconnected-junction detour regression
+PASS: Normal journey approaches do not cross mapped water
+Trip distance: 5413 m (direct 2409 m)
+PASS: Normal mainland/island journey has a connected road route: {X=0.55, Y=0.35} -> {X=0.6, Y=0.5}
+PASS: Road approaches stay inside the bounded search radius
+PASS: Normal journey avoids the disconnected-junction detour regression
+PASS: Normal journey approaches do not cross mapped water
+PASS: Distributed map route 1 across cells: {X=0.1237996, Y=0.09606165} -> {X=0.9481987, Y=0.4997772}
+PASS: Distributed map route 2 across cells: {X=0.2260352, Y=0.1170348} -> {X=0.1216679, Y=0.6019606}
+PASS: Distributed map route 3 across cells: {X=0.3726619, Y=0.1242131} -> {X=0.1911245, Y=0.6232527}
+PASS: Distributed map route 4 across cells: {X=0.4994674, Y=0.09747437} -> {X=0.2636915, Y=0.6231923}
+PASS: Distributed map route 5 across cells: {X=0.6241041, Y=0.04228088} -> {X=0.4834082, Y=0.5016646}
+PASS: Distributed map route 6 across cells: {X=0.749018, Y=0.1095937} -> {X=0.5990616, Y=0.5009133}
+PASS: Distributed map route 7 across cells: {X=0.8462033, Y=0.1230935} -> {X=0.7488617, Y=0.572543}
+PASS: Distributed map route 8 across cells: {X=0.9729827, Y=0.1246096} -> {X=0.8124487, Y=0.6242004}
+PASS: Distributed map route 9 across cells: {X=0.1243201, Y=0.2063503} -> {X=0.9236013, Y=0.6213661}
+PASS: Distributed map route 10 across cells: {X=0.2493957, Y=0.1740961} -> {X=0.124637, Y=0.7077007}
+PASS: Distributed map route 11 across cells: {X=0.3725195, Y=0.1478268} -> {X=0.2494215, Y=0.6893083}
+PASS: Distributed map route 12 across cells: {X=0.4997689, Y=0.2491234} -> {X=0.2886174, Y=0.7498063}
+PASS: Distributed map route 13 across cells: {X=0.5857276, Y=0.2497027} -> {X=0.3785417, Y=0.7318797}
+PASS: Distributed map route 14 across cells: {X=0.74352, Y=0.2496249} -> {X=0.6184346, Y=0.7061958}
+PASS: Distributed map route 15 across cells: {X=0.8248187, Y=0.249672} -> {X=0.6454997, Y=0.7274807}
+PASS: Distributed map route 16 across cells: {X=0.9561642, Y=0.2497436} -> {X=0.8704777, Y=0.7038201}
+PASS: Distributed map route 17 across cells: {X=0.1240596, Y=0.3119436} -> {X=0.9146317, Y=0.73507}
+PASS: Distributed map route 18 across cells: {X=0.2322805, Y=0.3718573} -> {X=0.09032602, Y=0.8705125}
+PASS: Distributed map route 19 across cells: {X=0.3350679, Y=0.373781} -> {X=0.3301423, Y=0.8727773}
+PASS: Distributed map route 20 across cells: {X=0.4943542, Y=0.2501245} -> {X=0.4998688, Y=0.8257871}
+PASS: Distributed map route 21 across cells: {X=0.6231635, Y=0.3734809} -> {X=0.6172361, Y=0.8470893}
+PASS: Distributed map route 22 across cells: {X=0.7484498, Y=0.2963762} -> {X=0.7404603, Y=0.8710613}
+PASS: Distributed map route 23 across cells: {X=0.8628795, Y=0.3497169} -> {X=0.8740506, Y=0.8371177}
+PASS: Distributed map route 24 across cells: {X=0.962109, Y=0.3728703} -> {X=0.9030407, Y=0.8526156}
+PASS: Distributed map route 25 across cells: {X=0.1234283, Y=0.4014673} -> {X=0.1248598, Y=0.8982743}
+PASS: Distributed map route 26 across cells: {X=0.2464874, Y=0.4997871} -> {X=0.2494426, Y=0.9184423}
+PASS: Distributed map route 27 across cells: {X=0.3723168, Y=0.4818977} -> {X=0.3685069, Y=0.9120937}
+PASS: Distributed map route 28 across cells: {X=0.4997711, Y=0.4798675} -> {X=0.4998415, Y=0.9306353}
+PASS: Distributed map route 29 across cells: {X=0.6246963, Y=0.4884213} -> {X=0.6228532, Y=0.9547066}
+PASS: Distributed map route 30 across cells: {X=0.7455081, Y=0.4888951} -> {X=0.7455433, Y=0.9335414}
+PASS: Distributed map route 31 across cells: {X=0.8371388, Y=0.4997565} -> {X=0.8691074, Y=0.8759829}
+PASS: Distributed map route 32 across cells: {X=0.9481987, Y=0.4997772} -> {X=0.89047, Y=0.8781064}
+PASS: Distributed map route 33 across cells: {X=0.1216679, Y=0.6019606} -> {X=0.1237996, Y=0.09606165}
+PASS: Distributed map route 34 across cells: {X=0.1911245, Y=0.6232527} -> {X=0.2260352, Y=0.1170348}
+PASS: Distributed map route 35 across cells: {X=0.2636915, Y=0.6231923} -> {X=0.3726619, Y=0.1242131}
+PASS: Distributed map route 36 across cells: {X=0.4834082, Y=0.5016646} -> {X=0.4994674, Y=0.09747437}
+PASS: Distributed map route 37 across cells: {X=0.5990616, Y=0.5009133} -> {X=0.6241041, Y=0.04228088}
+PASS: Distributed map route 38 across cells: {X=0.7488617, Y=0.572543} -> {X=0.749018, Y=0.1095937}
+PASS: Distributed map route 39 across cells: {X=0.8124487, Y=0.6242004} -> {X=0.8462033, Y=0.1230935}
+PASS: Distributed map route 40 across cells: {X=0.9236013, Y=0.6213661} -> {X=0.9729827, Y=0.1246096}
+PASS: Distributed map route 41 across cells: {X=0.124637, Y=0.7077007} -> {X=0.1243201, Y=0.2063503}
+PASS: Distributed map route 42 across cells: {X=0.2494215, Y=0.6893083} -> {X=0.2493957, Y=0.1740961}
+PASS: Distributed map route 43 across cells: {X=0.2886174, Y=0.7498063} -> {X=0.3725195, Y=0.1478268}
+PASS: Distributed map route 44 across cells: {X=0.3785417, Y=0.7318797} -> {X=0.4997689, Y=0.2491234}
+PASS: Distributed map route 45 across cells: {X=0.6184346, Y=0.7061958} -> {X=0.5857276, Y=0.2497027}
+PASS: Distributed map route 46 across cells: {X=0.6454997, Y=0.7274807} -> {X=0.74352, Y=0.2496249}
+PASS: Distributed map route 47 across cells: {X=0.8704777, Y=0.7038201} -> {X=0.8248187, Y=0.249672}
+PASS: Distributed map route 48 across cells: {X=0.9146317, Y=0.73507} -> {X=0.9561642, Y=0.2497436}
+PASS: Distributed map route 49 across cells: {X=0.09032602, Y=0.8705125} -> {X=0.1240596, Y=0.3119436}
+PASS: Distributed map route 50 across cells: {X=0.3301423, Y=0.8727773} -> {X=0.2322805, Y=0.3718573}
+PASS: Distributed map route 51 across cells: {X=0.4998688, Y=0.8257871} -> {X=0.3350679, Y=0.373781}
+PASS: Distributed map route 52 across cells: {X=0.6172361, Y=0.8470893} -> {X=0.4943542, Y=0.2501245}
+PASS: Distributed map route 53 across cells: {X=0.7404603, Y=0.8710613} -> {X=0.6231635, Y=0.3734809}
+PASS: Distributed map route 54 across cells: {X=0.8740506, Y=0.8371177} -> {X=0.7484498, Y=0.2963762}
+PASS: Distributed map route 55 across cells: {X=0.9030407, Y=0.8526156} -> {X=0.8628795, Y=0.3497169}
+PASS: Distributed map route 56 across cells: {X=0.1248598, Y=0.8982743} -> {X=0.962109, Y=0.3728703}
+PASS: Distributed map route 57 across cells: {X=0.2494426, Y=0.9184423} -> {X=0.1234283, Y=0.4014673}
+PASS: Distributed map route 58 across cells: {X=0.3685069, Y=0.9120937} -> {X=0.2464874, Y=0.4997871}
+PASS: Distributed map route 59 across cells: {X=0.4998415, Y=0.9306353} -> {X=0.3723168, Y=0.4818977}
+PASS: Distributed map route 60 across cells: {X=0.6228532, Y=0.9547066} -> {X=0.4997711, Y=0.4798675}
+PASS: Distributed map route 61 across cells: {X=0.7455433, Y=0.9335414} -> {X=0.6246963, Y=0.4884213}
+PASS: Distributed map route 62 across cells: {X=0.8691074, Y=0.8759829} -> {X=0.7455081, Y=0.4888951}
+PASS: Distributed map route 63 across cells: {X=0.89047, Y=0.8781064} -> {X=0.8371388, Y=0.4997565}
+PASS: Coverage sweep spans at least 40 occupied map cells
+PASS: B0 map-confirmed dirt gap avoids the former disconnected-track detour
+PASS: C3 map-confirmed dirt-to-paved junction closes its visible road gap
+Reported B2-to-Z4 Quickest: success=True distance=16482.461220553 entry=26.1818544942344 exit=12.9270688596842 dirt=1269.79280996323 seconds=1090.94713124456
+PASS: Reported Spickovina coordinates reach the Z4 yellow-road lighthouse in Quickest
+PASS: Reported journey stays on the nearby road rather than cutting across to a farther one in Quickest
+Reported B2-to-Z4 Shortest: success=True distance=16301.2530160229 entry=26.1818544942344 exit=12.9270688596842 dirt=4311.68506169203 seconds=1262.58817407648
+PASS: Reported Spickovina coordinates reach the Z4 yellow-road lighthouse in Shortest
+PASS: Reported journey stays on the nearby road rather than cutting across to a farther one in Shortest
+Reported B2-to-Z4 PavedOnly: success=True distance=20606.2223679843 entry=26.1818544942344 exit=12.9270688596842 dirt=0 seconds=1262.18523149265
+PASS: Reported Spickovina coordinates reach the Z4 yellow-road lighthouse in PavedOnly
+PASS: Reported journey stays on the nearby road rather than cutting across to a farther one in PavedOnly
+PASS: Reported paved-only journey never substitutes a dirt road
+Reported B2-to-Z4 Walking: success=True distance=16301.2530160229 entry=26.1818544942344 exit=12.9270688596842 dirt=4311.68506169203 seconds=11736.9021715365
+PASS: Reported Spickovina coordinates reach the Z4 yellow-road lighthouse in Walking
+PASS: Reported journey stays on the nearby road rather than cutting across to a farther one in Walking
+PASS: Dry fixture strip is verified against bundled water coverage
+PASS: Ten-metre disconnected road gap is not healed or bypassed by a farther snap
+PASS: Short trips do not report an unverified direct line as road routing
+PASS: Explicit captured junction works in both directions
+PASS: Bridge fixture spans mapped water between dry banks
+PASS: Explicit classified bridge geometry is preserved across water
+PASS: Navigation starts on a bridge above a mapped water pixel
+PASS: Bridge deck exemption cannot snap a distant swimmer onto a bridge
+PASS: Missing water coverage fails closed
+PASS: Surface fixture uses dry road endpoints
+PASS: Shortest uses the valid dirt shortcut
+PASS: Quickest accepts a longer paved route when its estimated time is lower
+PASS: Paved-only excludes all dirt road travel
+PASS: Walking minimizes known-road distance including dirt shortcuts
+PASS: Walking ETA uses 5 km/h rather than vehicle speeds
+PASS: Surface totals and dry approaches match route distance
+PASS: Paved-only fails when only a dirt road exists
+PASS: Unknown surfaces remain usable for shortest but cannot masquerade as paved
+PASS: Search chooses the correct destination endpoint after counting the partial destination edge
+PASS: Partial-edge optimization is symmetric in both directions
+PASS: Same-edge routes still consider a shorter path through the wider network
+PASS: Closed road splines choose the shorter direction around their shared endpoint
+Hairpin route: 15.07 m
+PASS: Nearby arms of one spline compete without taking a 600 metre detour
+PASS: Near-arm routing stays symmetric
+PASS: Folded bridge geometry does not gain alternate deck approaches
+PASS: No invented turn from bridge to underlying road in Quickest
+PASS: Bridge remains traversable along its own deck in Quickest
+PASS: Underlying road or tunnel remains traversable in Quickest
+PASS: No invented turn from bridge to underlying road in Shortest
+PASS: Bridge remains traversable along its own deck in Shortest
+PASS: Underlying road or tunnel remains traversable in Shortest
+PASS: No invented turn from bridge to underlying road in PavedOnly
+PASS: Bridge remains traversable along its own deck in PavedOnly
+PASS: Underlying road or tunnel remains traversable in PavedOnly
+PASS: No invented turn from bridge to underlying road in Walking
+PASS: Bridge remains traversable along its own deck in Walking
+PASS: Underlying road or tunnel remains traversable in Walking
+PASS: Legacy road assets fail closed for paved-only instead of guessing surfaces

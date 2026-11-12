@@ -26,11 +26,12 @@ namespace ScumMiniMap {
     // legs. All road searches run away from the WPF dispatcher.
     internal sealed class SquadRoutePlanner:IDisposable {
         sealed class Request { internal int Revision;internal RoadRouteMode Mode;internal PointF? Origin;internal PointF[] Stops; }
-        readonly object gate=new object();readonly Func<PointF,PointF,RoadRouteMode,RoadRoute> calculate;
+        readonly object gate=new object();readonly Func<PointF,PointF,RoadRouteMode,Func<bool>,RoadRoute> calculate;
         static readonly SemaphoreSlim calculations=new SemaphoreSlim(2);
         int revision;bool worker,disposed,busy;Request pending;SquadRoutePlan plan;
         internal SquadRoutePlanner(Func<PointF,PointF,RoadRoute> calculate):this((a,b,mode)=>calculate(a,b)) {}
-        internal SquadRoutePlanner(Func<PointF,PointF,RoadRouteMode,RoadRoute> calculate) { this.calculate=calculate; }
+        internal SquadRoutePlanner(Func<PointF,PointF,RoadRouteMode,RoadRoute> calculate) :this((a,b,m,current)=>calculate(a,b,m)) {}
+        internal SquadRoutePlanner(Func<PointF,PointF,RoadRouteMode,Func<bool>,RoadRoute> calculate) { this.calculate=calculate; }
         internal bool Busy { get { lock(gate)return busy; } }
         internal SquadRoutePlan Plan { get { lock(gate)return plan; } }
         static bool Valid(PointF p) { return !float.IsNaN(p.X)&&!float.IsNaN(p.Y)&&p.X>=0&&p.X<=1&&p.Y>=0&&p.Y<=1; }
@@ -43,9 +44,9 @@ namespace ScumMiniMap {
             }
         }
         bool Current(Request request) { lock(gate)return !disposed&&request.Revision==revision; }
-        RoadRoute CalculateBackground(PointF from,PointF to,RoadRouteMode mode) {
+        RoadRoute CalculateBackground(PointF from,PointF to,Request request) {
             var thread=Thread.CurrentThread;var previous=thread.Priority;
-            try { thread.Priority=ThreadPriority.BelowNormal;return calculate(from,to,mode); }
+            try { thread.Priority=ThreadPriority.BelowNormal;return calculate(from,to,request.Mode,()=>Current(request)); }
             finally { thread.Priority=previous; }
         }
         async Task Work() {
@@ -57,7 +58,7 @@ namespace ScumMiniMap {
                 for(int i=first;i<request.Stops.Length;i++) {
                     if(!Current(request))break;PointF to=request.Stops[i];RoadRoute route=null;
                     await calculations.WaitAsync();
-                    try { if(Current(request))route=await Task.Run(()=>CalculateBackground(from,to,request.Mode)); }catch(Exception) { }finally { calculations.Release(); }
+                    try { if(Current(request))route=await Task.Run(()=>CalculateBackground(from,to,request)); }catch(Exception) { }finally { calculations.Release(); }
                     if(!Current(request))break;
                     bool good=route!=null&&route.Success&&route.Polyline!=null&&route.Polyline.Length>0&&route.Polyline.All(Valid);
                     double straight=RoadRouter.DistanceMeters(from,to);

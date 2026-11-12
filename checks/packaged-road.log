@@ -1,0 +1,25 @@
+PASS: Actual WPF package reaches Z-island road {X=0.1028896, Y=0.8952379} from northern B2 {X=0.4096055, Y=0.3980024}
+PASS: Actual WPF package reaches Z-island road {X=0.3058849, Y=0.9062935} from northern B2 {X=0.4096055, Y=0.3980024}
+PASS: Actual WPF package reaches Z-island road {X=0.5075637, Y=0.9139952} from northern B2 {X=0.4096055, Y=0.3980024}
+PASS: Actual WPF package reaches Z-island road {X=0.6994768, Y=0.9042045} from northern B2 {X=0.4096055, Y=0.3980024}
+PASS: Actual WPF package reaches Z-island road {X=0.8930966, Y=0.9036438} from northern B2 {X=0.4096055, Y=0.3980024}
+PASS: Actual WPF package reaches Z-island road {X=0.1028896, Y=0.8952379} from northern B2 {X=0.5000607, Y=0.4055673}
+PASS: Actual WPF package reaches Z-island road {X=0.3058849, Y=0.9062935} from northern B2 {X=0.5000607, Y=0.4055673}
+PASS: Actual WPF package reaches Z-island road {X=0.5075637, Y=0.9139952} from northern B2 {X=0.5000607, Y=0.4055673}
+PASS: Actual WPF package reaches Z-island road {X=0.6994768, Y=0.9042045} from northern B2 {X=0.5000607, Y=0.4055673}
+PASS: Actual WPF package reaches Z-island road {X=0.8930966, Y=0.9036438} from northern B2 {X=0.5000607, Y=0.4055673}
+PASS: Actual WPF package reaches Z-island road {X=0.1028896, Y=0.8952379} from northern B2 {X=0.5733234, Y=0.3990068}
+PASS: Actual WPF package reaches Z-island road {X=0.3058849, Y=0.9062935} from northern B2 {X=0.5733234, Y=0.3990068}
+PASS: Actual WPF package reaches Z-island road {X=0.5075637, Y=0.9139952} from northern B2 {X=0.5733234, Y=0.3990068}
+PASS: Actual WPF package reaches Z-island road {X=0.6994768, Y=0.9042045} from northern B2 {X=0.5733234, Y=0.3990068}
+PASS: Actual WPF package reaches Z-island road {X=0.8930966, Y=0.9036438} from northern B2 {X=0.5733234, Y=0.3990068}
+PASS: Actual WPF package routes {X=0.62767, Y=0.63618} -> {X=0.6727, Y=0.03878} (17184 m)
+PASS: Actual WPF package routes {X=0.35, Y=0.45} -> {X=0.295, Y=0.835} (8832 m)
+PASS: Actual WPF package routes {X=0.63794, Y=0.7621} -> {X=0.62767, Y=0.63618} (3753 m)
+PASS: Actual WPF package routes {X=0.5000607, Y=0.4055673} -> {X=0.1028896, Y=0.8952379} (17344 m)
+PASS: Actual WPF package routes {X=0.5000607, Y=0.4055673} -> {X=0.3058849, Y=0.9062935} (13347 m)
+PASS: Actual WPF package rejects the lake shortcut.
+PASS: Actual package routes in Quickest with matching ETA.
+PASS: Actual package routes in Shortest with matching ETA.
+PASS: Actual package routes in PavedOnly with matching ETA.
+PASS: Actual package routes in Walking with matching ETA.
