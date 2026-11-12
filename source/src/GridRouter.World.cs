@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.IO;
 using System.IO.Compression;
@@ -36,6 +36,7 @@ namespace ScumMiniMap {
                 worldGrade = r.ReadBytes(checked(fine.CellCount * 2));
                 if (worldGrade.Length != fine.CellCount * 2) throw new EndOfStreamException();
             }
+            LoadLocalAreas(fine.Width);
             terrainFine = classes[LevelFine]; terrainMid = classes[LevelMid]; terrainCoarse = classes[LevelCoarse];
         }
 

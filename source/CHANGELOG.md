@@ -1,5 +1,9 @@
 ﻿# Changelog
 
+## [2.4.2] - 2026-11-12
+
+Detailed collision and original-position access paths for audited regions.
+
 ## [2.4.1] - 2026-11-12
 
 World2 refines large structure occupancy and validates vehicle-height collision volumes.

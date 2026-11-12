@@ -698,7 +698,7 @@ namespace ScumMiniMap {
         // ------------------------------------------------------------------
         // Public routing entry point
         // ------------------------------------------------------------------
-        internal RoadRoute FindRoute(PointF playerPt, PointF targetPt, RoadRouteMode mode) {
+        RoadRoute FindBaseRoute(PointF playerPt, PointF targetPt, RoadRouteMode mode) {
             RoadRoute result = new RoadRoute();
             result.Success = false;
             result.Mode = mode;

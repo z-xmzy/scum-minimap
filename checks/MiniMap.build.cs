@@ -74,15 +74,15 @@ using System.Drawing.Drawing2D;
 
 
 
-[assembly: AssemblyVersion("2.4.1.0")]
+[assembly: AssemblyVersion("2.4.2.0")]
 
 
 
-[assembly: AssemblyFileVersion("2.4.1.0")]
+[assembly: AssemblyFileVersion("2.4.2.0")]
 
 
 
-[assembly: AssemblyInformationalVersion("2.4.1-local-world2")]
+[assembly: AssemblyInformationalVersion("2.4.2-local-world3")]
 
 
 
@@ -1726,7 +1726,7 @@ namespace ScumMiniMap {
 
 
 
-        public const string VersionString = "2.4.1";
+        public const string VersionString = "2.4.2";
 
 
 
