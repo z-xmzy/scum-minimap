@@ -1,5 +1,9 @@
 ﻿# Changelog
 
+## [2.4.1] - 2026-11-12
+
+World2 refines large structure occupancy and validates vehicle-height collision volumes.
+
 ## [2.4.0] - 2026-11-12
 
 Local standalone world navigation for SCUM Build 26593778. The route grid uses game landscape, water, road and bridge geometry, static collision and hand-marked roads.

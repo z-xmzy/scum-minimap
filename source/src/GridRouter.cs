@@ -541,12 +541,12 @@ namespace ScumMiniMap {
             if (mode == RoadRouteMode.Shortest) { // 半越野: avoid steep mountain sides
                 if (t == 1) return 1.5;
                 if (t == 2) return 3.0;
-                return 7.0;
+                return 12.0;
             }
             if (mode == RoadRouteMode.PavedOnly) { // 全越野: still prefers gentle ground
                 if (t == 1) return 1.25;
                 if (t == 2) return 2.0;
-                return 4.0;
+                return 8.0;
             }
             return 1.0; // road-only is driven on graded roads
         }
@@ -649,8 +649,8 @@ namespace ScumMiniMap {
 
         // Shortest is distance based, but plain metres make cross-country as cheap as
         // the road network.  This multiplier keeps it a shortest-path mode while
-        // preferring roads/trails: paved/trail (1/2) x1.0, open ground (4) x1.35,
-        // rough/forest (8) x1.7.  Blocked cells stay impassable, so the penalty can
+        // preferring roads/trails: paved/trail (1/2) x1.0, open ground (4) x2.0,
+        // rough/forest (8) x4.0.  Blocked cells stay impassable, so the penalty can
         // only ever push the route back towards roads, never through obstacles.
         static readonly double[] ShortestTerrainPenalty = BuildShortestTerrainPenalties();
 
@@ -660,7 +660,7 @@ namespace ScumMiniMap {
             penalties[CostPaved] = 1.0;
             penalties[CostDirt] = 1.0;   // white-line trails / dirt roads added by the asset
             penalties[CostOpen] = 2.0;   // 半越野: roads first, flat open ground is the only shortcut
-            penalties[CostRough] = 24.0; // forest/rock: effectively a last resort for semi off-road
+            penalties[CostRough] = 4.0;  // passable ground near obstacles; solid footprints are blocked separately
             return penalties;
         }
 
@@ -674,7 +674,7 @@ namespace ScumMiniMap {
             penalties[CostPaved] = 1.1;
             penalties[CostDirt] = 1.1;
             penalties[CostOpen] = 1.0;
-            penalties[CostRough] = 3.0;  // 全越野也尽量绕开森林/碎石
+            penalties[CostRough] = 2.0;  // passable brush, with separate slope and collision costs
             return penalties;
         }
 

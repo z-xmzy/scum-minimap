@@ -1,10 +1,10 @@
-"""Package the local build with an independent data directory; exclude profiles from the upstream ZIP."""
+﻿"""Package the local build with an independent data directory; exclude profiles from the upstream ZIP."""
 from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
 ROOT=Path(__file__).resolve().parents[1]
 APP=ROOT/'app'
-OUT=ROOT.parent/'SCUM-MiniMap-2.4.0-world1-20261112.zip'
-PREFIX='SCUM-MiniMap-World/'
+OUT=ROOT.parent/'SCUM-MiniMap-2.4.1-world2-20261112.zip'
+PREFIX='SCUM-MiniMap-World2/'
 with ZipFile(OUT.with_suffix('.part'),'w',ZIP_DEFLATED,compresslevel=5) as z:
     def put(p,target):
         z.write(p,PREFIX+target)
@@ -19,6 +19,7 @@ with ZipFile(OUT.with_suffix('.part'),'w',ZIP_DEFLATED,compresslevel=5) as z:
         put(APP/name,'dist/'+name)
     put(ROOT/'checks/使用说明-世界导航.md','使用说明-世界导航.md')
     put(ROOT/'checks/route-validation.csv','路线对照.csv')
+    put(ROOT/'checks/version-comparison.csv','世界版逐组对照.csv')
     put(ROOT/'checks/road100-summary.csv','100组驾车走线.csv')
     z.writestr(PREFIX+'app/data/settings.ini','Language=zh-CN\r\n')
     z.writestr(PREFIX+'启动世界导航.cmd','@echo off\r\ncall "%~dp0app\\Start.cmd" %*\r\n')

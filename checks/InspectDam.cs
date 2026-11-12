@@ -25,7 +25,7 @@ class Footprints {
     static bool OverlapsAxis(double ax,double ay,V u,V v,V w,double x,double y,double radius) {
         return Math.Abs(ax*x+ay*y)<=Math.Abs(ax*u.x+ay*u.y)+Math.Abs(ax*v.x+ay*v.y)+Math.Abs(ax*w.x+ay*w.y)+radius*(Math.Abs(ax)+Math.Abs(ay));
     }
-    static string current;
+    static string current;static HashSet<int> ends=new HashSet<int>();
     static void Draw(V c,V u,V v,V w,byte flag) {
         // Project collision primitives onto the nav grid; allow a one-metre vehicle half-width.
         // Keep a separate tighter mask for known road centerlines (registration uncertainty).
@@ -41,11 +41,11 @@ class Footprints {
             if(!OverlapsAxis(-u.y,u.x,u,v,w,ox,oy,outer)||!OverlapsAxis(-v.y,v.x,u,v,w,ox,oy,outer)||!OverlapsAxis(-w.y,w.x,u,v,w,ox,oy,outer))continue;
             mask[i]|=flag;
             bool containsSmallObject=ex<dx && ey<dy && Math.Abs(ox)<=dx/2 && Math.Abs(oy)<=dy/2;
-            if(containsSmallObject || (Math.Abs(ox)<=ex+inner && Math.Abs(oy)<=ey+inner && OverlapsAxis(-u.y,u.x,u,v,w,ox,oy,inner)&&OverlapsAxis(-v.y,v.x,u,v,w,ox,oy,inner)&&OverlapsAxis(-w.y,w.x,u,v,w,ox,oy,inner))){mask[i]|=128;if(x==(int)(.4006*N) && y==(int)(.235*N)) Console.WriteLine(current);}
+            if(containsSmallObject || (Math.Abs(ox)<=ex+inner && Math.Abs(oy)<=ey+inner && OverlapsAxis(-u.y,u.x,u,v,w,ox,oy,inner)&&OverlapsAxis(-v.y,v.x,u,v,w,ox,oy,inner)&&OverlapsAxis(-w.y,w.x,u,v,w,ox,oy,inner))){mask[i]|=128;if(ends.Contains(i)) Console.WriteLine(i+" "+current);}
         }
     }
     static void Main(string[] args){
-        CultureInfo.CurrentCulture=CultureInfo.InvariantCulture;ground=ReadFloats("ground.f32");deck=ReadFloats("deck-used.f32");
+        CultureInfo.CurrentCulture=CultureInfo.InvariantCulture;foreach(string r in File.ReadLines("../checks/road100.csv")){var t=r.Split(',');for(int j=2;j<=4;j+=2)ends.Add(((int)(float.Parse(t[j+1])*N))*N+(int)(float.Parse(t[j])*N));}ground=ReadFloats("ground.f32");deck=ReadFloats("deck-used.f32");
         var shapes=new Dictionary<int,List<Box>>();
         foreach(string line in File.ReadLines("models.tsv")){
             var p=line.Split('\t');int id=int.Parse(p[0]);var d=new double[10];for(int j=0;j<10;j++)d[j]=double.Parse(p[5+j]);

@@ -47,6 +47,22 @@ class Footprints {
     static bool OverlapsAxis(double ax,double ay,V u,V v,V w,double x,double y,double radius) {
         return Math.Abs(ax*x+ay*y)<=Math.Abs(ax*u.x+ay*u.y)+Math.Abs(ax*v.x+ay*v.y)+Math.Abs(ax*w.x+ay*w.y)+radius*(Math.Abs(ax)+Math.Abs(ay));
     }
+    static double Dot(V a,V b){return a.x*b.x+a.y*b.y+a.z*b.z;}
+    static bool BoxAxis(V a,V u,V v,V w,V off,double radius){
+        double extent=Math.Abs(Dot(a,u))+Math.Abs(Dot(a,v))+Math.Abs(Dot(a,w));
+        return Math.Abs(Dot(a,off))<=extent+radius*(Math.Abs(a.x)+Math.Abs(a.y))+101*Math.Abs(a.z);
+    }
+    static bool BoxEdges(V a,V u,V v,V w,V off,double radius){
+        return BoxAxis(new V(0,a.z,-a.y),u,v,w,off,radius) &&
+            BoxAxis(new V(-a.z,0,a.x),u,v,w,off,radius) && BoxAxis(new V(a.y,-a.x,0),u,v,w,off,radius);
+    }
+    static bool VehicleIntersects(V u,V v,V w,V off,double radius){
+        // World X/Y/Z already checked in the broad phase. A transformed mesh box also
+        // needs its three face normals and the nine pairs of cross-product axes.
+        return BoxAxis(V.Cross(u,v),u,v,w,off,radius)&&BoxAxis(V.Cross(u,w),u,v,w,off,radius)&&
+            BoxAxis(V.Cross(v,w),u,v,w,off,radius)&&BoxEdges(u,u,v,w,off,radius)&&
+            BoxEdges(v,u,v,w,off,radius)&&BoxEdges(w,u,v,w,off,radius);
+    }
     static void Draw(V c,V u,V v,V w,byte flag) {
         // Project collision primitives onto the nav grid; allow a one-metre vehicle half-width.
         // Keep a separate tighter mask for known road centerlines (registration uncertainty).
@@ -62,7 +78,9 @@ class Footprints {
             if(!OverlapsAxis(-u.y,u.x,u,v,w,ox,oy,outer)||!OverlapsAxis(-v.y,v.x,u,v,w,ox,oy,outer)||!OverlapsAxis(-w.y,w.x,u,v,w,ox,oy,outer))continue;
             mask[i]|=flag;
             bool containsSmallObject=ex<dx && ey<dy && Math.Abs(ox)<=dx/2 && Math.Abs(oy)<=dy/2;
-            if(containsSmallObject || (Math.Abs(ox)<=ex+inner && Math.Abs(oy)<=ey+inner && OverlapsAxis(-u.y,u.x,u,v,w,ox,oy,inner)&&OverlapsAxis(-v.y,v.x,u,v,w,ox,oy,inner)&&OverlapsAxis(-w.y,w.x,u,v,w,ox,oy,inner)))mask[i]|=128;
+            double radius=containsSmallObject?Math.Max(dx,dy)/2:inner;
+            if(Math.Abs(ox)<=ex+radius && Math.Abs(oy)<=ey+radius &&
+                VehicleIntersects(u,v,w,new V(ox,oy,floor+119-c.z),radius))mask[i]|=128;
         }
     }
     static void Main(string[] args){
@@ -75,6 +93,13 @@ class Footprints {
             Q q=new Q(d[6],d[7],d[8],d[9]);if(!shapes.ContainsKey(id))shapes[id]=new List<Box>();
             shapes[id].Add(new Box{c=new V(d[0],d[1],d[2]),u=q.Rot(new V(d[3]/2,0,0)),v=q.Rot(new V(0,d[4]/2,0)),w=q.Rot(new V(0,0,d[5]/2)),flag=(byte)(p[1]=="tree"?1:p[1]=="wood"?2:p[1]=="rock"?4:8)});
         }
+        var detailed=new Dictionary<int,List<V>>();
+        foreach(string row in File.ReadLines("detailed-models.tsv")) {
+            int id=int.Parse(row.Split('\t')[0]);var verts=new List<V>();
+            using(var f=new BinaryReader(File.OpenRead(Path.Combine("detailed",id+".bin"))))
+                while(f.BaseStream.Position<f.BaseStream.Length)verts.Add(new V(f.ReadSingle(),f.ReadSingle(),f.ReadSingle()));
+            detailed.Add(id,verts);
+        }
         var counts=new long[16];
         var triangles=new List<V>();
         using(var b=new BinaryReader(File.OpenRead("outflow-triangles.f32")))
@@ -84,9 +109,11 @@ class Footprints {
                 int id=b.ReadInt32();var boxes=shapes[id];V pos=new V(b.ReadSingle(),b.ReadSingle(),b.ReadSingle());
                 var q=new Q(b.ReadSingle(),b.ReadSingle(),b.ReadSingle(),b.ReadSingle());V s=new V(b.ReadSingle(),b.ReadSingle(),b.ReadSingle());
                 counts[boxes[0].flag]++;
-                if(spillwayIds.Contains(id)){
-                    for(int i=0;i<triangles.Count;i+=3)
-                        DrawTriangle(pos+q.Rot(V.Product(s,triangles[i])),pos+q.Rot(V.Product(s,triangles[i+1])),pos+q.Rot(V.Product(s,triangles[i+2])));
+                List<V> verts;
+                if(!detailed.TryGetValue(id,out verts) && spillwayIds.Contains(id))verts=triangles;
+                if(verts!=null){
+                    for(int i=0;i<verts.Count;i+=3)
+                        DrawTriangle(pos+q.Rot(V.Product(s,verts[i])),pos+q.Rot(V.Product(s,verts[i+1])),pos+q.Rot(V.Product(s,verts[i+2])));
                     continue;
                 }
                 foreach(var box in boxes) Draw(pos+q.Rot(V.Product(s,box.c)),q.Rot(V.Product(s,box.u)),q.Rot(V.Product(s,box.v)),q.Rot(V.Product(s,box.w)),box.flag);

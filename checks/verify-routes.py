@@ -14,31 +14,6 @@ def layer(name):
 grid=layer('nav-world-grid.bin')
 terrain=layer('nav-world-terrain.bin')
 obs=np.fromfile(ROOT/'bake/obstacles.u8',np.uint8).reshape(W,W)
-def cases():
-    rows=list(csv.reader((CHECK/'cases.csv').open()))
-    for name in ('bridge26','bridge26_rev','road660'):
-        a=next(r for r in rows if r[0]==name)
-        rows.append([a[0],'Quickest',*a[2:]])
-    a=next(r for r in rows if r[0]=='bridge26')
-    rows.append(['bridge26','Walking',*a[2:]])
-    for mode in ('Quickest','Shortest','PavedOnly','Walking'):
-        rows.append(['open-water',mode,.01,.01,.015,.014])
-    rng=np.random.default_rng(26593778)
-    for val,kind in [(2,'wood'),(4,'rock')]:
-        ids=np.flatnonzero((obs==128+val)&(grid==255)&(terrain==0))
-        selected=0
-        for cell in rng.choice(ids,min(3000,len(ids)),replace=False):
-            y,x=divmod(cell,W)
-            if min(x,y,W-x,W-y)<15:continue
-            band=grid[y,x-6:x+7]
-            if band[0] not in (4,8) or band[-1] not in (4,8) or np.any(terrain[y-2:y+3,x-6:x+7]) or (band==255).sum()>3:continue
-            selected+=1
-            for mode in ('Shortest','PavedOnly'):
-                rows.append([kind+str(selected),mode,(x-5.5)/W,(y+.5)/W,(x+6.5)/W,(y+.5)/W])
-            if selected==3:break
-        assert selected==3
-    with (CHECK/'world-cases.csv').open('w',newline='') as f:csv.writer(f).writerows(rows)
-
 def run(folder,variant):
     out=CHECK/(variant+'-routes.tsv')
     subprocess.run([CHECK/'Probe.exe','stock',CHECK/'world-cases.csv',out],cwd=folder,check=True)
@@ -55,7 +30,7 @@ def score(row):
         steep+=m/n*((terrain[y,x]>=4)&(grid[y,x]>2)).sum();k+=n
     return [name,mode,ok,round(float(length),2),round(blocked,2),round(steep,2),k]
 if __name__=='__main__':
-    cases()
+    # world-cases.csv is the fixed world1 fixture; keep the exact same endpoints.
     results=[]
     for variant,path in [('navA28',OLD),('world',ROOT/'app')]:
         with run(path,variant).open(encoding='utf-8-sig') as f:
