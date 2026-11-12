@@ -1,0 +1,19 @@
+{
+  "game_build": 26593778,
+  "tiles": 400,
+  "scenes": 1648,
+  "hand_roads": 947,
+  "water_mesh_cells": 729589,
+  "deck_cells": 7631,
+  "road_mesh_cells": 213987,
+  "blocked_cells": 2990971,
+  "obstacle_instances": 1280726,
+  "classes": {
+    "1": 447047,
+    "2": 188025,
+    "4": 3357463,
+    "8": 5155676,
+    "16": 2331234,
+    "255": 2990971
+  }
+}

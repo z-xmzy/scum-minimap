@@ -1,0 +1,43 @@
+# ============================================================
+# SCUM MiniMap development repository
+# ============================================================
+
+# Build / release output
+/release/
+*.exe
+*.pdb
+*.zip
+*.partial
+
+# Runtime / local user state
+*.log
+*.bak
+/resources/settings.ini
+/resources/maps/
+/resources/imports/
+*.db
+*.sqlite
+private-groups.dat*
+/resources/settings.ini.*
+/resources/automatic.log
+/resources/last-detection.json
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Secrets / environment
+.env
+.env.*
+
+# Generated development previews
+/TestHarness.cs
+/discord-*.json
+/scummap-reference.json
+
+# Common editor / OS junk
+.vs/
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini

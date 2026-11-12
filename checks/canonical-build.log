@@ -1,0 +1,261 @@
+Validated 845 strings in all 22 languages, map names, format arguments, and 1115 source references.
+PASS: Automatic firewall exception permits only this executable and selected inbound TCP port on all network profiles
+PASS: Repeated hosting reuses the verified managed firewall rule without duplicates
+PASS: Firewall identity distinguishes ports while preserving Windows path case equivalence
+PASS: A deliberately disabled existing rule is not silently overridden
+PASS: Unrelated firewall rules are never overwritten or removed
+PASS: A newly created rule that fails scope verification is rolled back
+PASS: Firewall access denial is reported without claiming success
+PASS: UPnP discovery accepts a descriptor hosted by the local default gateway
+PASS: Router discovery rejects outside, credentialed or unsupported endpoints: http://8.8.8.8/root.xml
+PASS: Router discovery rejects outside, credentialed or unsupported endpoints: http://router.example/root.xml
+PASS: Router discovery rejects outside, credentialed or unsupported endpoints: http://user:pass@192.168.1.1/root.xml
+PASS: Router discovery rejects outside, credentialed or unsupported endpoints: https://192.168.1.1/root.xml
+PASS: UPnP resolves the local WAN control URL from the router descriptor
+PASS: UPnP never follows a control endpoint outside the gateway
+PASS: UPnP WAN address parsing accepts public IPv4 and rejects CGNAT addresses
+PASS: Router XML cannot load external entities or files
+PASS: UPnP fills the public address when NAT-PMP is unavailable, without an outside lookup service
+PASS: Failed local discovery never substitutes a private adapter address as the public IP
+PASS: Router cleanup deletes only the selected internal TCP port
+PASS: Local router discovery and TCP lease work without external services
+PASS: Failed lease renewal stops advertising router readiness
+PASS: Stopping host withdraws only its lease once
+PASS: Reassigned external port is withdrawn rather than advertised incorrectly
+PASS: CGNAT gateway address cannot be advertised as internet-ready
+PASS: Invalid mapping response rejected at byte 0
+PASS: Invalid mapping response rejected at byte 1
+PASS: Invalid mapping response rejected at byte 2
+PASS: Invalid mapping response rejected at byte 3
+PASS: Invalid mapping response rejected at byte 8
+PASS: Invalid mapping response rejected at byte 9
+PASS: Invalid mapping response rejected at byte 10
+PASS: Invalid mapping response rejected at byte 11
+PASS: Invalid mapping response rejected at byte 12
+PASS: Invalid mapping response rejected at byte 13
+PASS: Expired router lease rejected
+PASS: Late cleanup from an older host cannot delete the replacement host's mapping
+PASS: Public IPv4 detection accepts a canonical external address
+PASS: Public address lookup rejects private, reserved or malformed output: 172.24.0.1
+PASS: Public address lookup rejects private, reserved or malformed output: 192.168.0.14
+PASS: Public address lookup rejects private, reserved or malformed output: 10.0.0.1
+PASS: Public address lookup rejects private, reserved or malformed output: 100.64.0.1
+PASS: Public address lookup rejects private, reserved or malformed output: 127.0.0.1
+PASS: Public address lookup rejects private, reserved or malformed output: 169.254.1.1
+PASS: Public address lookup rejects private, reserved or malformed output: 0.0.0.0
+PASS: Public address lookup rejects private, reserved or malformed output: 224.0.0.1
+PASS: Public address lookup rejects private, reserved or malformed output: 255.255.255.255
+PASS: Public address lookup rejects private, reserved or malformed output: 192.0.2.1
+PASS: Public address lookup rejects private, reserved or malformed output: 198.51.100.1
+PASS: Public address lookup rejects private, reserved or malformed output: 203.0.113.1
+PASS: Public address lookup rejects private, reserved or malformed output: 198.18.0.1
+PASS: Public address lookup rejects private, reserved or malformed output: ::1
+PASS: Public address lookup rejects private, reserved or malformed output: 8.8.8.8:47831
+PASS: Public address lookup rejects private, reserved or malformed output: 0x08080808
+PASS: Public address lookup rejects private, reserved or malformed output: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+PASS: Authenticated encryption round trip
+PASS: Each packet has a fresh random IV
+PASS: Wrong group key fails closed
+PASS: Packet tampering rejected at byte 0
+PASS: Packet tampering rejected at byte 1
+PASS: Packet tampering rejected at byte 2
+PASS: Packet tampering rejected at byte 3
+PASS: Packet tampering rejected at byte 4
+PASS: Packet tampering rejected at byte 5
+PASS: Packet tampering rejected at byte 6
+PASS: Packet tampering rejected at byte 7
+PASS: Packet tampering rejected at byte 8
+PASS: Packet tampering rejected at byte 9
+PASS: Packet tampering rejected at byte 10
+PASS: Packet tampering rejected at byte 11
+PASS: Packet tampering rejected at byte 12
+PASS: Packet tampering rejected at byte 13
+PASS: Packet tampering rejected at byte 14
+PASS: Packet tampering rejected at byte 15
+PASS: Packet tampering rejected at byte 16
+PASS: Packet tampering rejected at byte 17
+PASS: Packet tampering rejected at byte 18
+PASS: Packet tampering rejected at byte 19
+PASS: Packet tampering rejected at byte 20
+PASS: Packet tampering rejected at byte 21
+PASS: Packet tampering rejected at byte 22
+PASS: Packet tampering rejected at byte 23
+PASS: Packet tampering rejected at byte 24
+PASS: Packet tampering rejected at byte 25
+PASS: Packet tampering rejected at byte 26
+PASS: Packet tampering rejected at byte 27
+PASS: Packet tampering rejected at byte 28
+PASS: Packet tampering rejected at byte 29
+PASS: Packet tampering rejected at byte 30
+PASS: Packet tampering rejected at byte 31
+PASS: Packet tampering rejected at byte 32
+PASS: Packet tampering rejected at byte 33
+PASS: Packet tampering rejected at byte 34
+PASS: Packet tampering rejected at byte 35
+PASS: Packet tampering rejected at byte 36
+PASS: Packet tampering rejected at byte 37
+PASS: Packet tampering rejected at byte 38
+PASS: Packet tampering rejected at byte 39
+PASS: Packet tampering rejected at byte 40
+PASS: Packet tampering rejected at byte 41
+PASS: Packet tampering rejected at byte 42
+PASS: Packet tampering rejected at byte 43
+PASS: Packet tampering rejected at byte 44
+PASS: Packet tampering rejected at byte 45
+PASS: Packet tampering rejected at byte 46
+PASS: Packet tampering rejected at byte 47
+PASS: Packet tampering rejected at byte 48
+PASS: Packet tampering rejected at byte 49
+PASS: Packet tampering rejected at byte 50
+PASS: Packet tampering rejected at byte 51
+PASS: Packet tampering rejected at byte 52
+PASS: Packet tampering rejected at byte 53
+PASS: Packet tampering rejected at byte 54
+PASS: Packet tampering rejected at byte 55
+PASS: Packet tampering rejected at byte 56
+PASS: Packet tampering rejected at byte 57
+PASS: Packet tampering rejected at byte 58
+PASS: Packet tampering rejected at byte 59
+PASS: Packet tampering rejected at byte 60
+PASS: Packet tampering rejected at byte 61
+PASS: Packet tampering rejected at byte 62
+PASS: Packet tampering rejected at byte 63
+PASS: Packet tampering rejected at byte 64
+PASS: Packet tampering rejected at byte 65
+PASS: Packet tampering rejected at byte 66
+PASS: Packet tampering rejected at byte 67
+PASS: Packet tampering rejected at byte 68
+PASS: Packet tampering rejected at byte 69
+PASS: Packet tampering rejected at byte 70
+PASS: Packet tampering rejected at byte 71
+PASS: Packet tampering rejected at byte 72
+PASS: Packet tampering rejected at byte 73
+PASS: Packet tampering rejected at byte 74
+PASS: Packet tampering rejected at byte 75
+PASS: Packet tampering rejected at byte 76
+PASS: Packet tampering rejected at byte 77
+PASS: Packet tampering rejected at byte 78
+PASS: Packet tampering rejected at byte 79
+PASS: Oversized and truncated packets rejected
+PASS: Stale and future positions rejected
+PASS: Two clients exchange only their own opt-in positions
+PASS: Authenticated stale, future and invalid-coordinate fixtures stay hidden
+PASS: Another group cannot read positions in the same folder
+PASS: Names are encrypted on disk
+PASS: Pausing sharing removes the local position
+PASS: Disconnect clears local peer visibility immediately
+PASS: Persistent member color prefixes preserve fresh per-connection replay identities
+PASS: Direct host relays authenticated positions between joined clients
+PASS: Both players see each other with the ten-second clock difference that previously caused one-way sharing
+PASS: Death markers and waypoints reach every member, with marker identities scoped to their owner
+PASS: A bounded full marker snapshot larger than the old 1 KB frame limit is delivered intact
+PASS: Marker rename, movement and owner deletion replace the shared snapshot without stale duplicates
+PASS: Host forwarding preserves capture age instead of refreshing old locations
+PASS: Replayed sequence cannot replace a received position
+PASS: Already stale network samples are rejected without relying on remote clocks
+PASS: Wrong-key direct join fails closed without leaking or publishing positions
+PASS: Invalid network frame is disconnected before allocation
+PASS: Pausing direct sharing withdraws the position from the whole group
+PASS: Pausing live capture preserves the connected owner's shared saved markers
+PASS: Direct disconnect clears peer and marker visibility immediately
+PASS: Losing the host closes the session and atomically clears positions and markers
+17 auto-launch lifetime/task checks passed.
+9 watcher lifecycle checks passed. No tasks registered or MiniMap/game applications started.
+PASS: Fixture blocks a protected group-file write
+PASS: UI group reads and name synchronization do not wait for slow protected storage
+PASS: Closing group sharing does not wait for a blocked credential write
+PASS: Serialized protected persistence finishes consistently after nonblocking shutdown
+PASS: Failed durable credential journaling fails closed before group management or connection
+PASS: Remote group-name synchronization returns before protected persistence finishes
+PASS: Asynchronous group-name persistence reached the blocked writer
+PASS: A newer group name remains usable while an earlier name is being saved
+PASS: UI membership views remain stable when the worker-visible membership changes
+PASS: Coalesced persistence writes the latest name rather than an obsolete snapshot
+PASS: Background save failures remain observable without discarding the current group name
+PASS: Failed asynchronous name saves retry and recover durably
+PASS: Synthetic router starts with an accepted local lease
+PASS: Fixture holds a router renewal inside network exchange
+PASS: Disconnect returns while router renewal is blocked
+PASS: Stopped router is not advertised ready and withdrawal waits for the old renewal
+PASS: Replacement lease waits for withdrawal without holding the lifecycle lock
+PASS: Repeated shutdown stays nonblocking while replacement waits
+PASS: Old renewal settles before withdrawal and the replacement remains valid
+PASS: Late repeated disposal cannot withdraw a replacement lease
+Threading regressions passed with synthetic data and no live relay access.
+PASS: Danger ping accepted at a valid position
+PASS: Repeated ping presses are rate limited
+PASS: Ping fits the existing encrypted marker protocol
+PASS: Incoming ping visible
+PASS: Heartbeat updates do not reset ping age
+PASS: Both sender and receiver expire pings after 60 seconds
+PASS: Expiry is independently scoped per group and player
+PASS: Invalid coordinates cannot become shared pings
+PASS: Ordered route stop 0 accepted
+PASS: Ordered route stop 1 accepted
+PASS: Ordered route stop 2 accepted
+PASS: Ordered route stop 3 accepted
+PASS: Ordered route stop 4 accepted
+PASS: Ordered route stop 5 accepted
+PASS: Ordered route stop 6 accepted
+PASS: Ordered route stop 7 accepted
+PASS: Ordered route stop 8 accepted
+PASS: Ordered route stop 9 accepted
+PASS: Ordered route stop 10 accepted
+PASS: Ordered route stop 11 accepted
+PASS: Ordered route stop 12 accepted
+PASS: Ordered route stop 13 accepted
+PASS: Ordered route stop 14 accepted
+PASS: Ordered route stop 15 accepted
+PASS: Route is bounded to 16 stops
+PASS: Shuffled encrypted snapshots restore route order
+PASS: Incomplete route cannot silently skip a missing stop
+PASS: Equal route IDs from different groups or owners do not merge
+PASS: Removing the last stop preserves contiguous order
+PASS: Clearing withdraws shared route stops
+PASS: Placed routes start as personal solo routes
+PASS: Shared mode is explicit and retains the route identity
+PASS: Removing a stage reindexes order while keeping surviving stop identities
+PASS: Switching back to solo is represented in the encrypted marker identities
+PASS: Encrypted TCP exchanges pings and complete ordered routes without protocol changes
+PASS: Expired ping is withdrawn from the network snapshot
+PASS: Map preset persists categories, layers and both map view settings
+PASS: Saving replaces an existing preset file atomically
+PASS: Truncated presets fail closed
+source\src\SquadRoutePlanner.cs(24,63): warning CS0649: ��δ���ֶΡ�ScumMiniMap.SquadRouteDrawing.Key����ֵ���ֶν�һֱ������Ĭ��ֵ null
+source\src\SquadRoutePlanner.cs(24,67): warning CS0649: ��δ���ֶΡ�ScumMiniMap.SquadRouteDrawing.Name����ֵ���ֶν�һֱ������Ĭ��ֵ null
+source\src\SquadRoutePlanner.cs(24,86): warning CS0649: ��δ���ֶΡ�ScumMiniMap.SquadRouteDrawing.Shared����ֵ���ֶν�һֱ������Ĭ��ֵ false
+source\src\SquadRoutePlanner.cs(24,117): warning CS0649: ��δ���ֶΡ�ScumMiniMap.SquadRouteDrawing.Plan����ֵ���ֶν�һֱ������Ĭ��ֵ null
+PASS: Every stage is road-calculated automatically, including the player-to-first-stop leg
+PASS: Route stages preserve the placed stop order
+PASS: Inter-stop routes still calculate without a fresh player origin
+PASS: Pending work owns an immutable copy of placed markers
+PASS: Invalid coordinates never enter a route search
+PASS: Route calculation runs off the calling thread
+PASS: An edited route discards obsolete results and calculates the newest stops
+PASS: Obsolete work stops between legs rather than finishing the old route
+PASS: Mode-change fixture starts its old request
+PASS: Mode changes discard old work and sum the selected mode ETA across legs
+PASS: Rapid marker placement is coalesced without flooding the road router
+PASS: Clearing a route immediately removes its preview and busy state
+PASS: Failed road legs remain explicitly unverified direct guidance
+PASS: Disposal fixture starts a route search
+PASS: Closing the app cannot publish late route results
+Add-Type : d:\codex\SCUM-MiniMap-world-nav-20261112\source\src\GridRouter.cs(105) : 视为错误的警告: 从未对字段“ScumMiniMap.GridRout
+er.TrailOverlay.UnblockedCells”赋值，字段将一直保持其默认值 0
+d:\codex\SCUM-MiniMap-world-nav-20261112\source\src\GridRouter.cs(104) :             internal int TrailCells;
+d:\codex\SCUM-MiniMap-world-nav-20261112\source\src\GridRouter.cs(105) : >>>             internal int UnblockedCells;
+d:\codex\SCUM-MiniMap-world-nav-20261112\source\src\GridRouter.cs(106) :         }
+At D:\codex\SCUM-MiniMap-world-nav-20261112\source\tests\Test-MapObjectLocalization.ps1:5 char:1
++ Add-Type -Path $miniSources -ReferencedAssemblies WindowsBase,Present ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidData: (Microsoft.Power...peCompilerError:AddTypeCompilerError) [Add-Type], Except 
+   ion
+    + FullyQualifiedErrorId : SOURCE_CODE_ERROR,Microsoft.PowerShell.Commands.AddTypeCommand
+ 
+Check failed: tests\Test-MapObjectLocalization.ps1
+At D:\codex\SCUM-MiniMap-world-nav-20261112\source\scripts\Invoke-MiniMapChecks.ps1:23 char:32
++     if ($LASTEXITCODE -ne 0) { throw "Check failed: $check" }
++                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (Check failed: t...ocalization.ps1:String) [], RuntimeException
+    + FullyQualifiedErrorId : Check failed: tests\Test-MapObjectLocalization.ps1
+ 
