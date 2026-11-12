@@ -1,0 +1,20 @@
+# 完整原始归档：不进 git，原样保存在磁盘上
+/版本/
+/实验/
+/发布包/
+/SCUM-MiniMap-2.4.11-新窗口交接.md
+# 构建产物、烘焙数据和临时文件
+/app/
+/bake/
+/release/
+/package/
+/extracted/
+/temp/
+/verified*/
+/预览/
+*.part/
+/source/release/
+/tools/model-review/
+bin/
+obj/
+.vs/
