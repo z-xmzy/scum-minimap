@@ -1169,6 +1169,7 @@ namespace ScumMiniMap {
         StackPanel sidebar;
         Grid hudLayout;
         Border hudStatus;
+        Border nativeLocationCard;
         TextBlock targetTitle,targetDetail,hudLocation,hudSector,routePreviewTitle,routePreviewDetail,tacticalLocation;
         WpfSatnavTicker hudRoute;
         Border targetCard,routePreviewCard;
@@ -1518,6 +1519,10 @@ namespace ScumMiniMap {
             var clear=WpfFieldTheme.Button(Localization.Get("WpfClearRoute"),ClearMapRoute);clear.MaxWidth=112;clear.FontSize=13;Grid.SetColumn(clear,1);target.Children.Add(clear);
             clear.Tag="text:WpfClearRoute";
             var topCards=new StackPanel { Width=408,HorizontalAlignment=HorizontalAlignment.Left,VerticalAlignment=VerticalAlignment.Top,Margin=new Thickness(24) };
+            var idleLocation=WpfFieldTheme.Text("",14,WpfFieldTheme.Ink,true);
+            idleLocation.TextWrapping=TextWrapping.Wrap;
+            nativeLocationCard=WpfFieldTheme.Card(idleLocation,new Thickness(10,7,10,7));
+            nativeLocationCard.Visibility=Visibility.Collapsed;topCards.Children.Add(nativeLocationCard);
             var targetBody=new StackPanel();targetBody.Children.Add(target);var targetActions=new WrapPanel();
             addTargetStop=WpfFieldTheme.Button(S("SquadAddStop"),()=>AddSquadDestination(engine.WpfSnapshot(true).Target));addTargetStop.Tag="text:SquadAddStop";addTargetStop.ToolTip=S("MapGpsSavedHelp");targetActions.Children.Add(addTargetStop);
             var stopTarget=WpfFieldTheme.Button(S("SquadStopNav"),()=> { StopSquadNavigation();filterIdentity=null;Refresh(); });stopTarget.Tag="text:SquadStopNav";targetActions.Children.Add(stopTarget);
@@ -1535,7 +1540,7 @@ namespace ScumMiniMap {
             // The details card is an overlay on the map, not a dead area for its
             // context menu. Preserve normal left-click/scroll behavior in it.
             hoverCard.PreviewMouseRightButtonDown+=(s,e)=> { if(tacticalMap.BeginContextPointer(e.GetPosition(tacticalMap)))e.Handled=true; };
-            var controls=new StackPanel { Orientation=Orientation.Horizontal };controls.Children.Add(WpfFieldTheme.Button("−",()=>QueueZoom(-1,true)));zoomResetButton=WpfFieldTheme.Button("1.0×",()=> { engine.WpfNativeTool(AppControlAction.ResetZoom);RefreshInteraction(); });controls.Children.Add(zoomResetButton);controls.Children.Add(WpfFieldTheme.Button("+",()=>QueueZoom(1,true)));
+            var controls=new WrapPanel { Orientation=Orientation.Horizontal };controls.Children.Add(WpfFieldTheme.Button("−",()=>QueueZoom(-1,true)));zoomResetButton=WpfFieldTheme.Button("1.0×",()=> { engine.WpfNativeTool(AppControlAction.ResetZoom);RefreshInteraction(); });controls.Children.Add(zoomResetButton);controls.Children.Add(WpfFieldTheme.Button("+",()=>QueueZoom(1,true)));
             ((FrameworkElement)controls.Children[0]).Tag="tooltip:ControlZoomOut";zoomResetButton.Tag="tooltip:ControlResetZoom";((FrameworkElement)controls.Children[2]).Tag="tooltip:ControlZoomIn";
             followButton=WpfFieldTheme.Button(Localization.Get("WpfFollowPlayer"),()=> { engine.WpfFollow();Refresh(); });followButton.Tag="text:WpfFollowPlayer";controls.Children.Add(followButton);
             var pin=WpfFieldTheme.Button(Localization.Get("MarkerCurrent"),()=> { if(!engine.WpfMarkCurrent())MessageBox.Show(tactical,Localization.Get(engine.WpfSnapshot(false).Position==null?"PlayerNoLocation":"LocalSaveFailed"),Localization.Get("MarkerCurrent"),MessageBoxButton.OK,MessageBoxImage.Information);Refresh(); });pin.Tag="text:MarkerCurrent";pin.ToolTip=Localization.Get("MarkerHelp");controls.Children.Add(pin);
@@ -1552,7 +1557,9 @@ namespace ScumMiniMap {
             var resize=new Thumb { Width=12,Margin=new Thickness(6,0,0,0),Cursor=Cursors.SizeNWSE,Tag="tooltip:WpfResizeControls" };DockPanel.SetDock(resize,Dock.Right);toolbar.Children.Add(resize);toolbar.Children.Add(controls);
             var chrome=WpfFieldTheme.Card(toolbar,new Thickness(8));chrome.HorizontalAlignment=HorizontalAlignment.Left;chrome.VerticalAlignment=VerticalAlignment.Bottom;chrome.Margin=new Thickness(24);scene.Children.Add(chrome);grid.Children.Add(scene);
             double controlScale=1;bool sidebarOpen=true;
-            Action clampControls=()=> { chrome.Margin=new Thickness(Math.Max(8,Math.Min(chrome.Margin.Left,Math.Max(8,scene.ActualWidth-chrome.ActualWidth*controlScale-8))),0,0,Math.Max(8,Math.Min(chrome.Margin.Bottom,Math.Max(8,scene.ActualHeight-chrome.ActualHeight*controlScale-8)))); };
+            bool? gameMap=null;
+            Thickness floatingMargin=chrome.Margin;
+            Action clampControls=()=> { if(gameMap==true)return;chrome.Margin=new Thickness(Math.Max(8,Math.Min(chrome.Margin.Left,Math.Max(8,scene.ActualWidth-chrome.ActualWidth*controlScale-8))),0,0,Math.Max(8,Math.Min(chrome.Margin.Bottom,Math.Max(8,scene.ActualHeight-chrome.ActualHeight*controlScale-8)))); };
             move.DragDelta+=(s,e)=> { chrome.Margin=new Thickness(chrome.Margin.Left+e.HorizontalChange,0,0,chrome.Margin.Bottom-e.VerticalChange);clampControls(); };
             resize.DragDelta+=(s,e)=> { double available=Math.Max(.7,(scene.ActualWidth-16)/Math.Max(1,chrome.ActualWidth));controlScale=Math.Max(.7,Math.Min(Math.Min(1.6,available),controlScale+e.HorizontalChange/400));chrome.LayoutTransform=new ScaleTransform(controlScale,controlScale);chrome.UpdateLayout();clampControls(); };
             chrome.SizeChanged+=(s,e)=>clampControls();scene.SizeChanged+=(s,e)=>clampControls();
@@ -1575,7 +1582,16 @@ namespace ScumMiniMap {
             tacticalLocation=WpfFieldTheme.Text("",12,WpfFieldTheme.Muted);var footer=new Border { Height=36,Padding=new Thickness(22,0,22,0),BorderThickness=new Thickness(0,1,0,0),BorderBrush=WpfFieldTheme.Line,Background=WpfFieldTheme.Ground,VerticalAlignment=VerticalAlignment.Bottom,Child=tacticalLocation };Grid.SetColumn(footer,1);grid.Children.Add(footer);
             // The game draws its own centred square at 1x. Keep the overlay viewport
             // full size for marker alignment; only use the unused side margin for controls.
-            bool? gameMap=null;
+            idleLocation.SetBinding(TextBlock.TextProperty,new System.Windows.Data.Binding("Text"){Source=tacticalLocation});
+            var nativeLeft=new Grid { HorizontalAlignment=HorizontalAlignment.Left,ClipToBounds=true };
+            nativeLeft.RowDefinitions.Add(new RowDefinition());nativeLeft.RowDefinitions.Add(new RowDefinition {Height=GridLength.Auto});
+            Grid.SetColumnSpan(nativeLeft,2);grid.Children.Add(nativeLeft);
+            var cardScroll=new ScrollViewer {VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Auto,
+                VerticalAlignment=VerticalAlignment.Top};
+            nativeLeft.Children.Add(cardScroll);
+            var toolScroll=new ScrollViewer {VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Auto,
+                VerticalAlignment=VerticalAlignment.Bottom};
+            Grid.SetRow(toolScroll,1);nativeLeft.Children.Add(toolScroll);
             var shelf=new Grid { Background=WpfFieldTheme.Panel,ClipToBounds=true };
             Grid.SetColumn(shelf,1);grid.Children.Add(shelf);
             foreach(var item in new FrameworkElement[]{scroller,headerBar,footer,sidebarToggle}) {
@@ -1603,7 +1619,35 @@ namespace ScumMiniMap {
                 shelf.Background=sidebarOpen?WpfFieldTheme.Panel:Brushes.Transparent;
                 var visible=sidebarOpen?Visibility.Visible:Visibility.Collapsed;
                 scroller.Visibility=headerBar.Visibility=footer.Visibility=visible;
-                chrome.Visibility=topCards.Visibility=native?Visibility.Collapsed:Visibility.Visible;
+                double leftWidth=bottom?Math.Min(408,Math.Max(0,grid.ActualWidth-width)):Math.Min(424,Math.Floor(gutter));
+                nativeLeft.Visibility=native&&leftWidth>0?Visibility.Visible:Visibility.Collapsed;
+                nativeLeft.Width=leftWidth;
+                if(native) {
+                    if(chrome.Parent==scene) {
+                        floatingMargin=chrome.Margin;
+                        scene.Children.Remove(chrome);scene.Children.Remove(topCards);
+                        cardScroll.Content=topCards;toolScroll.Content=chrome;
+                        chrome.LayoutTransform=Transform.Identity;chrome.ContextMenu=null;
+                        move.Visibility=resize.Visibility=Visibility.Collapsed;
+                    }
+                    double inset=Math.Min(6,leftWidth/10);
+                    topCards.Margin=chrome.Margin=new Thickness(inset);
+                    topCards.Width=Math.Max(0,leftWidth-2*inset-16);
+                    chrome.Width=Math.Max(80,leftWidth-2*inset-2);
+                    cardScroll.MaxHeight=bottom?lowerGutter:double.PositiveInfinity;
+                    toolScroll.MaxHeight=bottom?lowerGutter:Math.Max(0,grid.ActualHeight*.50);
+                    target.ColumnDefinitions[1].MaxWidth=leftWidth<280?74:112;
+                    nativeLocationCard.Visibility=targetCard.Visibility==Visibility.Visible||routePreviewCard.Visibility==Visibility.Visible?
+                        Visibility.Collapsed:Visibility.Visible;
+                }else if(toolScroll.Content!=null) {
+                    cardScroll.Content=null;toolScroll.Content=null;
+                    scene.Children.Add(topCards);scene.Children.Add(chrome);
+                    nativeLocationCard.Visibility=Visibility.Collapsed;
+                    move.Visibility=resize.Visibility=Visibility.Visible;
+                    chrome.Width=double.NaN;chrome.Margin=floatingMargin;chrome.ContextMenu=toolbarMenu;
+                    chrome.LayoutTransform=new ScaleTransform(controlScale,controlScale);
+                    topCards.Width=408;topCards.Margin=new Thickness(24);target.ColumnDefinitions[1].MaxWidth=112;
+                }
                 // Keep labels and controls usable in a narrow gutter. All items can be
                 // reached by either scrollbar; the viewport itself never spills over the map.
                 bool narrow=width<270;
@@ -1614,8 +1658,8 @@ namespace ScumMiniMap {
                 headerBar.Padding=new Thickness(26,0,4,0);
                 headerBar.Height=bottom?Math.Min(40,lowerGutter*.32):48;
                 headerScroll.HorizontalScrollBarVisibility=width<174?ScrollBarVisibility.Auto:ScrollBarVisibility.Disabled;
-                footer.Visibility=bottom?Visibility.Collapsed:visible;
-                scroller.Margin=new Thickness(0,headerBar.Height,0,bottom?0:36);
+                footer.Visibility=native&&nativeLeft.Visibility==Visibility.Visible?Visibility.Collapsed:bottom?Visibility.Collapsed:visible;
+                scroller.Margin=new Thickness(0,headerBar.Height,0,footer.Visibility==Visibility.Visible?36:0);
                 sidebarToggle.Content=sidebarOpen?"›":"‹";
                 sidebarToggle.Tag=sidebarOpen?"tooltip:WpfCollapseSidebar":"tooltip:WpfExpandSidebar";
                 sidebarToggle.Width=Math.Min(24,width);sidebarToggle.Height=32;sidebarToggle.MinHeight=0;
@@ -1774,6 +1818,8 @@ if(followButton!=null) { followButton.Background=engine.WpfFollowing?WpfFieldThe
             targetTitle.Text=state.Target==null?"":state.Target.DisplayName;targetDetail.Text=state.RouteSummary;
             addTargetStop.Visibility=state.Target!=null&&!state.SquadNavigating?Visibility.Visible:Visibility.Collapsed;addTargetStop.IsEnabled=state.LocalRoute.Length<SquadState.MaximumStops;
             routePreviewCard.Visibility=state.LocalRoute.Length>0&&state.ActiveSquadRoute==null?Visibility.Visible:Visibility.Collapsed;
+            nativeLocationCard.Visibility=fullView && state.Bunker==null && state.Opacity==0 &&
+                targetCard.Visibility!=Visibility.Visible && routePreviewCard.Visibility!=Visibility.Visible?Visibility.Visible:Visibility.Collapsed;
             routePreviewTitle.Text=Localization.Get("OwnRoute")+" · "+Localization.Get(squad.Shared?"SquadRoute":"SoloRoute")+" · "+state.LocalRoute.Length+" / 16";routePreviewTitle.Foreground=squad.Shared?WpfFieldTheme.Cyan:WpfFieldTheme.Amber;routePreviewDetail.Text=state.OwnRouteSummary??"";
             string sector=compact.Position==null?"":DestinationSearch.Sector(MapWindow.ToMap(compact.Position));string locationLabel=compact.Location;
             if(sector.Length>0&&locationLabel.StartsWith(sector+" - ",StringComparison.Ordinal))locationLabel=locationLabel.Substring(sector.Length+3);

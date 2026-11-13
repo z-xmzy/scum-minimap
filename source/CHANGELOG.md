@@ -1,5 +1,9 @@
 ﻿# Changelog
 
+## [2.4.7] - 2026-11-13
+
+- Restore the native-map information cards and zoom/marker toolbar in the available margins.
+
 ## [2.4.6] - 2026-11-13
 
 - Dock the open sidebar in the native map margin and reserve a separate column when zoomed.

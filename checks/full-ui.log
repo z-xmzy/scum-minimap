@@ -342,16 +342,16 @@ PASS: Escape closes only the in-map menu before closing the map
 PASS: Outside click dismisses the in-map menu
 PASS: Dense POI workers publish only frozen visible-cell drawings to the UI
 PASS: Dense full-map composition uses bounded frozen tile images rather than replaying every icon
-Full-map composition average=81.9 ms
-Blank bitmap readback=82.0 ms; map scene overhead=-0.1 ms
+Full-map composition average=83.6 ms
+Blank bitmap readback=82.8 ms; map scene overhead=0.9 ms
 PASS: Full-map scene work stays responsive above the independently measured blank readback cost
 PASS: GPS marker is published immediately without invalidating unrelated zone caches
 PASS: Pending road calculation still shows direct distance and an estimated travel time
 PASS: Direct-only navigation retains its estimated travel time
 Dense map redraw average=0.0 ms
 PASS: Dense-map redraws reuse retained graphics without rebuilding on the UI thread
-PASS: A POI toggle records its first updated map frame promptly: 9 ms
-POI toggle through completed scene=118 ms
+PASS: A POI toggle records its first updated map frame promptly: 8 ms
+POI toggle through completed scene=128 ms
 PASS: POI changes finish without the reported two-second delay
 PASS: A real click bypasses production refresh throttling even immediately after another refresh
 PASS: Wheel zoom updates the camera even while a full refresh is throttled

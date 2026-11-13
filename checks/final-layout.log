@@ -11,4 +11,6 @@ PASS 1440x900 native=True open=True sidebar=1170,0,270,900 map=270,0,900,900
 PASS 1280x820 native=False open=True sidebar=940,0,340,820 map=0,0,940,820
 PASS 1280x820 native=False open=False sidebar=1256,0,24,820 map=0,0,1256,820
 PASS 1280x820 native=True open=True sidebar=1050,0,230,820 map=230,0,820,820
+PASS hover, mark current, zoom-in and reset buttons
+PASS 1280x820 native=True open=True sidebar=1050,0,230,820 map=230,0,820,820
 原图侧栏.png

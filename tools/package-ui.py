@@ -3,7 +3,7 @@ from zipfile import ZipFile,ZIP_DEFLATED,ZIP_STORED
 import hashlib
 r=Path(__file__).resolve().parents[1]
 root=r/'package/SCUM-MiniMap'
-part=r/'SCUM-MiniMap-2.4.6-ui.part'
+part=r/'SCUM-MiniMap-2.4.7-ui.part'
 with ZipFile(part,'w',ZIP_DEFLATED,compresslevel=4) as z:
     for p in sorted(root.rglob('*')):
         if not p.is_file():continue

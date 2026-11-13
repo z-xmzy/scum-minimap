@@ -42,13 +42,25 @@ class WpfShowcaseHarness {
                 double vw=grid.ActualWidth,vh=grid.ActualHeight;if(Math.Abs(vw-w)>2||Math.Abs(vh-h)>2)throw new Exception("fixture dimensions "+vw+"x"+vh);
                 bool hasSpace=w!=h||!native;
                 bool shown=hasSpace&&open;
-                if(side.IsVisible!=shown||zoom.IsVisible==native||cards.IsVisible==native||toggle.IsVisible!=hasSpace)throw new Exception("visibility "+w+"x"+h);
+                if(side.IsVisible!=shown||zoom.IsVisible!=hasSpace||cards.IsVisible!=hasSpace||toggle.IsVisible!=hasSpace)throw new Exception("visibility "+w+"x"+h);
                 var corner=shelf.TranslatePoint(new Point(),grid);
                 var region=new Rect(corner,new Size(shelf.ActualWidth,shelf.ActualHeight));
                 double size=Math.Min(vw,vh);
                 var mapBox=native?new Rect((vw-size)/2,(vh-size)/2,size,size):new Rect(0,0,map.ActualWidth,map.ActualHeight);
                 Rect overlap=Rect.Intersect(region,mapBox);
                 if(hasSpace&&(!overlap.IsEmpty && overlap.Width*overlap.Height>.001))throw new Exception("sidebar overlap "+overlap);
+                if(native&&hasSpace) {
+                    var idle=(Border)Get(runtime,"nativeLocationCard");
+                    if(!idle.IsVisible||String.IsNullOrWhiteSpace(((TextBlock)idle.Child).Text))throw new Exception("no location");
+                    var widgets=new List<FrameworkElement>{idle,zoom};
+                    widgets.AddRange(Children(tactical).OfType<Button>().Where(q=>new[]{"text:MarkerCurrent","tooltip:ControlZoomIn","tooltip:ControlZoomOut","text:WpfFollowPlayer"}.Contains(q.Tag as string)));
+                    if(widgets.Count!=6)throw new Exception("missing toolbar action "+widgets.Count);
+                    foreach(var widget in widgets) {
+                        var box=new Rect(widget.TranslatePoint(new Point(0,0),grid),widget.RenderSize);
+                        var cross=Rect.Intersect(box,mapBox);
+                        if(!widget.IsVisible||box.Width<1||box.Height<1||(!cross.IsEmpty&&cross.Width*cross.Height>.001))throw new Exception("left widget "+widget.Tag+" "+box+" map="+mapBox);
+                    }
+                }
                 if(native&&(Math.Abs(map.ActualWidth-vw)>1 ||(int)Get(Get(map,"State"),"Opacity")!=0))throw new Exception("native camera changed");
                 if(shown&&(region.Width<40||region.Height<40))throw new Exception("controls clipped");
                 Console.WriteLine("PASS "+w+"x"+h+" native="+native+" open="+open+" sidebar="+region+" map="+mapBox);
@@ -60,6 +72,17 @@ class WpfShowcaseHarness {
             Call(runtime,"ToggleTactical",false);Call(runtime,"ToggleTactical",false);check(1440,900,true,true);
             Call(engine,"WpfZoomTo",true,1.45f);Call(runtime,"RefreshCamera");check(1280,820,false,true);
             click();check(1280,820,false,false);click();Call(engine,"WpfZoomTo",true,1f);Call(runtime,"RefreshCamera");check(1280,820,true,true);
+            Call(runtime,"ShowHoverDetails","地点信息");if(!((Border)Get(runtime,"hoverCard")).IsVisible)throw new Exception("hover");
+            Call(runtime,"ShowHoverDetails","");
+            var mark=Children(tactical).OfType<Button>().Single(q=>(q.Tag as string)=="text:MarkerCurrent");
+            int count=((Array)Call(engine,"WpfSavedMarkers")).Length;
+            mark.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            if(((Array)Call(engine,"WpfSavedMarkers")).Length!=count+1)throw new Exception("mark current");
+            var plus=Children(tactical).OfType<Button>().Single(q=>(q.Tag as string)=="tooltip:ControlZoomIn");
+            plus.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));for(int i=0;i<30;i++)Pump();
+            if((float)Get(map,"State").GetType().GetField("Zoom",Flags).GetValue(Get(map,"State"))<=1)throw new Exception("zoom in click");
+            zoom.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));for(int i=0;i<10;i++)Pump();
+            Console.WriteLine("PASS hover, mark current, zoom-in and reset buttons");check(1280,820,true,true);
             Shot(tactical,Path.Combine(output,"原图侧栏.png"));
         }finally{((IDisposable)runtime).Dispose();}
     }
