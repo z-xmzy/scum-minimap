@@ -1,0 +1,224 @@
+PASS: Member colors agree across viewers and group prefixes
+PASS: Different synthetic members have different assigned colors
+PASS: Fresh connection identities retain the member's assigned color
+PASS: Assigned member color survives a profile reload without connecting to a relay
+PASS: Different profiles receive separate persistent member colors
+PASS: Personal GPS connector and retained path, verified, unverified and pending squad routes have equal thickness: False
+PASS: Unverified squad routing retains dashed guidance: False
+PASS: Personal GPS connector and retained path, verified, unverified and pending squad routes have equal thickness: True
+PASS: Unverified squad routing retains dashed guidance: True
+PASS: Compact Circle guidance ignores long repeated GPS/route names: visible markers
+PASS: Compact Circle retains GPS/route symbols
+PASS: Tactical Circle retains full GPS and route names
+PASS: Compact Circle selected destination keeps its ring without a text box
+PASS: Tactical Circle selected destination retains its name
+PASS: Compact Circle selected destination ring remains visible
+PASS: Compact Circle guidance ignores long repeated GPS/route names: edge arrows
+PASS: Compact Circle retains GPS/route direction arrows
+PASS: Compact Circle selected destination keeps its ring without a text box
+PASS: Tactical Circle selected destination retains its name
+PASS: Compact Circle selected destination ring remains visible
+PASS: Compact Square guidance ignores long repeated GPS/route names: visible markers
+PASS: Compact Square retains GPS/route symbols
+PASS: Tactical Square retains full GPS and route names
+PASS: Compact Square selected destination keeps its ring without a text box
+PASS: Tactical Square selected destination retains its name
+PASS: Compact Square selected destination ring remains visible
+PASS: Compact Square guidance ignores long repeated GPS/route names: edge arrows
+PASS: Compact Square retains GPS/route direction arrows
+PASS: Compact Square selected destination keeps its ring without a text box
+PASS: Tactical Square selected destination retains its name
+PASS: Compact Square selected destination ring remains visible
+PASS: Long teammate edge names stay within one line beside the direction arrow
+PASS: Save location starts in the name field with Save disabled
+PASS: Save location name exposes its label and editable value to assistive tools
+PASS: Save location exposes a native automation Invoke action
+PASS: Whitespace and Enter cannot save an empty location
+PASS: A nonempty location name enables Save
+PASS: Enter saves one trimmed location and closes the dialog
+PASS: Save location preserves the original clicked coordinates
+PASS: Save-location fixture cleans its persisted synthetic marker
+PASS: A failed location save retains the name and dialog without committing a marker
+PASS: Cancel after a failed save leaves saved locations unchanged
+PASS: Escape cancels a typed location without saving
+PASS: Saving current location stays disabled until a position is available
+PASS: Actual Save location modal focuses the field, protects game input, saves on click and releases input protection
+PASS: Actual-modal fixture removes its saved synthetic marker
+PASS: Save location controls fit with simulated UI magnification: 1.5
+PASS: Save location controls fit with simulated UI magnification: 2
+PASS: Search query has a descriptive accessible name
+PASS: Unmatched search shows an empty results list
+PASS: Arrow keys and Enter on empty search preserve the dialog without selecting a result
+PASS: Search keyboard selection recovers when results return
+PASS: Search result announces its destination and detail instead of a panel type
+PASS: First Escape dismisses a settings dropdown and keeps Settings open
+PASS: Focused dropdown has a visible focus outline
+PASS: Focused slider has a visible focus outline
+PASS: Escape closes Settings after its dropdown has been dismissed
+PASS: Diagnostic settings cannot register an automatic startup task
+PASS: Automatic launch has an accessible text label
+PASS: Automatic launch label wraps in narrow settings windows
+PASS: General no longer mixes in tracking and zoom numbers
+PASS: Tracking numbers expose labels to assistive tools in their own category
+PASS: Tracking numbers retain their valid-range descriptions
+PASS: Shortcuts category directly exposes the binding editor without a duplicate wizard window
+PASS: Shortcut buttons identify both the action and its current binding
+PASS: Shortcuts expose editable SCUM map, chat and copy bindings
+PASS: Map key capture applies the chosen binding through the settings UI
+PASS: Map binding label refreshes after capture
+PASS: Converted dropdown retains its disabled state and associated label
+PASS: Search actions fit without overlap: English
+PASS: Search distances explicitly identify direct distance: English
+PASS: Save location actions fit without overlap: English
+PASS: Linked squad/navigation tabs fit the minimum window width: English
+PASS: Automatic launch uses the selected language and remains safe in diagnostics: English
+PASS: Automatic launch label fits narrow settings: English
+PASS: Search actions fit without overlap: SpanishArgentina
+PASS: Search distances explicitly identify direct distance: SpanishArgentina
+PASS: Save location actions fit without overlap: SpanishArgentina
+PASS: Linked squad/navigation tabs fit the minimum window width: SpanishArgentina
+PASS: Automatic launch uses the selected language and remains safe in diagnostics: SpanishArgentina
+PASS: Automatic launch label fits narrow settings: SpanishArgentina
+PASS: Search actions fit without overlap: French
+PASS: Search distances explicitly identify direct distance: French
+PASS: Save location actions fit without overlap: French
+PASS: Linked squad/navigation tabs fit the minimum window width: French
+PASS: Automatic launch uses the selected language and remains safe in diagnostics: French
+PASS: Automatic launch label fits narrow settings: French
+PASS: Search actions fit without overlap: German
+PASS: Search distances explicitly identify direct distance: German
+PASS: Save location actions fit without overlap: German
+PASS: Linked squad/navigation tabs fit the minimum window width: German
+PASS: Automatic launch uses the selected language and remains safe in diagnostics: German
+PASS: Automatic launch label fits narrow settings: German
+PASS: Search actions fit without overlap: Dutch
+PASS: Search distances explicitly identify direct distance: Dutch
+PASS: Save location actions fit without overlap: Dutch
+PASS: Linked squad/navigation tabs fit the minimum window width: Dutch
+PASS: Automatic launch uses the selected language and remains safe in diagnostics: Dutch
+PASS: Automatic launch label fits narrow settings: Dutch
+PASS: Search actions fit without overlap: Russian
+PASS: Search distances explicitly identify direct distance: Russian
+PASS: Save location actions fit without overlap: Russian
+PASS: Linked squad/navigation tabs fit the minimum window width: Russian
+PASS: Automatic launch uses the selected language and remains safe in diagnostics: Russian
+PASS: Automatic launch label fits narrow settings: Russian
+PASS: Search actions fit without overlap: Chinese
+PASS: Search distances explicitly identify direct distance: Chinese
+PASS: Save location actions fit without overlap: Chinese
+PASS: Linked squad/navigation tabs fit the minimum window width: Chinese
+PASS: Automatic launch uses the selected language and remains safe in diagnostics: Chinese
+PASS: Automatic launch label fits narrow settings: Chinese
+PASS: Search actions fit without overlap: Turkish
+PASS: Search distances explicitly identify direct distance: Turkish
+PASS: Save location actions fit without overlap: Turkish
+PASS: Linked squad/navigation tabs fit the minimum window width: Turkish
+PASS: Automatic launch uses the selected language and remains safe in diagnostics: Turkish
+PASS: Automatic launch label fits narrow settings: Turkish
+PASS: Search actions fit without overlap: Arabic
+PASS: Search distances explicitly identify direct distance: Arabic
+PASS: Save location actions fit without overlap: Arabic
+PASS: Linked squad/navigation tabs fit the minimum window width: Arabic
+PASS: Automatic launch uses the selected language and remains safe in diagnostics: Arabic
+PASS: Automatic launch label fits narrow settings: Arabic
+PASS: Search actions fit without overlap: Portuguese
+PASS: Search distances explicitly identify direct distance: Portuguese
+PASS: Save location actions fit without overlap: Portuguese
+PASS: Linked squad/navigation tabs fit the minimum window width: Portuguese
+PASS: Automatic launch uses the selected language and remains safe in diagnostics: Portuguese
+PASS: Automatic launch label fits narrow settings: Portuguese
+PASS: Search actions fit without overlap: Korean
+PASS: Search distances explicitly identify direct distance: Korean
+PASS: Save location actions fit without overlap: Korean
+PASS: Linked squad/navigation tabs fit the minimum window width: Korean
+PASS: Automatic launch uses the selected language and remains safe in diagnostics: Korean
+PASS: Automatic launch label fits narrow settings: Korean
+PASS: Search actions fit without overlap: Polish
+PASS: Search distances explicitly identify direct distance: Polish
+PASS: Save location actions fit without overlap: Polish
+PASS: Linked squad/navigation tabs fit the minimum window width: Polish
+PASS: Automatic launch uses the selected language and remains safe in diagnostics: Polish
+PASS: Automatic launch label fits narrow settings: Polish
+PASS: Search actions fit without overlap: PortuguesePortugal
+PASS: Search distances explicitly identify direct distance: PortuguesePortugal
+PASS: Save location actions fit without overlap: PortuguesePortugal
+PASS: Linked squad/navigation tabs fit the minimum window width: PortuguesePortugal
+PASS: Automatic launch uses the selected language and remains safe in diagnostics: PortuguesePortugal
+PASS: Automatic launch label fits narrow settings: PortuguesePortugal
+PASS: Search actions fit without overlap: Thai
+PASS: Search distances explicitly identify direct distance: Thai
+PASS: Save location actions fit without overlap: Thai
+PASS: Linked squad/navigation tabs fit the minimum window width: Thai
+PASS: Automatic launch uses the selected language and remains safe in diagnostics: Thai
+PASS: Automatic launch label fits narrow settings: Thai
+PASS: Search actions fit without overlap: ChineseTraditional
+PASS: Search distances explicitly identify direct distance: ChineseTraditional
+PASS: Save location actions fit without overlap: ChineseTraditional
+PASS: Linked squad/navigation tabs fit the minimum window width: ChineseTraditional
+PASS: Automatic launch uses the selected language and remains safe in diagnostics: ChineseTraditional
+PASS: Automatic launch label fits narrow settings: ChineseTraditional
+PASS: Search actions fit without overlap: Japanese
+PASS: Search distances explicitly identify direct distance: Japanese
+PASS: Save location actions fit without overlap: Japanese
+PASS: Linked squad/navigation tabs fit the minimum window width: Japanese
+PASS: Automatic launch uses the selected language and remains safe in diagnostics: Japanese
+PASS: Automatic launch label fits narrow settings: Japanese
+PASS: Search actions fit without overlap: Czech
+PASS: Search distances explicitly identify direct distance: Czech
+PASS: Save location actions fit without overlap: Czech
+PASS: Linked squad/navigation tabs fit the minimum window width: Czech
+PASS: Automatic launch uses the selected language and remains safe in diagnostics: Czech
+PASS: Automatic launch label fits narrow settings: Czech
+PASS: Search actions fit without overlap: Italian
+PASS: Search distances explicitly identify direct distance: Italian
+PASS: Save location actions fit without overlap: Italian
+PASS: Linked squad/navigation tabs fit the minimum window width: Italian
+PASS: Automatic launch uses the selected language and remains safe in diagnostics: Italian
+PASS: Automatic launch label fits narrow settings: Italian
+PASS: Search actions fit without overlap: Ukrainian
+PASS: Search distances explicitly identify direct distance: Ukrainian
+PASS: Save location actions fit without overlap: Ukrainian
+PASS: Linked squad/navigation tabs fit the minimum window width: Ukrainian
+PASS: Automatic launch uses the selected language and remains safe in diagnostics: Ukrainian
+PASS: Automatic launch label fits narrow settings: Ukrainian
+PASS: Search actions fit without overlap: Finnish
+PASS: Search distances explicitly identify direct distance: Finnish
+PASS: Save location actions fit without overlap: Finnish
+PASS: Linked squad/navigation tabs fit the minimum window width: Finnish
+PASS: Automatic launch uses the selected language and remains safe in diagnostics: Finnish
+PASS: Automatic launch label fits narrow settings: Finnish
+PASS: Search actions fit without overlap: Lithuanian
+PASS: Search distances explicitly identify direct distance: Lithuanian
+PASS: Save location actions fit without overlap: Lithuanian
+PASS: Linked squad/navigation tabs fit the minimum window width: Lithuanian
+PASS: Automatic launch uses the selected language and remains safe in diagnostics: Lithuanian
+PASS: Automatic launch label fits narrow settings: Lithuanian
+PASS: Search actions fit without overlap: Swahili
+PASS: Search distances explicitly identify direct distance: Swahili
+PASS: Save location actions fit without overlap: Swahili
+PASS: Linked squad/navigation tabs fit the minimum window width: Swahili
+PASS: Automatic launch uses the selected language and remains safe in diagnostics: Swahili
+PASS: Automatic launch label fits narrow settings: Swahili
+PASS: Search cannot add a route stop without a result
+PASS: Search adds its selected named location directly to the active route
+PASS: A stop added from search uses the existing automatic GPS navigation
+PASS: Ordinary GPS navigation immediately replaces route navigation and retains its editable stops
+PASS: Routes exposes Quickest, Shortest, Paved roads only and Walking modes
+PASS: Quickest changes the routing preference without removing stops
+PASS: Paved-only selection reaches the actual navigation engine
+PASS: Routing preference survives saving and loading the isolated profile
+PASS: Walking selection reaches the actual navigation engine
+PASS: Routes exposes removal of an individual named stop
+PASS: Removing an inactive local stop preserves the current manual GPS destination
+PASS: Squad pings are visibly unavailable without a connected group
+FAIL: Live route refresh preserves preset text and keyboard focus
+   在 SquadUiTests.Check(Boolean v, String n)
+   在 SquadUiTests.CheckSquadIntegration(Object runtime, String folder)
+   在 SquadUiTests.Main(String[] args)
+Squad UI tests failed
+At D:\codex\SCUM-MiniMap-2.4.4-ui\source\tests\Test-SquadUi.ps1:13 char:27
++ if($LASTEXITCODE -ne 0) { throw 'Squad UI tests failed' }
++                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (Squad UI tests failed:String) [], RuntimeException
+    + FullyQualifiedErrorId : Squad UI tests failed
+ 

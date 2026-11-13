@@ -1,4 +1,8 @@
-# Changelog
+﻿# Changelog
+
+## [2.4.4] - 2026-11-13
+
+- Refresh the map sidebar, search, display controls and settings hierarchy.
 
 ## [2.4.3] - 2026-11-12
 

@@ -4,7 +4,7 @@ $env:TMP=$env:TEMP
 New-Item -ItemType Directory -Path $env:TEMP -Force | Out-Null
 $root=Join-Path $PSScriptRoot 'source'
 $resources=Join-Path $root 'resources'
-$output=Join-Path $PSScriptRoot 'package/SCUM-MiniMap-World4/app'
+$output=Join-Path $PSScriptRoot 'package/SCUM-MiniMap/app'
 if (!(Test-Path -LiteralPath (Join-Path $output 'assets/map-tiles.bin'))) { throw 'Prepare the local app assets in app/ before building.' }
 # The complete existing bunker atlas is retained in this isolated app/assets directory.
 Copy-Item -LiteralPath (Join-Path $resources 'marker-icons\LICENSE.txt') -Destination (Join-Path $output 'Lucide-LICENSE.txt') -Force
@@ -13,9 +13,9 @@ $assetLines=@('map-tiles.bin','roads.bin' | ForEach-Object { $_+'='+(Get-FileHas
 [IO.File]::WriteAllLines($manifest,$assetLines,[Text.UTF8Encoding]::new($false))
 $sources=@(& (Join-Path $root 'scripts\Get-MiniMapSources.ps1'))
 $mainSource=Join-Path $root 'src\MiniMap.cs'
-$stamped=[IO.File]::ReadAllText($mainSource) -replace '\[assembly:\s*AssemblyVersion\("[^"]+"\)\]','[assembly: AssemblyVersion("2.4.3.0")]'
-$stamped=$stamped -replace '\[assembly:\s*AssemblyFileVersion\("[^"]+"\)\]','[assembly: AssemblyFileVersion("2.4.3.0")]'
-$stamped=$stamped -replace '\[assembly:\s*AssemblyInformationalVersion\("[^"]+"\)\]','[assembly: AssemblyInformationalVersion("2.4.3-local-world4")]'
+$stamped=[IO.File]::ReadAllText($mainSource) -replace '\[assembly:\s*AssemblyVersion\("[^"]+"\)\]','[assembly: AssemblyVersion("2.4.4.0")]'
+$stamped=$stamped -replace '\[assembly:\s*AssemblyFileVersion\("[^"]+"\)\]','[assembly: AssemblyFileVersion("2.4.4.0")]'
+$stamped=$stamped -replace '\[assembly:\s*AssemblyInformationalVersion\("[^"]+"\)\]','[assembly: AssemblyInformationalVersion("2.4.4-local-map")]'
 $stampedPath=Join-Path $PSScriptRoot 'checks\MiniMap.build.cs'
 [IO.File]::WriteAllText($stampedPath,$stamped,[Text.UTF8Encoding]::new($false))
 $sources=@($sources | ForEach-Object { if([IO.Path]::GetFullPath($_) -eq $mainSource) { $stampedPath } else { $_ } })
@@ -39,7 +39,7 @@ if($LASTEXITCODE -ne 0){throw 'Fine raster compilation failed.'}
 $exe=Join-Path $output 'SkynettMiniMap.exe'
 & (Join-Path $framework 'csc.exe') /nologo /codepage:65001 /optimize+ /target:winexe /platform:x64 /define:MINIMAP_LOCAL @embedded "/out:$exe" @references "/win32icon:$resources\App-Icon.ico" "/win32manifest:$root\packaging\MiniMap.manifest" @sources
 if($LASTEXITCODE -ne 0) { throw 'Candidate compilation failed.' }
-$package=@('version=2.4.3',('SkynettMiniMap.exe='+(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()))+@($assetLines | ForEach-Object { 'assets/'+$_ })
+$package=@('version=2.4.4',('SkynettMiniMap.exe='+(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()))+@($assetLines | ForEach-Object { 'assets/'+$_ })
 [IO.File]::WriteAllLines((Join-Path $output 'package.txt'),$package,[Text.UTF8Encoding]::new($false))
 & powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File (Join-Path $root 'scripts\Test-PackagedMiniMap.ps1') -AssemblyPath $exe
 if($LASTEXITCODE -ne 0) { throw 'Candidate packaged check failed.' }

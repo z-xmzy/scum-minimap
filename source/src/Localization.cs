@@ -6586,7 +6586,7 @@ public static readonly Dictionary<string, string> StringsEsAr = new Dictionary<s
             { "HeaderSettings", "SKYNETT / 设置 v{0}" },
             { "HeaderMapZones", "SKYNETT / 地图区域" },
             { "HeaderWaypoint", "SKYNETT / 导航路标" },
-            { "SecGeneral", "常规 && 指南" },
+            { "SecGeneral", "常规与指南" },
             { "SecMapZones", "地图与区域" },
             { "SecAppearance", "外观设置" },
             { "SecToolsShortcuts", "工具与快捷键" },

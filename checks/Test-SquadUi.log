@@ -1,5 +1,0 @@
-D:\codex\SCUM-MiniMap-world4-release\source\tests\Test-SquadUi.ps1 : Cannot process command because of one or more miss
-ing mandatory parameters: Executable OutputDirectory.
-    + CategoryInfo          : InvalidArgument: (:) [Test-SquadUi.ps1], ParentContainsErrorRecordException
-    + FullyQualifiedErrorId : MissingMandatoryParameter,Test-SquadUi.ps1
- 
