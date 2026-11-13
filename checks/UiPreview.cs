@@ -21,7 +21,7 @@ class WpfShowcaseHarness {
         window.ShowActivated=false;window.WindowStartupLocation=WindowStartupLocation.Manual;window.Left=-32000;window.Top=-32000;window.Show();window.UpdateLayout();for(int i=0;i<5;i++)Pump();window.UpdateLayout();
         var bitmap=new RenderTargetBitmap((int)(window.ActualWidth*scale),(int)(window.ActualHeight*scale),96*scale,96*scale,PixelFormats.Pbgra32);bitmap.Render(window);var encoder=new PngBitmapEncoder();encoder.Frames.Add(BitmapFrame.Create(bitmap));using(var stream=File.Create(file))encoder.Save(stream);window.Hide();Console.WriteLine(Path.GetFileName(file));
     }
-    [STAThread]static void Main(string[] args) {
+    [STAThread]static int Main(string[] args) {try {Run(args);return 0;}catch(Exception e){while(e.InnerException!=null)e=e.InnerException;Console.WriteLine(e.GetType().Name+" "+e.Message+" "+e.StackTrace);return 1;}} static void Run(string[] args){
         string output=Path.GetFullPath(args[1]),profile=Path.Combine(output,"isolated-profile");Directory.CreateDirectory(profile);File.WriteAllText(Path.Combine(profile,"settings.ini"),"Welcomed=True\nLanguage="+args[2]+"\nWpfDefaultsRevision=1\n");
         var assembly=Assembly.LoadFrom(Path.GetFullPath(args[0]));var runtimeType=assembly.GetType("ScumMiniMap.WpfFieldConsoleRuntime");object runtime=Activator.CreateInstance(runtimeType,Flags,null,new object[]{profile,true},null);var peers=new List<IDisposable>();
         try {
@@ -34,27 +34,34 @@ class WpfShowcaseHarness {
             var side=(FrameworkElement)Get(runtime,"sidebar");var zoom=(Button)Get(runtime,"zoomResetButton");
             var card=(FrameworkElement)Get(runtime,"targetCard");var cards=(FrameworkElement)card.Parent;
             var map=(FrameworkElement)Get(runtime,"tacticalMap");
-            Action<bool,string> check=(open,msg)=>{
-                Pump();tactical.UpdateLayout();
-                var column=((Grid)tactical.Content).ColumnDefinitions[1].ActualWidth;
-                if(side.IsVisible!=open||zoom.IsVisible!=open||cards.IsVisible!=open||!toggle.IsVisible||
-                    (open?column!=340:column!=0)||Math.Abs(map.ActualWidth-((Grid)tactical.Content).ActualWidth)>1)
-                    throw new Exception(msg+" sidebar="+side.IsVisible+" zoom="+zoom.IsVisible+" cards="+cards.IsVisible+" column="+column);
-                Console.WriteLine("PASS "+msg+" button="+toggle.ActualWidth+"x"+toggle.ActualHeight);
+            var grid=(Grid)tactical.Content;var shelf=(Grid)toggle.Parent;
+            Action<int,int,bool,bool> check=(w,h,native,open)=>{
+                tactical.MinWidth=0;tactical.MinHeight=0;tactical.MaxWidth=4000;tactical.MaxHeight=4000;
+                grid.Width=w;grid.Height=h;tactical.Width=w;tactical.Height=h;Pump();tactical.UpdateLayout();Pump();tactical.UpdateLayout();
+                grid.Measure(new Size(w,h));grid.Arrange(new Rect(0,0,w,h));grid.UpdateLayout();
+                double vw=grid.ActualWidth,vh=grid.ActualHeight;if(Math.Abs(vw-w)>2||Math.Abs(vh-h)>2)throw new Exception("fixture dimensions "+vw+"x"+vh);
+                bool hasSpace=w!=h||!native;
+                bool shown=hasSpace&&open;
+                if(side.IsVisible!=shown||zoom.IsVisible==native||cards.IsVisible==native||toggle.IsVisible!=hasSpace)throw new Exception("visibility "+w+"x"+h);
+                var corner=shelf.TranslatePoint(new Point(),grid);
+                var region=new Rect(corner,new Size(shelf.ActualWidth,shelf.ActualHeight));
+                double size=Math.Min(vw,vh);
+                var mapBox=native?new Rect((vw-size)/2,(vh-size)/2,size,size):new Rect(0,0,map.ActualWidth,map.ActualHeight);
+                Rect overlap=Rect.Intersect(region,mapBox);
+                if(hasSpace&&(!overlap.IsEmpty && overlap.Width*overlap.Height>.001))throw new Exception("sidebar overlap "+overlap);
+                if(native&&(Math.Abs(map.ActualWidth-vw)>1 ||(int)Get(Get(map,"State"),"Opacity")!=0))throw new Exception("native camera changed");
+                if(shown&&(region.Width<40||region.Height<40))throw new Exception("controls clipped");
+                Console.WriteLine("PASS "+w+"x"+h+" native="+native+" open="+open+" sidebar="+region+" map="+mapBox);
             };
             Action click=()=>toggle.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            check(false,"open 1x, full viewport");
-            var state=Get(map,"State");if((int)Get(state,"Opacity")!=0)throw new Exception("1x base map opacity");
-            Call(runtime,"ShowHoverDetails","test");if(((FrameworkElement)Get(runtime,"hoverCard")).IsVisible)throw new Exception("Hover card covered native map");
-            Call(runtime,"ShowHoverDetails","");click();check(true,"manually open");Call(runtime,"Refresh");check(true,"poll preserves user action");
-            Call(runtime,"ToggleTactical",false);Call(runtime,"ToggleTactical",false);check(false,"reopen at 1x");
-            Call(engine,"WpfZoomTo",true,1.45f);Call(runtime,"RefreshCamera");check(true,"zoom in");
-            click();Pump();if(side.IsVisible||!zoom.IsVisible)throw new Exception("Zoom sidebar preference");
-            Call(engine,"WpfZoomTo",true,1f);Call(runtime,"RefreshCamera");check(false,"reset zoom");
-            Call(engine,"WpfZoomTo",true,1.45f);Call(runtime,"RefreshCamera");Pump();if(side.IsVisible||!zoom.IsVisible)throw new Exception("Forgot zoom sidebar preference");
-            Call(engine,"WpfZoomTo",true,1f);Call(runtime,"RefreshCamera");check(false,"second reset");
-            tactical.WindowState=WindowState.Normal;tactical.Width=1280;tactical.Height=820;
-            Shot(tactical,Path.Combine(output,"原图模式.png"));
+            check(1920,1080,true,true);check(1280,820,true,true);check(800,600,true,true);check(1080,1920,true,true);
+            check(900,900,true,true);check(1440,900,true,true);click();check(1440,900,true,false);
+            Call(runtime,"Refresh");check(1440,900,true,false);click();check(1440,900,true,true);
+            Call(runtime,"ToggleTactical",false);Call(runtime,"ToggleTactical",false);check(1440,900,true,true);
+            Call(engine,"WpfZoomTo",true,1.45f);Call(runtime,"RefreshCamera");check(1280,820,false,true);
+            click();check(1280,820,false,false);click();Call(engine,"WpfZoomTo",true,1f);Call(runtime,"RefreshCamera");check(1280,820,true,true);
+            Shot(tactical,Path.Combine(output,"原图侧栏.png"));
         }finally{((IDisposable)runtime).Dispose();}
     }
 }
+

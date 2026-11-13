@@ -1,5 +1,9 @@
 ﻿# Changelog
 
+## [2.4.6] - 2026-11-13
+
+- Dock the open sidebar in the native map margin and reserve a separate column when zoomed.
+
 ## [2.4.5] - 2026-11-13
 
 - Keep map panels folded when the native game map is visible at 1×.

@@ -1,8 +1,0 @@
-PASS open 1x, full viewport button=24x36
-PASS manually open button=36x36
-PASS poll preserves user action button=36x36
-PASS reopen at 1x button=24x36
-PASS zoom in button=36x36
-PASS reset zoom button=24x36
-PASS second reset button=24x36
-原图模式.png

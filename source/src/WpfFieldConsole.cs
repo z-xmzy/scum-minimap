@@ -1508,7 +1508,7 @@ namespace ScumMiniMap {
                 var root=new MenuItem { Header=Localization.Get("ControlAdminCommands") };
                 WpfMapSurface.AddAdminContextItems(root.Items,actions);return root;
             };
-            // The sidebar overlays the full monitor viewport; toggling it must not move the camera.
+            // Native-map geometry spans both columns; the software map uses the unobstructed column.
             var scene=new Grid();Grid.SetColumnSpan(scene,2);scene.Children.Add(tacticalMap);
             var contextLayer=new Canvas();tacticalMap.ContextHost=contextLayer;Grid.SetColumnSpan(contextLayer,2);Panel.SetZIndex(contextLayer,200);grid.Children.Add(contextLayer);
             window.PreviewMouseDown+=(s,e)=> { if(tacticalMap.DismissContextOutside(e.GetPosition(contextLayer))&&e.ChangedButton==MouseButton.Left)e.Handled=true; };
@@ -1552,13 +1552,13 @@ namespace ScumMiniMap {
             var resize=new Thumb { Width=12,Margin=new Thickness(6,0,0,0),Cursor=Cursors.SizeNWSE,Tag="tooltip:WpfResizeControls" };DockPanel.SetDock(resize,Dock.Right);toolbar.Children.Add(resize);toolbar.Children.Add(controls);
             var chrome=WpfFieldTheme.Card(toolbar,new Thickness(8));chrome.HorizontalAlignment=HorizontalAlignment.Left;chrome.VerticalAlignment=VerticalAlignment.Bottom;chrome.Margin=new Thickness(24);scene.Children.Add(chrome);grid.Children.Add(scene);
             double controlScale=1;bool sidebarOpen=true;
-            Action clampControls=()=> { chrome.Margin=new Thickness(Math.Max(8,Math.Min(chrome.Margin.Left,Math.Max(8,scene.ActualWidth-(sidebarOpen?340:0)-chrome.ActualWidth*controlScale-8))),0,0,Math.Max(8,Math.Min(chrome.Margin.Bottom,Math.Max(8,scene.ActualHeight-chrome.ActualHeight*controlScale-8)))); };
+            Action clampControls=()=> { chrome.Margin=new Thickness(Math.Max(8,Math.Min(chrome.Margin.Left,Math.Max(8,scene.ActualWidth-chrome.ActualWidth*controlScale-8))),0,0,Math.Max(8,Math.Min(chrome.Margin.Bottom,Math.Max(8,scene.ActualHeight-chrome.ActualHeight*controlScale-8)))); };
             move.DragDelta+=(s,e)=> { chrome.Margin=new Thickness(chrome.Margin.Left+e.HorizontalChange,0,0,chrome.Margin.Bottom-e.VerticalChange);clampControls(); };
-            resize.DragDelta+=(s,e)=> { double available=Math.Max(.7,(scene.ActualWidth-(sidebarOpen?340:0)-16)/Math.Max(1,chrome.ActualWidth));controlScale=Math.Max(.7,Math.Min(Math.Min(1.6,available),controlScale+e.HorizontalChange/400));chrome.LayoutTransform=new ScaleTransform(controlScale,controlScale);chrome.UpdateLayout();clampControls(); };
+            resize.DragDelta+=(s,e)=> { double available=Math.Max(.7,(scene.ActualWidth-16)/Math.Max(1,chrome.ActualWidth));controlScale=Math.Max(.7,Math.Min(Math.Min(1.6,available),controlScale+e.HorizontalChange/400));chrome.LayoutTransform=new ScaleTransform(controlScale,controlScale);chrome.UpdateLayout();clampControls(); };
             chrome.SizeChanged+=(s,e)=>clampControls();scene.SizeChanged+=(s,e)=>clampControls();
             var toolbarMenu=new ContextMenu();var resetControls=new MenuItem { Header=Localization.Get("WpfResetControls") };toolbarMenu.Opened+=(s,e)=>resetControls.Header=Localization.Get("WpfResetControls");resetControls.Click+=(s,e)=> { controlScale=1;chrome.LayoutTransform=Transform.Identity;chrome.Margin=new Thickness(24);clampControls(); };toolbarMenu.Items.Add(resetControls);chrome.ContextMenu=toolbarMenu;
             sidebar=new StackPanel { Margin=new Thickness(22,18,22,24) };var scroller=new ScrollViewer { Content=sidebar,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled,Background=WpfFieldTheme.Panel,Margin=new Thickness(0,64,0,36) };Grid.SetColumn(scroller,1);grid.Children.Add(scroller);window.Content=grid;
-            var sidebarToggle=new Button {Content="›",Background=WpfFieldTheme.Panel,Foreground=WpfFieldTheme.Ink};sidebarToggle.Width=36;sidebarToggle.Height=36;sidebarToggle.MinHeight=36;sidebarToggle.Padding=new Thickness(0);sidebarToggle.HorizontalAlignment=HorizontalAlignment.Right;sidebarToggle.VerticalAlignment=VerticalAlignment.Top;sidebarToggle.Margin=new Thickness(12,12,352,0);sidebarToggle.ToolTip=Localization.Get("SidebarTitle");System.Windows.Automation.AutomationProperties.SetName(sidebarToggle,Localization.Get("SidebarTitle"));Grid.SetColumnSpan(sidebarToggle,2);grid.Children.Add(sidebarToggle);
+            var sidebarToggle=new Button {Content="›",Background=WpfFieldTheme.Panel,Foreground=WpfFieldTheme.Ink};sidebarToggle.Width=36;sidebarToggle.Height=36;sidebarToggle.MinHeight=36;sidebarToggle.Padding=new Thickness(0);sidebarToggle.HorizontalAlignment=HorizontalAlignment.Right;sidebarToggle.VerticalAlignment=VerticalAlignment.Top;sidebarToggle.Margin=new Thickness(0,12,0,0);sidebarToggle.ToolTip=Localization.Get("SidebarTitle");System.Windows.Automation.AutomationProperties.SetName(sidebarToggle,Localization.Get("SidebarTitle"));Grid.SetColumnSpan(sidebarToggle,2);grid.Children.Add(sidebarToggle);
             // At 1x the game supplies the map beneath this transparent overlay. Keep chrome inside the sidebar.
             var headerActions=new StackPanel { Orientation=Orientation.Horizontal,VerticalAlignment=VerticalAlignment.Center };
             var settings=WpfFieldTheme.Button("\uE713",ShowSettings);settings.FontFamily=new FontFamily("Segoe MDL2 Assets");settings.FontSize=17;settings.Tag="tooltip:Settings";headerActions.Children.Add(settings);
@@ -1569,32 +1569,66 @@ namespace ScumMiniMap {
             foreach(Button action in headerActions.Children) {
                 action.Width=34;action.Height=34;action.MinHeight=34;action.Padding=new Thickness(0);action.Margin=new Thickness(2,0,0,0);action.Background=Brushes.Transparent;
             }
-            var mast=new DockPanel();DockPanel.SetDock(headerActions,Dock.Right);mast.Children.Add(headerActions);mast.Children.Add(WpfFieldTheme.Brand());
+            var mast=new DockPanel();DockPanel.SetDock(headerActions,Dock.Right);mast.Children.Add(headerActions);var brand=WpfFieldTheme.Brand();mast.Children.Add(brand);
             var headerBar=new Border { Height=64,Padding=new Thickness(18,0,12,0),BorderBrush=WpfFieldTheme.Line,BorderThickness=new Thickness(0,0,0,1),
                 Background=WpfFieldTheme.Ground,VerticalAlignment=VerticalAlignment.Top,Child=mast };Grid.SetColumn(headerBar,1);grid.Children.Add(headerBar);
             tacticalLocation=WpfFieldTheme.Text("",12,WpfFieldTheme.Muted);var footer=new Border { Height=36,Padding=new Thickness(22,0,22,0),BorderThickness=new Thickness(0,1,0,0),BorderBrush=WpfFieldTheme.Line,Background=WpfFieldTheme.Ground,VerticalAlignment=VerticalAlignment.Bottom,Child=tacticalLocation };Grid.SetColumn(footer,1);grid.Children.Add(footer);
-            bool? gameMap=null;bool gameTools=false,zoomSidebar=true;
-            Action applyChrome=()=> {
+            // The game draws its own centred square at 1x. Keep the overlay viewport
+            // full size for marker alignment; only use the unused side margin for controls.
+            bool? gameMap=null;
+            var shelf=new Grid { Background=WpfFieldTheme.Panel,ClipToBounds=true };
+            Grid.SetColumn(shelf,1);grid.Children.Add(shelf);
+            foreach(var item in new FrameworkElement[]{scroller,headerBar,footer,sidebarToggle}) {
+                grid.Children.Remove(item);Grid.SetColumn(item,0);Grid.SetColumnSpan(item,1);shelf.Children.Add(item);
+            }
+            scroller.Content=null;var scrollContent=new Grid();scrollContent.Children.Add(sidebar);
+            scroller.Content=scrollContent;
+            headerBar.Child=null;
+            var headerScroll=new ScrollViewer { Content=mast,VerticalScrollBarVisibility=ScrollBarVisibility.Disabled };
+            headerBar.Child=headerScroll;
+            Action arrange=()=> {
                 bool native=gameMap==true;
-                sidebarOpen=native?gameTools:zoomSidebar;
-                var panel=sidebarOpen?Visibility.Visible:Visibility.Collapsed;
-                scroller.Visibility=headerBar.Visibility=footer.Visibility=panel;
-                grid.ColumnDefinitions[1].Width=new GridLength(sidebarOpen?340:0);
-                chrome.Visibility=topCards.Visibility=native&&!gameTools?Visibility.Collapsed:Visibility.Visible;
+                double gutter=Math.Max(0,(grid.ActualWidth-Math.Min(grid.ActualWidth,grid.ActualHeight))/2);
+                double lowerGutter=Math.Floor(Math.Max(0,(grid.ActualHeight-grid.ActualWidth)/2));
+                bool bottom=native&&gutter<1&&lowerGutter>0;
+                double available=native&&!bottom?Math.Min(340,Math.Floor(gutter)):340;
+                double width=sidebarOpen?available:Math.Min(24,available);
+                grid.ColumnDefinitions[1].Width=new GridLength(bottom?0:width);
+                Grid.SetColumn(shelf,bottom?0:1);Grid.SetColumnSpan(shelf,bottom?2:1);
+                shelf.VerticalAlignment=bottom?VerticalAlignment.Bottom:VerticalAlignment.Stretch;
+                shelf.HorizontalAlignment=bottom?HorizontalAlignment.Right:HorizontalAlignment.Stretch;
+                shelf.Height=bottom?lowerGutter:double.NaN;shelf.Width=bottom?Math.Min(width,grid.ActualWidth):double.NaN;
+                Grid.SetColumnSpan(scene,native?2:1);
+                shelf.Visibility=width>0?Visibility.Visible:Visibility.Collapsed;
+                shelf.Background=sidebarOpen?WpfFieldTheme.Panel:Brushes.Transparent;
+                var visible=sidebarOpen?Visibility.Visible:Visibility.Collapsed;
+                scroller.Visibility=headerBar.Visibility=footer.Visibility=visible;
+                chrome.Visibility=topCards.Visibility=native?Visibility.Collapsed:Visibility.Visible;
+                // Keep labels and controls usable in a narrow gutter. All items can be
+                // reached by either scrollbar; the viewport itself never spills over the map.
+                bool narrow=width<270;
+                scroller.HorizontalScrollBarVisibility=narrow?ScrollBarVisibility.Auto:ScrollBarVisibility.Disabled;
+                sidebar.Margin=new Thickness(narrow?6:18,12,narrow?6:18,16);
+                scrollContent.MinWidth=narrow?220:0;
+                brand.Visibility=width>=315?Visibility.Visible:Visibility.Collapsed;
+                headerBar.Padding=new Thickness(26,0,4,0);
+                headerBar.Height=bottom?Math.Min(40,lowerGutter*.32):48;
+                headerScroll.HorizontalScrollBarVisibility=width<174?ScrollBarVisibility.Auto:ScrollBarVisibility.Disabled;
+                footer.Visibility=bottom?Visibility.Collapsed:visible;
+                scroller.Margin=new Thickness(0,headerBar.Height,0,bottom?0:36);
                 sidebarToggle.Content=sidebarOpen?"›":"‹";
                 sidebarToggle.Tag=sidebarOpen?"tooltip:WpfCollapseSidebar":"tooltip:WpfExpandSidebar";
-                sidebarToggle.Width=native&&!gameTools?24:36;
-                sidebarToggle.Margin=new Thickness(0,12,sidebarOpen?352:native?0:12,0);
-                RefreshLocalizedChrome(sidebarToggle);clampControls();
+                sidebarToggle.Width=Math.Min(24,width);sidebarToggle.Height=32;sidebarToggle.MinHeight=0;
+                sidebarToggle.HorizontalAlignment=HorizontalAlignment.Left;sidebarToggle.Margin=new Thickness(0,8,0,0);
+                RefreshLocalizedChrome(sidebarToggle);
+                if(!native)clampControls();
             };
+            grid.SizeChanged+=(sender,e)=>arrange();
             syncMapChrome=(native,opening)=> {
                 if(!opening && gameMap==native)return;
-                gameMap=native;gameTools=false;applyChrome();
+                gameMap=native;arrange();
             };
-            sidebarToggle.Click+=(s,e)=> {
-                if(gameMap==true)gameTools=!gameTools;else zoomSidebar=!zoomSidebar;
-                applyChrome();
-            };
+            sidebarToggle.Click+=(sender,e)=> {sidebarOpen=!sidebarOpen;arrange();};
             syncMapChrome(true,true);
             RefreshLocalizedChrome(grid);
             window.Closing+=(s,e)=> { if(!disposed&&!diagnostic) { e.Cancel=true;window.Hide();engine.WpfTactical(false);if(hudEnabled)hud.Show(); } };
