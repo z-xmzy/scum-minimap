@@ -1,5 +1,9 @@
 ﻿# Changelog
 
+## [2.4.5] - 2026-11-13
+
+- Keep map panels folded when the native game map is visible at 1×.
+
 ## [2.4.4] - 2026-11-13
 
 - Refresh the map sidebar, search, display controls and settings hierarchy.

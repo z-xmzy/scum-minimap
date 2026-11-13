@@ -1165,6 +1165,7 @@ namespace ScumMiniMap {
         Window settingsWindow;
         volatile bool settingsToggleOpen;
         WpfMapSurface tacticalMap,hudMap;
+        Action<bool,bool> syncMapChrome;
         StackPanel sidebar;
         Grid hudLayout;
         Border hudStatus;
@@ -1207,6 +1208,7 @@ namespace ScumMiniMap {
             RenderOptions.SetBitmapScalingMode(tacticalMap,BitmapScalingMode.Linear);
             if(cameraSettle==null) { cameraSettle=new DispatcherTimer(DispatcherPriority.Background,application.Dispatcher) { Interval=TimeSpan.FromMilliseconds(200) };cameraSettle.Tick+=(s,e)=> { if(disposed) { cameraSettle.Stop();return; }if(tacticalMap.PointerCameraActive)return;cameraSettle.Stop();EndCameraInteraction(); }; }
             cameraSettle.Stop();cameraSettle.Start();
+            syncMapChrome(tacticalMap.State.Bunker==null && tacticalMap.State.Opacity==0,false);
             SyncCameraControls(tacticalMap.State);tacticalMap.RequestRedraw();
         }
         float zoomTarget;
@@ -1485,7 +1487,7 @@ namespace ScumMiniMap {
             if(position) { window.Left=Math.Max(origin.X,Math.Min(window.Left,origin.X+width-window.Width));window.Top=Math.Max(origin.Y,Math.Min(window.Top,origin.Y+height-window.Height)); }
         }
         Window BuildTactical() {
-            var window=Window("SCUM MiniMap",1280,850);window.MinWidth=900;window.MinHeight=620;window.Topmost=true;window.ShowActivated=false;
+            var window=Window("SCUM MiniMap",1280,850);window.MinWidth=900;window.MinHeight=620;window.ResizeMode=ResizeMode.CanResize;window.Topmost=true;window.ShowActivated=false;
             bool solidTest=Program.IsTestBuild&&(Environment.GetCommandLineArgs().Any(arg=>string.Equals(arg,"--fast-tac-test",StringComparison.OrdinalIgnoreCase))||Environment.GetEnvironmentVariable("SCUM_MINIMAP_TAC_OPAQUE")=="1");
             window.AllowsTransparency=!solidTest;window.Background=solidTest?WpfFieldTheme.Ground:Brushes.Transparent;
             window.SourceInitialized+=(s,e)=> {
@@ -1556,7 +1558,7 @@ namespace ScumMiniMap {
             chrome.SizeChanged+=(s,e)=>clampControls();scene.SizeChanged+=(s,e)=>clampControls();
             var toolbarMenu=new ContextMenu();var resetControls=new MenuItem { Header=Localization.Get("WpfResetControls") };toolbarMenu.Opened+=(s,e)=>resetControls.Header=Localization.Get("WpfResetControls");resetControls.Click+=(s,e)=> { controlScale=1;chrome.LayoutTransform=Transform.Identity;chrome.Margin=new Thickness(24);clampControls(); };toolbarMenu.Items.Add(resetControls);chrome.ContextMenu=toolbarMenu;
             sidebar=new StackPanel { Margin=new Thickness(22,18,22,24) };var scroller=new ScrollViewer { Content=sidebar,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled,Background=WpfFieldTheme.Panel,Margin=new Thickness(0,64,0,36) };Grid.SetColumn(scroller,1);grid.Children.Add(scroller);window.Content=grid;
-            var sidebarToggle=WpfFieldTheme.Button("›",()=> { bool collapse=scroller.Visibility==Visibility.Visible;scroller.Visibility=collapse?Visibility.Collapsed:Visibility.Visible;grid.ColumnDefinitions[1].Width=new GridLength(collapse?0:340); });sidebarToggle.Width=36;sidebarToggle.Height=36;sidebarToggle.MinHeight=36;sidebarToggle.Padding=new Thickness(0);sidebarToggle.HorizontalAlignment=HorizontalAlignment.Right;sidebarToggle.VerticalAlignment=VerticalAlignment.Top;sidebarToggle.Margin=new Thickness(12,12,352,0);sidebarToggle.ToolTip=Localization.Get("SidebarTitle");System.Windows.Automation.AutomationProperties.SetName(sidebarToggle,Localization.Get("SidebarTitle"));Grid.SetColumnSpan(sidebarToggle,2);grid.Children.Add(sidebarToggle);
+            var sidebarToggle=new Button {Content="›",Background=WpfFieldTheme.Panel,Foreground=WpfFieldTheme.Ink};sidebarToggle.Width=36;sidebarToggle.Height=36;sidebarToggle.MinHeight=36;sidebarToggle.Padding=new Thickness(0);sidebarToggle.HorizontalAlignment=HorizontalAlignment.Right;sidebarToggle.VerticalAlignment=VerticalAlignment.Top;sidebarToggle.Margin=new Thickness(12,12,352,0);sidebarToggle.ToolTip=Localization.Get("SidebarTitle");System.Windows.Automation.AutomationProperties.SetName(sidebarToggle,Localization.Get("SidebarTitle"));Grid.SetColumnSpan(sidebarToggle,2);grid.Children.Add(sidebarToggle);
             // At 1x the game supplies the map beneath this transparent overlay. Keep chrome inside the sidebar.
             var headerActions=new StackPanel { Orientation=Orientation.Horizontal,VerticalAlignment=VerticalAlignment.Center };
             var settings=WpfFieldTheme.Button("\uE713",ShowSettings);settings.FontFamily=new FontFamily("Segoe MDL2 Assets");settings.FontSize=17;settings.Tag="tooltip:Settings";headerActions.Children.Add(settings);
@@ -1571,8 +1573,29 @@ namespace ScumMiniMap {
             var headerBar=new Border { Height=64,Padding=new Thickness(18,0,12,0),BorderBrush=WpfFieldTheme.Line,BorderThickness=new Thickness(0,0,0,1),
                 Background=WpfFieldTheme.Ground,VerticalAlignment=VerticalAlignment.Top,Child=mast };Grid.SetColumn(headerBar,1);grid.Children.Add(headerBar);
             tacticalLocation=WpfFieldTheme.Text("",12,WpfFieldTheme.Muted);var footer=new Border { Height=36,Padding=new Thickness(22,0,22,0),BorderThickness=new Thickness(0,1,0,0),BorderBrush=WpfFieldTheme.Line,Background=WpfFieldTheme.Ground,VerticalAlignment=VerticalAlignment.Bottom,Child=tacticalLocation };Grid.SetColumn(footer,1);grid.Children.Add(footer);
-            sidebarToggle.Tag="tooltip:WpfCollapseSidebar";
-            sidebarToggle.Click+=(s,e)=> { bool open=scroller.Visibility==Visibility.Visible;sidebarOpen=open;headerBar.Visibility=footer.Visibility=scroller.Visibility;sidebarToggle.Content=open?"›":"‹";sidebarToggle.Tag=open?"tooltip:WpfCollapseSidebar":"tooltip:WpfExpandSidebar";RefreshLocalizedChrome(sidebarToggle);sidebarToggle.Margin=new Thickness(12,12,open?352:12,0);clampControls(); };
+            bool? gameMap=null;bool gameTools=false,zoomSidebar=true;
+            Action applyChrome=()=> {
+                bool native=gameMap==true;
+                sidebarOpen=native?gameTools:zoomSidebar;
+                var panel=sidebarOpen?Visibility.Visible:Visibility.Collapsed;
+                scroller.Visibility=headerBar.Visibility=footer.Visibility=panel;
+                grid.ColumnDefinitions[1].Width=new GridLength(sidebarOpen?340:0);
+                chrome.Visibility=topCards.Visibility=native&&!gameTools?Visibility.Collapsed:Visibility.Visible;
+                sidebarToggle.Content=sidebarOpen?"›":"‹";
+                sidebarToggle.Tag=sidebarOpen?"tooltip:WpfCollapseSidebar":"tooltip:WpfExpandSidebar";
+                sidebarToggle.Width=native&&!gameTools?24:36;
+                sidebarToggle.Margin=new Thickness(0,12,sidebarOpen?352:native?0:12,0);
+                RefreshLocalizedChrome(sidebarToggle);clampControls();
+            };
+            syncMapChrome=(native,opening)=> {
+                if(!opening && gameMap==native)return;
+                gameMap=native;gameTools=false;applyChrome();
+            };
+            sidebarToggle.Click+=(s,e)=> {
+                if(gameMap==true)gameTools=!gameTools;else zoomSidebar=!zoomSidebar;
+                applyChrome();
+            };
+            syncMapChrome(true,true);
             RefreshLocalizedChrome(grid);
             window.Closing+=(s,e)=> { if(!disposed&&!diagnostic) { e.Cancel=true;window.Hide();engine.WpfTactical(false);if(hudEnabled)hud.Show(); } };
             return window;
@@ -1692,6 +1715,7 @@ namespace ScumMiniMap {
             tacticalLocation.Text=state.BunkerCaption??(Localization.Get("FullMap")+"  ·  "+state.Location);tacticalLocation.ToolTip=tacticalLocation.Text;
             targetChanged|=!object.ReferenceEquals(lastPresentedTarget,state.Target);
             lastPresentedTarget=state.Target;
+            if(fullView)syncMapChrome(state.Bunker==null && state.Opacity==0,false);
             SyncCameraControls(state);
             var compact=fullView?engine.WpfSnapshot(false):state;
             if(sharingSessions.Length>0) {
@@ -1760,7 +1784,10 @@ if(followButton!=null) { followButton.Background=engine.WpfFollowing?WpfFieldThe
                 if(forward&&!diagnostic) { var binding=engine.WpfSnapshot(false);Native.ReturnMapKey(gameMapWindow,binding.MapKey,binding.MapScan); }
             } else {
                 gameMapWindow=diagnostic?IntPtr.Zero:Native.AdminGameWindow();
-                hud.Hide();engine.WpfTactical(true);engine.WpfFollow();tactical.WindowState=WindowState.Normal;tactical.Show();FitTacticalToMonitor();
+                hud.Hide();engine.WpfTactical(true);engine.WpfFollow();
+                var openingState=engine.WpfSnapshot(true);
+                syncMapChrome(openingState.Bunker==null && openingState.Opacity==0,true);
+                tactical.WindowState=WindowState.Normal;tactical.Show();FitTacticalToMonitor();
             }
             Refresh();
         }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -27,11 +27,34 @@ class WpfShowcaseHarness {
         try {
             var engine=Get(runtime,"engine");Call(engine,"WpfPreviewPosition","{X=-336602.375 Y=-270302.625 Z=18853.264|P=0 Y=135 R=0}");Set(engine,"fullMapOpacity",100);Set(engine,"fullMapZoom",2f);Set(engine,"gridOpacity",20);Call(engine,"WpfRotate",true);Call(engine,"WpfAppearance","Circle",90);
             var position=Get(engine,"position");var point=(System.Drawing.PointF)engine.GetType().GetMethod("ToMap",BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic).Invoke(null,new[]{position});
-            Call(engine,"WpfRotate",false);Set(engine,"fullMapZoom",1.45f);
-            Call(runtime,"Refresh");var tactical=(Window)Get(runtime,"tactical");tactical.Width=1280;tactical.Height=820;
-            Shot(tactical,Path.Combine(output,"地图.png"));
-            var settings=(Window)Call(runtime,"BuildSettings",0);Shot(settings,Path.Combine(output,"设置.png"));settings.Close();
-            var hud=(Window)Get(runtime,"hud");Shot(hud,Path.Combine(output,"小地图.png"),1.5);
+            var tactical=(Window)Get(runtime,"tactical");tactical.Width=1280;tactical.Height=820;
+            Set(engine,"fullMapZoom",1f);Call(runtime,"ToggleTactical",false);
+            tactical.WindowState=WindowState.Normal;tactical.Width=1280;tactical.Height=820;
+            var toggle=Children(tactical).OfType<Button>().Single(b=>(b.Tag as string??"").EndsWith("Sidebar"));
+            var side=(FrameworkElement)Get(runtime,"sidebar");var zoom=(Button)Get(runtime,"zoomResetButton");
+            var card=(FrameworkElement)Get(runtime,"targetCard");var cards=(FrameworkElement)card.Parent;
+            var map=(FrameworkElement)Get(runtime,"tacticalMap");
+            Action<bool,string> check=(open,msg)=>{
+                Pump();tactical.UpdateLayout();
+                var column=((Grid)tactical.Content).ColumnDefinitions[1].ActualWidth;
+                if(side.IsVisible!=open||zoom.IsVisible!=open||cards.IsVisible!=open||!toggle.IsVisible||
+                    (open?column!=340:column!=0)||Math.Abs(map.ActualWidth-((Grid)tactical.Content).ActualWidth)>1)
+                    throw new Exception(msg+" sidebar="+side.IsVisible+" zoom="+zoom.IsVisible+" cards="+cards.IsVisible+" column="+column);
+                Console.WriteLine("PASS "+msg+" button="+toggle.ActualWidth+"x"+toggle.ActualHeight);
+            };
+            Action click=()=>toggle.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            check(false,"open 1x, full viewport");
+            var state=Get(map,"State");if((int)Get(state,"Opacity")!=0)throw new Exception("1x base map opacity");
+            Call(runtime,"ShowHoverDetails","test");if(((FrameworkElement)Get(runtime,"hoverCard")).IsVisible)throw new Exception("Hover card covered native map");
+            Call(runtime,"ShowHoverDetails","");click();check(true,"manually open");Call(runtime,"Refresh");check(true,"poll preserves user action");
+            Call(runtime,"ToggleTactical",false);Call(runtime,"ToggleTactical",false);check(false,"reopen at 1x");
+            Call(engine,"WpfZoomTo",true,1.45f);Call(runtime,"RefreshCamera");check(true,"zoom in");
+            click();Pump();if(side.IsVisible||!zoom.IsVisible)throw new Exception("Zoom sidebar preference");
+            Call(engine,"WpfZoomTo",true,1f);Call(runtime,"RefreshCamera");check(false,"reset zoom");
+            Call(engine,"WpfZoomTo",true,1.45f);Call(runtime,"RefreshCamera");Pump();if(side.IsVisible||!zoom.IsVisible)throw new Exception("Forgot zoom sidebar preference");
+            Call(engine,"WpfZoomTo",true,1f);Call(runtime,"RefreshCamera");check(false,"second reset");
+            tactical.WindowState=WindowState.Normal;tactical.Width=1280;tactical.Height=820;
+            Shot(tactical,Path.Combine(output,"原图模式.png"));
         }finally{((IDisposable)runtime).Dispose();}
     }
 }
