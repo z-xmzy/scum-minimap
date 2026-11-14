@@ -205,7 +205,9 @@ namespace ScumMiniMap {
         string terrainLayerKey,annotationLayerKey,trailLayerKey,terrainDrawingKey,queuedTerrainKey;
         DrawingGroup terrainDrawing,trailDrawing,annotationDrawing,staticDrawing;
         CameraScene presentedCameraScene;
-        CameraScene lastPresentedCameraScene;
+        double staticSide,staticWidth,staticHeight;
+        DrawingPoint staticCentre;
+        string staticOverlayKey;
         internal bool ZoomGestureActive;
         bool layersDrawn,layersCameraRasterized;
         internal int TerrainRevision,TerrainLayerBuilds,AnnotationLayerBuilds,LiveLayerBuilds;
@@ -214,7 +216,7 @@ namespace ScumMiniMap {
         void ClearTacticalLayers() {
             ResetCameraScenes();
             if(!layersDrawn)return;foreach(DrawingVisual layer in mapLayers)using(layer.RenderOpen()) { }
-            layersDrawn=layersCameraRasterized=false;sharedLayerKey=terrainLayerKey=annotationLayerKey=trailLayerKey=terrainDrawingKey=queuedTerrainKey=null;terrainDrawing=trailDrawing=annotationDrawing=staticDrawing=null;presentedCameraScene=null;lastPresentedCameraScene=null;
+            layersDrawn=layersCameraRasterized=false;sharedLayerKey=terrainLayerKey=annotationLayerKey=trailLayerKey=terrainDrawingKey=queuedTerrainKey=null;terrainDrawing=trailDrawing=annotationDrawing=staticDrawing=null;presentedCameraScene=null;staticOverlayKey=null;
         }
         internal void PublishState(WpfMapState state) {
             Dispatcher.VerifyAccess();State=state;
@@ -226,20 +228,22 @@ namespace ScumMiniMap {
             return string.Join("|",new object[]{ActualWidth,ActualHeight,Compact,State.Shape,State.Zoom,Identity(State.Bunker),Identity(State.BunkerImage),centre.X,centre.Y,Rotation(State,Compact),VisualTreeHelper.GetDpi(this).DpiScaleX});
         }
         static int Identity(object value) { return value==null?0:System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(value); }
-        string SceneContentKey() {
+        string SceneContentKey() { return OverlayContentKey()+"|"+(State==null?0:State.Opacity)+"|"+TerrainRevision; }
+        string OverlayContentKey() {
             if(State==null)return "";
-            return string.Join("|",new object[]{Identity(State.Store),State.Store==null?"":State.Store.GetFilterHashKey(),State.Opacity,State.Shape,State.Grid,State.GridLabels,State.GridOpacity,State.LabelSize,TerrainRevision,Identity(Terrain),Identity(BaseMap),Identity(State.Bunker),Identity(State.BunkerImage),State.History,State.HistoryColor,Identity(State.Trail),State.Zones,State.Waypoints,State.Labels,State.PoiClustering,State.ZoneRevision,Identity(State.Saved),Localization.CurrentCode});
+            return string.Join("|",new object[]{Identity(State.Store),State.Store==null?"":State.Store.GetFilterHashKey(),State.Store!=null&&State.Store.MasterEnabled,State.Shape,State.Grid,State.GridLabels,State.GridOpacity,State.LabelSize,State.SmartLabels,Identity(Terrain),Identity(BaseMap),Identity(State.Bunker),Identity(State.BunkerImage),State.History,State.HistoryColor,Identity(State.Trail),State.Zones,State.Waypoints,State.Labels,State.PoiClustering,State.ZoneRevision,Identity(State.Saved),Localization.CurrentCode});
         }
         void UpdateTacticalLayers() {
             if(ActualWidth<1||ActualHeight<1)return;
             if(State==null) {
                 ClearTacticalLayers();using(var dc=terrainLayer.RenderOpen())dc.DrawRectangle(tacticalHitSurface,null,new Rect(0,0,ActualWidth,ActualHeight));layersDrawn=true;return;
             }
-            if(cameraScene!=null&&cameraScene.ContentKey!=SceneContentKey())cameraScene=null;
+            string overlayKey=OverlayContentKey();
+            if(cameraScene!=null&&(cameraScene.Opacity!=State.Opacity||cameraScene.OverlayKey!=overlayKey))cameraScene=null;
             // During a zoom gesture keep reprojecting the last complete snapshot even
             // while its replacement is being built: rebuilding the vector terrain every
             // wheel step is what made seamless zoom stutter.
-            CameraScene previewScene=cameraScene??(ZoomGestureActive?lastPresentedCameraScene:null);
+            CameraScene previewScene=cameraScene;
             if(State.Bunker==null&&CameraInteracting&&!DirectTerrain&&previewScene!=null&&previewScene.Width==ActualWidth&&previewScene.Height==ActualHeight&&previewScene.Opacity==State.Opacity) {
                 // The stationary snapshot already contains all static layers.
                 // Camera motion only reprojects it; defer terrain preparation,
@@ -247,7 +251,30 @@ namespace ScumMiniMap {
                 string preview="preview|"+CameraLayerKey();
                 if(terrainLayerKey!=preview||!object.ReferenceEquals(presentedCameraScene,previewScene)) {
                     using(var dc=terrainLayer.RenderOpen())DrawCameraScene(dc,previewScene,staticDrawing,ActualWidth,ActualHeight);
-                    terrainLayerKey=preview;presentedCameraScene=previewScene;lastPresentedCameraScene=previewScene;
+                    terrainLayerKey=preview;presentedCameraScene=previewScene;
+                }
+                if(!layersCameraRasterized) { using(trailLayer.RenderOpen()) { }using(annotationLayer.RenderOpen()) { } }
+                layersCameraRasterized=true;
+                UpdateSharedLayer(preview);using(var dc=liveLayer.RenderOpen())DrawMapPass(dc,MapPass.Live);LiveLayerBuilds++;layersDrawn=true;return;
+            }
+            // The native game map and the zoomed map have different sizes and opacity.
+            // Reproject the last recorded overlays while the first zoom bitmap is unavailable.
+            if(ZoomGestureActive && CameraInteracting && State.Bunker==null && !DirectTerrain &&
+                staticSide>0 && staticOverlayKey==overlayKey) {
+                string preview="overview|"+CameraLayerKey()+"|"+State.Opacity;
+                if(terrainLayerKey!=preview) {
+                    double side=MapSide(State,ActualWidth,ActualHeight,false);
+                    var centre=CameraCentre(State,ActualWidth,ActualHeight,false);
+                    double scale=side/staticSide;
+                    using(var dc=terrainLayer.RenderOpen()) {
+                        DrawMapPass(dc,MapPass.Terrain,true);
+                        dc.PushClip(new RectangleGeometry(new Rect(0,0,ActualWidth,ActualHeight)));
+                        dc.PushTransform(new MatrixTransform(scale,0,0,scale,
+                            ActualWidth/2+(staticCentre.X-centre.X)*side-staticWidth*scale/2,
+                            ActualHeight/2+(staticCentre.Y-centre.Y)*side-staticHeight*scale/2));
+                        dc.DrawDrawing(trailDrawing);dc.DrawDrawing(annotationDrawing);dc.Pop();dc.Pop();
+                    }
+                    terrainLayerKey=preview;presentedCameraScene=null;
                 }
                 if(!layersCameraRasterized) { using(trailLayer.RenderOpen()) { }using(annotationLayer.RenderOpen()) { } }
                 layersCameraRasterized=true;
@@ -266,6 +293,8 @@ namespace ScumMiniMap {
             if(annotationChanged) {
                 annotationDrawing=new DrawingGroup();using(var dc=annotationDrawing.Open())DrawMapPass(dc,MapPass.Annotations);annotationDrawing.Freeze();annotationLayerKey=annotation+"|"+PoiSceneBuilds;AnnotationLayerBuilds++;
             }
+            staticWidth=ActualWidth;staticHeight=ActualHeight;staticSide=MapSide(State,staticWidth,staticHeight,false);
+            staticCentre=CameraCentre(State,staticWidth,staticHeight,false);staticOverlayKey=overlayKey;
             string staticKey=terrainKey+"|"+trailKey+"|"+annotationLayerKey;
             if(State.Bunker==null&&!Compact&&!DirectTerrain&&queuedTerrainKey!=staticKey) {
                 // Software composition must not replay dense annotation vectors on
@@ -308,14 +337,14 @@ namespace ScumMiniMap {
             PresentCameraFrame();
         }
         sealed class CameraScene {
-            internal DrawingGroup Drawing;internal BitmapSource Image;internal double Width,Height,Side;internal DrawingPoint Centre;internal int Generation,Opacity;internal string ContentKey;
+            internal DrawingGroup Drawing;internal BitmapSource Image;internal double Width,Height,Side;internal DrawingPoint Centre;internal int Generation,Opacity;internal string ContentKey,OverlayKey;
         }
         readonly object cameraGate=new object();
         CameraScene pendingCameraScene,completedCameraScene,cameraScene,idleCameraScene;
         bool cameraWorker,cameraApplyPosted;
         int cameraGeneration;
         internal int CameraSceneBuilds;
-        internal void BeginCameraFrames() { if(!CameraInteracting)cameraScene=idleCameraScene!=null&&idleCameraScene.ContentKey==SceneContentKey()?idleCameraScene:null;CameraInteracting=true; }
+        internal void BeginCameraFrames() { if(!CameraInteracting)cameraScene=idleCameraScene!=null&&State!=null&&idleCameraScene.Opacity==State.Opacity&&idleCameraScene.OverlayKey==OverlayContentKey()?idleCameraScene:null;CameraInteracting=true; }
         internal void EndCameraFrames() {
             CameraInteracting=false;CancelCameraFrame();lastCameraComposition=TimeSpan.MinValue;
             // A short pause must not discard the only ready snapshot before its replacement arrives.
@@ -324,10 +353,10 @@ namespace ScumMiniMap {
         }
         void ResetCameraScenes() {
             lock(cameraGate) { cameraGeneration++;pendingCameraScene=null;completedCameraScene=null; }
-            cameraScene=null;idleCameraScene=null;queuedTerrainKey=null;lastPresentedCameraScene=null;ZoomGestureActive=false;
+            cameraScene=null;idleCameraScene=null;queuedTerrainKey=null;staticOverlayKey=null;ZoomGestureActive=false;
         }
         void QueueCameraScene(DrawingGroup drawing,double width,double height) {
-            drawing.Freeze();var scene=new CameraScene { Drawing=drawing,Width=width,Height=height,Side=MapSide(State,width,height,false),Centre=CameraCentre(State,width,height,false),Opacity=State.Opacity,ContentKey=SceneContentKey() };
+            drawing.Freeze();var scene=new CameraScene { Drawing=drawing,Width=width,Height=height,Side=MapSide(State,width,height,false),Centre=CameraCentre(State,width,height,false),Opacity=State.Opacity,ContentKey=SceneContentKey(),OverlayKey=OverlayContentKey() };
             lock(cameraGate) {
                 scene.Generation=cameraGeneration;pendingCameraScene=scene;
                 if(cameraWorker)return;cameraWorker=true;
@@ -705,7 +734,7 @@ namespace ScumMiniMap {
         void DrawMap(DrawingContext dc) {
             DrawMapPass(dc,MapPass.All);
         }
-        void DrawMapPass(DrawingContext dc,MapPass pass) {
+        void DrawMapPass(DrawingContext dc,MapPass pass,bool overviewOnly=false) {
             base.OnRender(dc);double w=ActualWidth,h=ActualHeight;if(w<1||h<1)return;
             if(Compact&&State!=null&&State.Shape=="Circle")dc.PushClip(new EllipseGeometry(new Point(w/2,h/2),Math.Min(w,h)/2,Math.Min(w,h)/2));else dc.PushClip(new RectangleGeometry(new Rect(0,0,w,h),Compact?10:0,Compact?10:0));
             if(pass==MapPass.All||pass==MapPass.Terrain)dc.DrawRectangle(Compact?Brushes.Transparent:tacticalHitSurface,null,new Rect(0,0,w,h));
@@ -726,7 +755,7 @@ namespace ScumMiniMap {
                 dc.DrawImage(State.BunkerImage,new Rect(left+(617718-b.MaxX)/1521618.0*side,top+(618618-b.MaxY)/1523618.0*side,(b.MaxX-b.MinX)/1521618.0*side,(b.MaxY-b.MinY)/1523618.0*side));
             } else if(State.Opacity>0) {
                 dc.PushOpacity(State.Opacity/100.0);
-                if(Terrain!=null)Terrain.DrawRotated(dc,w,h,left,top,side,VisualTreeHelper.GetDpi(this).DpiScaleX,rotation==0?0:Math.Max(w,h));
+                if(Terrain!=null&&!overviewOnly)Terrain.DrawRotated(dc,w,h,left,top,side,VisualTreeHelper.GetDpi(this).DpiScaleX,rotation==0?0:Math.Max(w,h));
                 else { dc.PushTransform(new TranslateTransform(left,top));dc.PushTransform(new ScaleTransform(side/1024,side/1024));if(BaseMap!=null)dc.DrawDrawing(BaseMap);dc.Pop();dc.Pop(); }
                 dc.Pop();
             }
@@ -1026,6 +1055,14 @@ namespace ScumMiniMap {
         readonly Dispatcher dispatcher=Dispatcher.CurrentDispatcher;
         bool interactive,tileWorker;volatile bool disposed;BitmapSource overview;
         internal event Action Changed;
+        DispatcherTimer tileRefresh;
+        void ScheduleTileRefresh() {
+            if(tileRefresh==null) {
+                tileRefresh=new DispatcherTimer(DispatcherPriority.Background,dispatcher) { Interval=TimeSpan.FromMilliseconds(60) };
+                tileRefresh.Tick+=(s,e)=> { tileRefresh.Stop();if(!disposed&&Changed!=null)Changed(); };
+            }
+            if(!tileRefresh.IsEnabled)tileRefresh.Start();
+        }
         readonly Stream stream;
         readonly List<Level> levels=new List<Level>();
         readonly Dictionary<long,LinkedListNode<Tile>> cache=new Dictionary<long,LinkedListNode<Tile>>();
@@ -1075,7 +1112,7 @@ namespace ScumMiniMap {
                 try {
                     tile.Image=DecodeTile(tile.Level,tile.Column,tile.Row);
                     if(!dispatcher.HasShutdownStarted)dispatcher.BeginInvoke(new Action(()=> {
-                        lock(tileGate)pendingTiles.Remove(tile.Key);if(disposed)return;CacheTile(tile);var changed=Changed;if(changed!=null)changed();
+                        lock(tileGate)pendingTiles.Remove(tile.Key);if(disposed)return;CacheTile(tile);ScheduleTileRefresh();
                     }),DispatcherPriority.Background);
                 }catch(Exception error) { lock(tileGate) { pendingTiles.Remove(tile.Key);failedTiles.Add(tile.Key); }Program.LogException("TerrainTile",error); }
             }
@@ -1111,7 +1148,7 @@ namespace ScumMiniMap {
             }
         }
         internal DrawingGroup Overview() { var visual=new DrawingVisual();using(var dc=visual.RenderOpen())Draw(dc,905,905,0,0,905);var image=new RenderTargetBitmap(905,905,96,96,PixelFormats.Pbgra32);image.Render(visual);image.Freeze();overview=image;interactive=true;var drawing=new DrawingGroup();using(var dc=drawing.Open())dc.DrawImage(image,new Rect(0,0,1024,1024));drawing.Freeze();return drawing; }
-        public void Dispose() { dispatcher.VerifyAccess();lock(tileGate) { if(disposed)return;disposed=true;tileQueue.Clear();pendingTiles.Clear();if(!tileWorker)stream.Dispose(); }Changed=null;cache.Clear();recent.Clear(); }
+        public void Dispose() { dispatcher.VerifyAccess();lock(tileGate) { if(disposed)return;disposed=true;tileQueue.Clear();pendingTiles.Clear();if(!tileWorker)stream.Dispose(); }if(tileRefresh!=null)tileRefresh.Stop();Changed=null;cache.Clear();recent.Clear(); }
     }
 
     internal sealed partial class WpfFieldConsoleRuntime:IDisposable {
@@ -1321,7 +1358,7 @@ namespace ScumMiniMap {
             foreach(string font in new[]{"BarlowSemiCondensed-Regular.ttf","BarlowSemiCondensed-SemiBold.ttf"})using(var stream=typeof(MapWindow).Assembly.GetManifestResourceStream(font))if(stream!=null)using(var file=File.Create(Path.Combine(fonts,font)))stream.CopyTo(file);
             application.Resources[typeof(Window)]=new Style(typeof(Window)) { Setters={new Setter(Control.FontFamilyProperty,new FontFamily("Segoe UI, Microsoft YaHei UI")),new Setter(Control.ForegroundProperty,WpfFieldTheme.Ink),new Setter(Control.BackgroundProperty,WpfFieldTheme.Ground),new Setter(Control.FontSizeProperty,14.0)} };
             tactical=BuildTactical();hud=BuildHud();
-            terrain.Changed+=()=> { if(!disposed) { tacticalMap.TerrainRevision++;tacticalMap.RequestRedraw();hudMap.InvalidateVisual(); } };
+            terrain.Changed+=()=> { if(!disposed) { tacticalMap.TerrainRevision++;if(tactical.IsVisible&&tacticalMap.State!=null&&tacticalMap.State.Opacity>0)tacticalMap.RequestRedraw();if(hud.IsVisible)hudMap.InvalidateVisual(); } };
             tactical.IsVisibleChanged+=(s,e)=> { tacticalMouseShieldActive=tactical.IsVisible&&tactical.WindowState!=WindowState.Minimized;if(!tactical.IsVisible)tacticalMap.CloseContextMenu(); };
             tactical.StateChanged+=(s,e)=>tacticalMouseShieldActive=tactical.IsVisible&&tactical.WindowState!=WindowState.Minimized;
             tactical.Closed+=(s,e)=>tacticalMouseShieldActive=false;
@@ -1419,7 +1456,17 @@ namespace ScumMiniMap {
             SetWindowPos(handle,new IntPtr(-1),bounds.X,bounds.Y,bounds.Width,bounds.Height,0x0010);
             tactical.UpdateLayout();lastTacticalBounds=bounds;
         }
-        internal void StartViews() { tactical.Hide();engine.WpfTactical(false);if(hudEnabled)hud.Show();Refresh(); }
+        internal void StartViews() {
+            tactical.Hide();engine.WpfTactical(false);if(hudEnabled)hud.Show();Refresh();
+            application.Dispatcher.BeginInvoke(new Action(()=> {
+                if(disposed||tactical.IsVisible||lastTacticalBounds.Width>0)return;
+                FitTacticalToMonitor();
+                var content=(FrameworkElement)tactical.Content;
+                var size=new Size(tactical.Width,tactical.Height);
+                content.Measure(size);content.Arrange(new Rect(size));
+                RefreshView(null,true);
+            }),DispatcherPriority.ApplicationIdle);
+        }
         internal static bool ShouldShowHud(bool enabled,bool tacticalVisible) { return enabled&&!tacticalVisible; }
         internal static System.Drawing.Rectangle RecoverHudBounds(System.Drawing.Rectangle desired,System.Drawing.Rectangle[] monitors) {
             if(monitors==null||monitors.Length==0)return desired;
@@ -1674,7 +1721,7 @@ namespace ScumMiniMap {
             };
             sidebarToggle.Click+=(sender,e)=> {sidebarOpen=!sidebarOpen;arrange();};
             syncMapChrome(true,true);
-            RefreshLocalizedChrome(grid);
+            RefreshLocalizedChrome(grid);chromeLanguage=Localization.CurrentCode;
             window.Closing+=(s,e)=> { if(!disposed&&!diagnostic) { e.Cancel=true;window.Hide();engine.WpfTactical(false);if(hudEnabled)hud.Show(); } };
             return window;
         }
@@ -1759,13 +1806,14 @@ namespace ScumMiniMap {
         void FilterAll(bool enabled) { var store=engine.WpfPoiStore;if(store==null)return;store.SetAllEnabled(enabled);engine.WpfScheduleSave();RefreshInteraction(); }
         void FilterSection(string section,bool enabled) { var store=engine.WpfPoiStore;if(store==null||!store.CategoriesBySection.ContainsKey(section))return;foreach(var category in store.CategoriesBySection[section])store.SetCategoryEnabled(category.Id,enabled);engine.WpfScheduleSave();RefreshInteraction(); }
         MapZone lastPresentedTarget;
-        internal void Refresh() {
+        internal void Refresh() { RefreshView(null); }
+        void RefreshView(WpfMapState openingState,bool prepareMap=false) {
             application.Dispatcher.VerifyAccess();
             if(disposed)return;
             RefreshSetupPreview();
             // The native controller also requests refreshes. Coalesce those with the WPF timer.
             bool targetChanged=!object.ReferenceEquals(lastPresentedTarget,engine.WpfCurrentTarget);
-            if(!diagnostic&&!targetChanged&&refreshClock.ElapsedMilliseconds-lastRefresh<100)return;
+            if(!diagnostic&&!prepareMap&&!targetChanged&&refreshClock.ElapsedMilliseconds-lastRefresh<100)return;
             lastRefresh=refreshClock.ElapsedMilliseconds;
             if(!diagnostic&&tactical.IsVisible) { var foreground=Native.GetForegroundWindow();SyncTacticalFocus(Native.IsGameWindow(foreground),Native.IsOurWindow(foreground)); }
             if(!diagnostic&&TacticalVisible) { var bounds=TacticalBounds();if(bounds!=lastTacticalBounds)ApplyTacticalBounds(bounds); }
@@ -1786,10 +1834,10 @@ namespace ScumMiniMap {
             UpdateSquad();UpdateRoutePreviews();foreach(var peer in playerRoster) { TextBlock label;if(playerStatusLabels.TryGetValue(peer.Id,out label))label.Text=PeerStatus(peer); }
             if(!diagnostic) {
                 SyncHudVisibility();
-                if(!TacticalVisible&&!hud.IsVisible)return;
+                if(!prepareMap&&!TacticalVisible&&!hud.IsVisible)return;
             }
-            bool fullView=diagnostic||TacticalVisible;
-            var state=engine.WpfSnapshot(fullView);
+            bool fullView=prepareMap||diagnostic||TacticalVisible;
+            var state=fullView&&openingState!=null?openingState:engine.WpfSnapshot(fullView);
             tacticalLocation.Text=state.BunkerCaption??(Localization.Get("FullMap")+"  ·  "+state.Location);tacticalLocation.ToolTip=tacticalLocation.Text;
             targetChanged|=!object.ReferenceEquals(lastPresentedTarget,state.Target);
             lastPresentedTarget=state.Target;
@@ -1805,7 +1853,7 @@ namespace ScumMiniMap {
             state.LocalPeerId=compact.LocalPeerId=sharingSessions.Select(session=>session.LocalId).FirstOrDefault();
             AddRouteState(state,compact);
             deathRemovalButton.IsEnabled=state.Saved.Any(marker=>marker.IsDeathMarker);if(chromeLanguage!=Localization.CurrentCode) { chromeLanguage=Localization.CurrentCode;RefreshLocalizedChrome(tactical);if(settingsWindow!=null)RefreshLocalizedChrome(settingsWindow); }
-            if(diagnostic||TacticalVisible) { string key=VisualIdentity(state);if(key!=tacticalVisualIdentity) { tacticalVisualIdentity=key;tacticalMap.PublishState(state); } }
+            if(fullView) { string key=VisualIdentity(state);if(key!=tacticalVisualIdentity) { tacticalVisualIdentity=key;tacticalMap.PublishState(state); } }
             if(diagnostic||hud.IsVisible) { string key=VisualIdentity(compact);if(key!=hudVisualIdentity) { hudVisualIdentity=key;hudMap.State=compact;hudMap.InvalidateVisual(); } }
             hud.Width=compact.HudWidth;hud.Height=compact.HudHeight+(compact.Status?60:0);
             hudLayout.RowDefinitions[0].Height=new GridLength(compact.StatusAbove&&compact.Status?60:compact.HudHeight);
@@ -1867,7 +1915,8 @@ if(followButton!=null) { followButton.Background=engine.WpfFollowing?WpfFieldThe
                 hud.Hide();engine.WpfTactical(true);engine.WpfFollow();
                 var openingState=engine.WpfSnapshot(true);
                 syncMapChrome(openingState.Bunker==null && openingState.Opacity==0,true);
-                tactical.WindowState=WindowState.Normal;tactical.Show();FitTacticalToMonitor();
+                FitTacticalToMonitor();tactical.Show();lastRefresh=-1000;
+                RefreshView(openingState);return;
             }
             Refresh();
         }

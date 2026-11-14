@@ -1,0 +1,66 @@
+1-7-immediate
+open sync=306 maxGap=306 renderEvents=29 terrain=1 annotations=3
+firstWheel sync=5 maxGap=219 renderEvents=55 terrain=21 annotations=9
+nextWheel sync=0 maxGap=158 renderEvents=97 terrain=57 annotations=4
+zoomOut sync=0 maxGap=48 renderEvents=51 terrain=1 annotations=4
+1-7-idle
+startupIdle sync=0 maxGap=54 renderEvents=27 terrain=0 annotations=0
+open sync=253 maxGap=253 renderEvents=34 terrain=3 annotations=5
+firstWheel sync=3 maxGap=188 renderEvents=56 terrain=17 annotations=9
+nextWheel sync=0 maxGap=179 renderEvents=95 terrain=57 annotations=4
+zoomOut sync=0 maxGap=42 renderEvents=45 terrain=1 annotations=4
+1-8-immediate
+open sync=286 maxGap=286 renderEvents=28 terrain=1 annotations=3
+firstWheel sync=2 maxGap=62 renderEvents=47 terrain=2 annotations=4
+nextWheel sync=0 maxGap=61 renderEvents=48 terrain=3 annotations=4
+zoomOut sync=0 maxGap=46 renderEvents=51 terrain=1 annotations=3
+1-8-idle
+startupIdle sync=0 maxGap=73 renderEvents=22 terrain=2 annotations=3
+open sync=57 maxGap=57 renderEvents=44 terrain=0 annotations=0
+firstWheel sync=2 maxGap=59 renderEvents=42 terrain=2 annotations=4
+nextWheel sync=0 maxGap=65 renderEvents=48 terrain=3 annotations=4
+zoomOut sync=0 maxGap=21 renderEvents=50 terrain=1 annotations=3
+2-8-immediate
+open sync=293 maxGap=293 renderEvents=26 terrain=1 annotations=3
+firstWheel sync=2 maxGap=53 renderEvents=42 terrain=2 annotations=4
+nextWheel sync=0 maxGap=47 renderEvents=50 terrain=3 annotations=4
+zoomOut sync=0 maxGap=42 renderEvents=50 terrain=1 annotations=3
+2-8-idle
+startupIdle sync=0 maxGap=88 renderEvents=24 terrain=2 annotations=3
+open sync=55 maxGap=55 renderEvents=44 terrain=0 annotations=0
+firstWheel sync=3 maxGap=57 renderEvents=45 terrain=2 annotations=4
+nextWheel sync=0 maxGap=68 renderEvents=50 terrain=3 annotations=4
+zoomOut sync=0 maxGap=33 renderEvents=47 terrain=1 annotations=3
+2-7-immediate
+open sync=318 maxGap=318 renderEvents=23 terrain=1 annotations=3
+firstWheel sync=2 maxGap=224 renderEvents=50 terrain=21 annotations=9
+nextWheel sync=0 maxGap=173 renderEvents=92 terrain=57 annotations=4
+zoomOut sync=0 maxGap=46 renderEvents=48 terrain=1 annotations=4
+2-7-idle
+startupIdle sync=0 maxGap=57 renderEvents=18 terrain=0 annotations=0
+open sync=249 maxGap=249 renderEvents=33 terrain=3 annotations=5
+firstWheel sync=3 maxGap=224 renderEvents=49 terrain=17 annotations=9
+nextWheel sync=0 maxGap=168 renderEvents=98 terrain=57 annotations=4
+zoomOut sync=0 maxGap=43 renderEvents=50 terrain=1 annotations=4
+3-7-immediate
+open sync=314 maxGap=314 renderEvents=27 terrain=1 annotations=3
+firstWheel sync=2 maxGap=77 renderEvents=46 terrain=4 annotations=7
+nextWheel sync=0 maxGap=195 renderEvents=99 terrain=57 annotations=4
+zoomOut sync=0 maxGap=55 renderEvents=46 terrain=1 annotations=4
+3-7-idle
+startupIdle sync=0 maxGap=56 renderEvents=23 terrain=0 annotations=0
+open sync=250 maxGap=250 renderEvents=34 terrain=3 annotations=5
+firstWheel sync=2 maxGap=194 renderEvents=52 terrain=17 annotations=9
+nextWheel sync=0 maxGap=178 renderEvents=99 terrain=57 annotations=4
+zoomOut sync=0 maxGap=40 renderEvents=50 terrain=1 annotations=4
+3-8-immediate
+open sync=329 maxGap=329 renderEvents=28 terrain=1 annotations=3
+firstWheel sync=2 maxGap=93 renderEvents=45 terrain=3 annotations=4
+nextWheel sync=0 maxGap=34 renderEvents=49 terrain=3 annotations=4
+zoomOut sync=0 maxGap=37 renderEvents=42 terrain=1 annotations=3
+3-8-idle
+startupIdle sync=0 maxGap=109 renderEvents=21 terrain=2 annotations=3
+open sync=55 maxGap=55 renderEvents=40 terrain=0 annotations=0
+firstWheel sync=2 maxGap=34 renderEvents=45 terrain=2 annotations=4
+nextWheel sync=0 maxGap=84 renderEvents=49 terrain=3 annotations=4
+zoomOut sync=0 maxGap=24 renderEvents=47 terrain=1 annotations=3

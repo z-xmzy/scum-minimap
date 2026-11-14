@@ -5,4 +5,4 @@ PASS: normal startup continues without a release installer dialog
 PASS: null startup continues without a release installer dialog
 PASS: installer startup continues without a release installer dialog
 PASS: Local profile stays beside the executable; stable release validation remains strict.
-Local candidate built: D:\codex\SCUM-MiniMap-2.4.7-map\package\SCUM-MiniMap\app\SkynettMiniMap.exe
+Local candidate built: D:\codex\SCUM-MiniMap-2.4.8-map\package\SCUM-MiniMap\app\SkynettMiniMap.exe

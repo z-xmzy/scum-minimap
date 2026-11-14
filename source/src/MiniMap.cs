@@ -1726,7 +1726,7 @@ namespace ScumMiniMap {
 
 
 
-        public const string VersionString = "2.4.7";
+        public const string VersionString = "2.4.8";
 
 
 

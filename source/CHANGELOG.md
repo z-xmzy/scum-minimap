@@ -1,4 +1,8 @@
-﻿# Changelog
+# Changelog
+
+## [2.4.8] - 2026-11-14
+
+- Prepare the full map during startup idle time, reuse overlays across the native-map zoom transition, and batch terrain tile refreshes.
 
 ## [2.4.7] - 2026-11-13
 

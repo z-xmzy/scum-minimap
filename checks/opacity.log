@@ -1,0 +1,23 @@
+PASS: Old manual opacity cannot make the fully zoomed-out tactical terrain visible
+PASS: Loaded legacy override cannot bypass automatic opacity at zoom 1
+PASS: Loaded legacy override cannot bypass automatic opacity at zoom 1.0001
+PASS: Loaded legacy override cannot bypass automatic opacity at zoom 2
+PASS: Loaded legacy override cannot bypass automatic opacity at zoom 8
+PASS: Loaded legacy override cannot bypass automatic opacity at zoom 1
+PASS: A saved map preset cannot override the zoomed opacity lock
+PASS: A saved map preset cannot override the overview transparency lock
+PASS: The overview toolbar displays locked 0% opacity
+PASS: A programmatic slider change is reset to the automatic overview value
+PASS: Camera-only updates immediately display locked 100% opacity
+PASS: A programmatic slider change cannot unlock zoomed opacity
+Terrain pixel: 255,0,0,255
+PASS: Rendered camera preview switches terrain immediately at zoom 2
+Terrain pixel: 0,0,0,1
+PASS: Rendered camera preview switches terrain immediately at zoom 1
+Terrain pixel: 255,0,0,255
+PASS: Rendered camera preview switches terrain immediately at zoom 3
+Terrain pixel: 0,0,0,1
+PASS: Rendered camera preview switches terrain immediately at zoom 1
+PASS: Automatic tactical opacity leaves compact HUD opacity unchanged
+PASS: Saving settings removes the obsolete manual tactical override
+PASS: Overview transparency stays locked after saving and reloading
