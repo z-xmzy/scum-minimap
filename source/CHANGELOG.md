@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.4.9] - 2026-11-15
+
+- Save named routes, share and import LX- codes, and navigate ordered or repeating routes from the first stop.
+
 ## [2.4.8] - 2026-11-14
 
 - Prepare the full map during startup idle time, reuse overlays across the native-map zoom transition, and batch terrain tile refreshes.

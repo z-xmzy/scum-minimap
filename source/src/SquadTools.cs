@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.IO;
@@ -29,7 +29,7 @@ namespace ScumMiniMap {
         string followingPeer;MapZone squadTarget;DateTime nextSquadRoute;
         SharedMapMarker[] activeStops=new SharedMapMarker[0];int activeStop;
         static string S(string key) { return Localization.Get(key); }
-        void StopSquadNavigation() { followingPeer=null;activeStops=new SharedMapMarker[0];squadTarget=null;squadRoutePlanner.Clear();activeRouteSignature=null;engine.WpfClear(); }
+        void StopSquadNavigation() { activeSavedRoute=null;returningToStart=false;followingPeer=null;activeStops=new SharedMapMarker[0];squadTarget=null;squadRoutePlanner.Clear();activeRouteSignature=null;engine.WpfClear(); }
         static TextBlock SquadHelp(string key) { var text=WpfFieldTheme.Text(S(key),13,WpfFieldTheme.Muted);text.TextWrapping=TextWrapping.Wrap;text.TextTrimming=TextTrimming.None;text.Margin=new Thickness(0,10,0,10);return text; }
         bool CanSendPing() {
             var sessions=(relayGroups==null?new DirectPositions[0]:relayGroups.Sessions).Concat(privatePositions==null?new DirectPositions[0]:new[]{privatePositions});
@@ -56,7 +56,7 @@ namespace ScumMiniMap {
             SyncSelectedSharedRoute();
             var state=engine.WpfSnapshot(false);
             // A manual destination or Clear takes precedence over squad navigation.
-            if(squadTarget!=null&&!object.ReferenceEquals(squadTarget,state.Target)||(followingPeer!=null&&squadTarget==null&&state.Target!=null)) { followingPeer=null;activeStops=new SharedMapMarker[0];squadTarget=null;squadRoutePlanner.Clear();activeRouteSignature=null; }
+            if(squadTarget!=null&&!object.ReferenceEquals(squadTarget,state.Target)||(followingPeer!=null&&squadTarget==null&&state.Target!=null)) { activeSavedRoute=null;returningToStart=false;followingPeer=null;activeStops=new SharedMapMarker[0];squadTarget=null;squadRoutePlanner.Clear();activeRouteSignature=null; }
             if(followingPeer!=null) {
                 var peer=current.FirstOrDefault(p=>p.Id==followingPeer);
                 if(peer==null||peer.Position==null) { bool clear=squadTarget!=null;squadTarget=null;if(clear)engine.WpfClear();return; }
@@ -65,14 +65,24 @@ namespace ScumMiniMap {
             }
             else if(activeStops.Length>0&&activeStop<activeStops.Length) {
                 int previousStop=activeStop;
-                if(state.Position!=null&&state.Tracking&&!state.TrackingPaused&&PrivatePositions.Fresh(state.Updated,now)&&DestinationSearch.Metres(MapWindow.ToMap(state.Position),new DrawingPoint((float)activeStops[activeStop].X,(float)activeStops[activeStop].Y))<40)activeStop++;
-                if(activeStop>=activeStops.Length) { engine.WpfClear();activeStops=new SharedMapMarker[0];squadTarget=null; }
+                if(state.Position!=null&&state.Tracking&&!state.TrackingPaused&&PrivatePositions.Fresh(state.Updated,now)&&DestinationSearch.Metres(MapWindow.ToMap(state.Position),PointOf(activeStops[activeStop]))<ArrivalRadius()) {
+                    activeStop++;returningToStart=false;
+                    if(activeStop==activeStops.Length&&activeSavedRoute!=null&&activeSavedRoute.Loop) {
+                        activeStop=0;returningToStart=true;
+                    }
+                }
+                if(activeStop>=activeStops.Length) { StopSquadNavigation(); }
                 else if(previousStop!=activeStop||squadTarget==null||!object.ReferenceEquals(squadTarget,state.Target))SetSquadStop();
                 else { var stop=activeStops[activeStop];if(squadTarget.Centroid.X!=(float)stop.X||squadTarget.Centroid.Y!=(float)stop.Y)SetSquadStop(); }
             }
         }
-        void SetSquadStop() { var m=activeStops[activeStop];squadTarget=new MapZone { Name=(activeStop+1)+"/"+activeStops.Length+" · "+m.Name,Points=new[]{new DrawingPoint((float)m.X,(float)m.Y)} };engine.WpfSquadTarget(squadTarget); }
-        void StartSquadRoute(SharedMapMarker[] stops) { if(stops.Length==0)return;followingPeer=null;activeStops=stops.Select(m=>m.Copy()).ToArray();activeStop=0;SetSquadStop();Refresh(); }
+        void SetSquadStop() { var m=activeStops[activeStop];squadTarget=new MapZone { Name=(activeSavedRoute==null?"":activeSavedRoute.Name+" · "+SavedStopRole(activeStop,activeSavedRoute)+" ")+(activeStop+1)+"/"+activeStops.Length+" · "+m.Name,Points=new[]{new DrawingPoint((float)m.X,(float)m.Y)} };engine.WpfSquadTarget(squadTarget); }
+        void StartSquadRoute(SharedMapMarker[] stops) {
+            if(stops.Length==0)return;
+            if(activeSavedRoute!=null&&stops[0].Id==activeSavedRoute.Stops[0].Id) { StartSavedRoute(activeSavedRoute);return; }
+            activeSavedRoute=null;returningToStart=false;BeginRoute(stops);
+        }
+        void BeginRoute(SharedMapMarker[] stops) {followingPeer=null;activeStops=stops.Select(m=>m.Copy()).ToArray();activeStop=0;SetSquadStop();Refresh(); }
         void NavigateDestination(MapZone destination) { StopSquadNavigation();engine.WpfTarget(destination);filterIdentity=null;RefreshInteraction(); }
         void AddSquadDestination(MapZone destination) { if(destination!=null&&squad.AddStop(destination.DisplayName,destination.Centroid.X,destination.Centroid.Y))OwnRouteEdited(); }
         void AddSquadStop(DrawingPoint at) { AddSquadDestination(engine.WpfClickedTarget(at,.003f)); }
@@ -103,6 +113,7 @@ namespace ScumMiniMap {
             routePage.Children.Add(modes);
             var navActions=new WrapPanel();var addTarget=WpfFieldTheme.Button(S("SquadAddStop"),()=> { AddSquadDestination(engine.WpfSnapshot(true).Target);redraw(); });addTarget.Tag="route-add-target";addTarget.ToolTip=S("MapGpsSavedHelp");navActions.Children.Add(addTarget);
             var stopNavigation=WpfFieldTheme.Button(S("SquadStopNav"),()=> { StopSquadNavigation();filterIdentity=null;Refresh();redraw(); });stopNavigation.Tag="route-stop-navigation";navActions.Children.Add(stopNavigation);routePage.Children.Add(navActions);
+            AddSavedRoutes(routePage,window);
             var routes=new StackPanel();routePage.Children.Add(routes);string routeIdentity=null;
             redraw=()=> {
                 foreach(var button in modeButtons) { bool active=(string)button.Tag=="route-mode-"+engine.WpfRouteMode;button.Background=active?WpfFieldTheme.Amber:WpfFieldTheme.Panel;button.Foreground=active?WpfFieldTheme.Ground:WpfFieldTheme.Ink; }

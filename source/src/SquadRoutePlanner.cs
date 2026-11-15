@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Linq;
 using System.Collections.Generic;
@@ -37,7 +37,7 @@ namespace ScumMiniMap {
         static bool Valid(PointF p) { return !float.IsNaN(p.X)&&!float.IsNaN(p.Y)&&p.X>=0&&p.X<=1&&p.Y>=0&&p.Y<=1; }
         internal void Update(PointF? origin,PointF[] stops,RoadRouteMode mode=RoadRouteMode.Shortest) {
             if(!Enum.IsDefined(typeof(RoadRouteMode),mode))throw new ArgumentOutOfRangeException("mode");
-            if(stops==null||stops.Length<1||stops.Length>16||stops.Any(p=>!Valid(p))||origin.HasValue&&!Valid(origin.Value))throw new ArgumentException();
+            if(stops==null||stops.Length<1||(stops.Length>16 && !(stops.Length==17 && stops[0]==stops[stops.Length-1]))||stops.Any(p=>!Valid(p))||origin.HasValue&&!Valid(origin.Value))throw new ArgumentException();
             lock(gate) {
                 if(disposed)return;pending=new Request { Revision=++revision,Mode=mode,Origin=origin,Stops=(PointF[])stops.Clone() };plan=null;busy=true;
                 if(!worker) { worker=true;Task.Run((Func<Task>)Work); }

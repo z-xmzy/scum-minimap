@@ -31,14 +31,14 @@ namespace ScumMiniMap {
         void ClearOwnRoute() { ClearLocalRoute(false); }
         void ClearMapRoute() { ClearLocalRoute(true); }
         void ClearLocalRoute(bool stopNavigation) {
-            bool ownActive=activeStops.Length>0&&activeStops[0].OwnerId==null;
+            bool ownActive=activeSavedRoute==null&&activeStops.Length>0&&activeStops[0].OwnerId==null;
             squad.ClearRoute();ownRouteSignature=null;ownRoutePlanner.Clear();if(stopNavigation||ownActive)StopSquadNavigation();filterIdentity=null;Refresh();
         }
         void OwnRouteEdited() {
-            var next=squad.Stops;bool ownActive=activeStops.Length>0&&activeStops[0].OwnerId==null;
+            var next=squad.Stops;bool ownActive=activeSavedRoute==null&&activeStops.Length>0&&activeStops[0].OwnerId==null;
             if(next.Length==0) { if(ownActive)StopSquadNavigation(); }
             else {
-                activeStop=ownActive?AlignedStop(next):0;followingPeer=null;activeStops=next;SetSquadStop();
+                activeStop=ownActive?AlignedStop(next):0;activeSavedRoute=null;returningToStart=false;followingPeer=null;activeStops=next;SetSquadStop();
             }
             ownRouteSignature=null;UpdateRoutePreviews();filterIdentity=null;Refresh();
         }
@@ -51,7 +51,7 @@ namespace ScumMiniMap {
             }
             return Math.Min(activeStop,next.Length-1);
         }
-        bool UsesOwnNavigationPlan { get { return activeStop==0&&activeStops.Length>0&&activeStops[0].OwnerId==null; } }
+        bool UsesOwnNavigationPlan { get { return activeSavedRoute==null&&activeStop==0&&activeStops.Length>0&&activeStops[0].OwnerId==null; } }
         void UpdateRoutePreviews() {
             var now=DateTime.UtcNow;var origin=PlanningOrigin();var own=squad.Stops;string signature=engine.WpfRouteMode+":"+StopSignature(own);
             if(own.Length==0) { if(ownRouteSignature!="")ownRoutePlanner.Clear();ownRouteSignature=""; }
@@ -60,7 +60,7 @@ namespace ScumMiniMap {
             }
             if(activeStops.Length==0||UsesOwnNavigationPlan) { if(activeRouteSignature!=null)squadRoutePlanner.Clear();activeRouteSignature=null; }
             else {
-                var remaining=activeStops.Skip(activeStop).ToArray();signature=engine.WpfRouteMode+":"+StopSignature(remaining);
+                var remaining=RemainingStops().ToArray();signature=engine.WpfRouteMode+":"+StopSignature(remaining);
                 if(remaining.Length>0&&(signature!=activeRouteSignature||now-activePlanRequested>=TimeSpan.FromSeconds(2)&&OriginChanged(activePlanOrigin,origin))) {
                     activeRouteSignature=signature;activePlanOrigin=origin;activePlanRequested=now;squadRoutePlanner.Update(origin,StopPoints(remaining),engine.WpfRouteMode);
                 }
@@ -83,6 +83,7 @@ namespace ScumMiniMap {
             if(StopSignature(current)!=StopSignature(activeStops)) { activeStop=AlignedStop(current);activeStops=current;SetSquadStop(); }
         }
         void AddRouteState(WpfMapState state,WpfMapState compact) {
+            if(activeSavedRoute!=null)state.SharedMarkers=compact.SharedMarkers=state.SharedMarkers.Concat(activeStops).ToArray();
             state.LocalRoute=compact.LocalRoute=squad.Stops;state.OwnRoutePlan=compact.OwnRoutePlan=ownRoutePlanner.Plan;
             state.SquadPlan=compact.SquadPlan=UsesOwnNavigationPlan?ownRoutePlanner.Plan:squadRoutePlanner.Plan;state.SquadPlanning=compact.SquadPlanning=UsesOwnNavigationPlan?ownRoutePlanner.Busy:squadRoutePlanner.Busy;
             state.SquadNavigating=compact.SquadNavigating=followingPeer!=null||activeStops.Length>0;
@@ -96,7 +97,7 @@ namespace ScumMiniMap {
             if(activeStops.Length>activeStop&&state.Target!=null&&state.Position!=null) {
                 var plan=state.SquadPlan;
                 double distance=0;var from=MapWindow.ToMap(state.Position);
-                foreach(var stop in activeStops.Skip(activeStop)) { var to=new DrawingPoint((float)stop.X,(float)stop.Y);distance+=DestinationSearch.Metres(from,to);from=to; }
+                foreach(var stop in RemainingStops()) { var to=new DrawingPoint((float)stop.X,(float)stop.Y);distance+=DestinationSearch.Metres(from,to);from=to; }
                 bool road=plan!=null&&plan.HasOrigin&&plan.MissingRoads==0;
                 if(plan!=null&&plan.HasOrigin)distance=plan.Distance;
                 state.RouteSummary=compact.RouteSummary=S("NavigationNext")+": "+state.RouteSummary+" · "+S("NavigationRemaining")+": "+engine.WpfTravelSummary(distance,road,state.SquadPlanning,plan==null?(double?)null:plan.EstimatedSeconds,plan==null||!plan.HasOrigin?0:plan.UnplannedLegs,plan!=null&&plan.HasOrigin&&plan.AllFailed);
