@@ -1,0 +1,95 @@
+{
+  "version": "2.4.10-local-map",
+  "sha256": "9459FA49B62BF77E993795AE403659A6FD81C3EAFFE70312C3B9EF8E5D239055",
+  "exe_sha256": "3ECFD841B16C16F52775F415B2ECC3D0EA806CD7767A5041BB3178C34A154A60",
+  "bytes": 742495946,
+  "entries": 1878,
+  "route_calls": 18944,
+  "transitions": 5114,
+  "cases": {
+    "area": {
+      "calls": 2064,
+      "success": 1966
+    },
+    "extra": {
+      "calls": 7640,
+      "success": 6732
+    },
+    "approach": {
+      "calls": 1168,
+      "success": 1080
+    },
+    "other": {
+      "calls": 416,
+      "success": 154
+    },
+    "stacked": {
+      "calls": 392,
+      "success": 392
+    },
+    "levels": {
+      "calls": 208,
+      "success": 208
+    },
+    "decks": {
+      "calls": 4712,
+      "success": 4712
+    },
+    "heads": {
+      "calls": 1760,
+      "success": 1680
+    },
+    "through": {
+      "calls": 584,
+      "success": 584
+    }
+  },
+  "game_build": 26621909,
+  "base_world_build": 26593778,
+  "old_package_sha256": "52D7DDCC92FF61583F729CF15D601B349C8DFC0BF65F576251F7B04C0F31160A",
+  "topology": {
+    "nodes": 210773,
+    "ground_cells": 54423,
+    "cross_layer_links": 7373,
+    "under_road_links": 2794,
+    "handroad_target_matches": 3570,
+    "invalid_edges": 0,
+    "max_portal_rise_m": 1.997,
+    "max_portal_grade_ratio": 0.442,
+    "examples": []
+  },
+  "benchmark": {
+    "old0": {
+      "calls": 92,
+      "p50_ms": 0.059,
+      "p95_ms": 42.997,
+      "max_ms": 2591.812,
+      "startup_ms": 745.0,
+      "success": 89
+    },
+    "new0": {
+      "calls": 92,
+      "p50_ms": 0.152,
+      "p95_ms": 21.625,
+      "max_ms": 2090.893,
+      "startup_ms": 641.0,
+      "success": 89
+    },
+    "new1": {
+      "calls": 92,
+      "p50_ms": 0.141,
+      "p95_ms": 21.887,
+      "max_ms": 2107.376,
+      "startup_ms": 634.2,
+      "success": 89
+    },
+    "old1": {
+      "calls": 92,
+      "p50_ms": 0.055,
+      "p95_ms": 42.395,
+      "max_ms": 2099.57,
+      "startup_ms": 491.4,
+      "success": 89
+    }
+  }
+}

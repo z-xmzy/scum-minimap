@@ -574,6 +574,13 @@ namespace ScumMiniMap {
             var menu=new ContextMenu { Background=WpfFieldTheme.Panel,Foreground=WpfFieldTheme.Ink };
             menu.Items.Add(new MenuItem { Header=DestinationSearch.Sector(target),IsEnabled=false });
             var navigate=new MenuItem { Header=Localization.Get("MapGpsDestination"),ToolTip=Localization.Get("MapGpsSavedHelp") };navigate.Click+=(s,e)=>NavigateTo(target);menu.Items.Add(navigate);
+            if(State!=null&&State.Bunker==null&&NavigateShared!=null) {
+                var heights=NavigationRouter.BridgeHeights(target);
+                for(int i=0;i<heights.Length;i++) {
+                    double height=heights[i];string label=Localization.Get(i==0?"BridgeLower":"BridgeUpper");
+                    var pick=new MenuItem { Header=label };pick.Click+=(s,e)=>NavigateShared(new MapZone {Name=label,Points=new[]{target},RouteHeightCm=height});menu.Items.Add(pick);
+                }
+            }
             var save=new MenuItem { Header=Localization.Get("MarkerAdd"),ToolTip=Localization.Get("MarkerHelp") };save.Click+=(s,e)=> { if(WaypointAt!=null)WaypointAt(target); };menu.Items.Add(save);
             if(RouteStopAt!=null&&State!=null) {
                 var routeMenu=new MenuItem { Header=Localization.Get("RouteList") };
@@ -814,7 +821,7 @@ namespace ScumMiniMap {
             }
             if(pass==MapPass.All||pass==MapPass.Live) {
             routeInk=(SolidColorBrush)RouteInk(State.ActiveSquadRoute);
-            if(State.Route!=null&&State.Route.Success&&State.Position!=null) {
+            if(State.Route!=null&&State.Route.Success&&State.Route.BridgeLayers==null&&State.Position!=null) {
                 var path=State.Route.Polyline;
                 if(path!=null&&path.Length>0)DrawLine(dc,new[]{point(MapWindow.ToMap(State.Position)),point(path[0])},new Pen(routeInk,RouteThickness));
                 else if(State.Target!=null)DrawLine(dc,new[]{point(MapWindow.ToMap(State.Position)),point(State.Target.Centroid)},new Pen(routeInk,RouteThickness));
@@ -834,7 +841,7 @@ namespace ScumMiniMap {
             if(State.Bunker==null) {
             if(State.Route!=null&&State.Route.Success&&State.Position!=null&&State.Route.Polyline!=null&&State.Route.Polyline.Length>0) {
                 var path=State.Route.Polyline;var ink=RouteInk(State.ActiveSquadRoute);DrawStreamedRoute(dc,path,ink,true,point);
-                if(State.Target!=null)DrawLine(dc,new[]{point(path[path.Length-1]),point(State.Target.Centroid)},new Pen(ink,RouteThickness));
+                if(State.Target!=null&&State.Route.BridgeLayers==null)DrawLine(dc,new[]{point(path[path.Length-1]),point(State.Target.Centroid)},new Pen(ink,RouteThickness));
             }
             string ownKey=State.LocalRoute.Length>0?SquadState.RouteKey(State.LocalRoute[0]):null;
             if(State.OwnRoutePlan!=null&&ownKey!=State.ActiveSquadRoute)DrawRoutePlan(dc,State.OwnRoutePlan,OwnerInk(null),point);

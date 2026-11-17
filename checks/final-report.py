@@ -1,0 +1,124 @@
+from pathlib import Path
+import csv,json,hashlib,collections,zipfile,shutil
+root=Path(__file__).resolve().parents[1];checks=root/'checks'
+src=root/'package/SCUM-MiniMap/app/SkynettMiniMap.exe';published=root/'verified-final/SCUM-MiniMap/app/SkynettMiniMap.exe'
+sha=lambda p:hashlib.file_digest(p.open('rb'),'sha256').hexdigest().upper()
+assert sha(src)==sha(published)
+manifest=(checks/'release-exits.txt').read_text(encoding='utf-8-sig')
+assert all(line.endswith(' 0') for line in manifest.splitlines())
+datasets=['area','extra','approach','other','stacked','levels','decks','heads','through']
+counts={};allrows=[]
+for name in datasets:
+ inp=root.parent/'SCUM-2.4.9-all-bridges'/(name+'.tsv')
+ if not inp.exists():inp=checks/(name+'.tsv')
+ rows=list(csv.reader((checks/(name+'.out')).open(encoding='utf8'),delimiter='\t'))
+ expected=inp.read_text(encoding='utf-8-sig').splitlines()
+ assert len(rows)==len(expected),(name,len(rows),len(expected))
+ for actual,want in zip(rows,expected):assert actual[:-3]==want.split('\t'),name
+ counts[name]=dict(calls=len(rows),success=sum(c[-3]=='True' for c in rows))
+ allrows.extend(rows)
+summary=list(csv.DictReader((checks/'逐条复测.csv').open(encoding='utf-8-sig')))
+assert len(summary)==len(allrows)
+assert not any(int(c['无入口的换层']) for c in summary)
+for kind in ['levels','decks']:
+ rows=list(csv.DictReader((checks/(kind+'-verification.csv')).open(encoding='utf-8-sig')))
+ assert all(r['结论']=='通过' for r in rows),(kind,[r for r in rows if r['结论']!='通过'][:3])
+gate=list(csv.DictReader((checks/'heads-verification.csv').open(encoding='utf-8-sig')))
+assert all(r['结论'] in ['经入口换层','安全拒绝'] for r in gate)
+assert counts['through']['success']==counts['through']['calls']
+topology=json.loads((checks/'topology-verification.json').read_text())
+assert topology['invalid_edges']==0 and topology['max_portal_grade_ratio']<.451
+calls=sum(c['calls'] for c in counts.values())
+transitions=sum(int(r['换层数']) for r in summary)
+selected=[r for r in summary if r['用例集']=='area' and r['测试'].startswith('换层') and r['模式']!='Walking']
+results=collections.Counter(r['实际走层'] for r in selected)
+hand=[r for r in summary if r['ID'].startswith('H') and r['用例集'] in ['area','other'] and r['模式']=='Quickest']
+assert len(hand)==180 and all(r['规划成功']=='True' for r in hand)
+bench=json.loads((checks/'bench-summary.json').read_text())
+archive=root/'SCUM-MiniMap-2.4.10-ui.part'
+release=root.parent/'SCUM-MiniMap-2.4.10-桥面分层版.zip'
+with zipfile.ZipFile(archive) as z:
+ assert z.testzip() is None
+ assert hashlib.sha256(z.read('SCUM-MiniMap/app/SkynettMiniMap.exe')).hexdigest().upper()==sha(src)
+ assert not any(any(tag in n for tag in ['BridgeProbe.exe','nav-trails.bin','automatic.log','fine-work/','__pycache__']) for n in z.namelist())
+ info=dict(version='2.4.10-local-map',sha256=sha(archive),exe_sha256=sha(src),bytes=archive.stat().st_size,entries=len(z.infolist()),route_calls=calls,transitions=transitions,cases=counts,game_build=26621909,base_world_build=26593778,old_package_sha256=sha(root.parent/'SCUM-MiniMap-2.4.9-路线分享版.zip'),topology=topology,benchmark=bench)
+if release.exists():assert sha(release)==info['sha256']
+else:shutil.copyfile(archive,release)
+(checks/'release-manifest.json').write_text(json.dumps(info,ensure_ascii=False,indent=2),encoding='utf8')
+benchrows='\n'.join('|'+n+'|'+str(v['p50_ms'])+'|'+str(v['p95_ms'])+'|'+str(v['max_ms'])+'|' for n,v in bench.items())
+tab='\n'.join('|'+n+'|'+str(v['calls'])+'|'+str(v['success'])+'|' for n,v in counts.items())
+report=f"""# SCUM MiniMap 2.4.10 全岛桥面分层修复与复测
+
+2026-11-18。基于 2.4.9 独立制作，旧版压缩包保留。成品位于 {release}，解压后运行「启动 SCUM 地图.cmd」。
+
+## 修复后的行为
+
+桥面与地面分别有通行节点。平面相交时，各层保持独立，换层必须经过模型支持的桥头或接坡。全岛扫描采用同一套规则，覆盖 D0、Z1 及其余区域。已对有明显离地高度的普通道路模型补充检查。
+
+桥下道路恢复自身的路面和高度。4 米格遗漏的桥下道路连接，通过 1 米原始道路表面校验后接入。玩家当前位置使用游戏 Z 值选层，处理人物坐标高于脚下路面的偏移。在同一平面坐标，桥下位置不会完成桥上目的地。路线后台计算和取消机制继续生效。
+
+大地图右键点上下层重叠位置，可选择「导航到桥面」或「导航到桥下」。旧 LX- 路线点仅保存平面坐标，重叠处需要把途经点放在各层独立路段，或使用右键明确选择目的层。手画线靠近模型桥面时，沿线方向用于选中真实桥面，横向选点偏差不会直接生成为上桥通路。
+
+## 最终程序复测
+
+发布 EXE SHA256 为 {info['exe_sha256']}。以下调用来自该程序，包内 EXE 与测试程序逐字节一致。
+
+- 原审计的五套用例全部重跑，共 11,680 次调用，覆盖原清单 146 个投影区域、627 个桥面模型件，以及手画线、附属面和叠层候选。
+- 13 处已识别的上下层交叉点，双向、四种模式，共 208 次直行。全部保持在指定层，并穿过目标交叉位置。
+- 627 个模型件中，589 个能在连续上表面独立取两个端点，共 4,712 次。全部在指定桥层通行，未发生中途下桥绕行。
+- 对模型支持的 198 组入口位置，双向、四种模式，共 1,584 次接坡，全部经允许的入口换层。
+- 22 处同平面坐标、不同高度的目标，双向、四种模式，共 176 次。96 次经入口绕行，80 次明确返回无法连接，零次直接跨层。
+- 73 组两岸有模型连接证据的端点，共 584 次完整穿桥，全部返回通路。
+- 原审计的 276 次车辆换层用例，{results['经接入口']} 次改走接入口，{results['无路线']} 次返回无法规划，零次无入口换层。
+- 90 段手画道路过水用例，走线模式双向共 180 次全部返回路线。
+- 合计 {calls:,} 次调用，对返回折线检查到 {transitions:,} 次换层，全部对应明确的接入口边。
+
+|用例集|调用数|返回路线数|
+|---|---:|---:|
+{tab}
+
+用例包含正常通行、跨层拒绝、结构附属面与旧投影端点，表中的返回路线数不能当作整体通行成功率。
+
+## 原始模型核对与保留限制
+
+桥面、道路和相关接坡从本机 Build 26621909 的 1,648 个室外关卡读取。原基础地形、碰撞与部分世界栅格仍为 Build 26593778。桥面约 1 米取样，每个平面位置保留不同高度的表面。桥端与道路插入件通过 XYZ 连续性连接。
+
+最终嵌入 {topology['nodes']:,} 个上层节点、{topology['ground_cells']:,} 个地面修正格、{topology['cross_layer_links']:,} 条接入口边，以及 {topology['under_road_links']:,} 条经过细采样确认的桥下道路连接。接入口沿途检查模型或地形支撑，并限制坡度，未通过校验的连接被排除。
+
+以下结构没有计入完整穿桥通过项。
+
+- 36 个 SM_SB_Bridge_A_Closed 收起状态模型和 2 个很小的 SM_RiverBridge_03_Transition 连接件，未能独立取得两个连续桥面端点。它们仍包含在原五套用例和逐件清单中。
+- Z3 越野赛道 B137/B138 的桥与平台模型已连接成同一上层结构，只确认单侧接入。另一端离地约 4.7 米，附近存在不同高度的赛道表面，尚无连续落地连接证据。保留单侧可达性，未宣称能从另一端直接驶下。
+- 部分建筑连廊、活动桥及结构面缺少双端地面接入证据，详见两岸接入口清单.csv。离线返回可达不代表该结构适合具体车辆。
+- 桥区内原二维路网生成的岔路提示已过滤，桥区内的转向语音覆盖可能减少。桥区外原有岔路提示保留，语音时机与实际驾驶仍需游戏内验证。
+- 净空、活动桥或道闸状态、车辆宽度及转弯空间，仍需要游戏内验证。模型离线结果不能替代实机通行确认。
+
+## 程序与安装包验证
+
+解压成品自检通过。该解压 EXE 的 SquadUi 408 项通过，静音导航测试通过，桥层选择、到达判断、取消和无效输入共 115 项通过。路线规划、审计回归、聊天复制、输入节奏、既有桥水回归脚本均 exit 0。
+
+标准检查集中的 Test-InputVoice 在管理员面板相关检查后崩溃，复制到 D 盘的 2.4.9 基线在相同位置复现。根因未定位，因此完整标准测试集没有计为全通过。此失败与已通过的静音导航测试分别记录。
+
+最终导航复测使用清理学习轨迹后的候选目录。早期 UI 测试生成的 nav-trails.bin 已移至测试记录目录，成品不含该文件或测试 EXE、临时日志、运行缓存。使用说明及启动脚本已核对。
+
+## 性能
+
+同机、同批 92 条走线请求，顺序 old0 → new0 → new1 → old1。每轮均为独立进程，使用现有模型缓存，初始化耗时单列在 JSON 中。两版每轮均返回 89 条路线。p50/p95 为全 92 次的 nearest-rank。该批结果仅适用于这些桥区和手画线请求。
+
+|轮次|p50 毫秒|p95 毫秒|最大毫秒|
+|---|---:|---:|---:|
+{benchrows}
+
+计算在原有后台工作线程执行。首次细模型加载和无法规划的用例仍可能需要数秒，不能将该批缓存结果理解为所有首次操作的速度。
+
+## 文件与复核
+
+- 成品 {release.name}，{info['bytes']:,} 字节，{info['entries']} 条目。
+- 成品 SHA256 {info['sha256']}。
+- 旧版包 SHA256 {info['old_package_sha256']}。
+- 源码与构建脚本在 D:/codex/SCUM-MiniMap-2.4.10-map。
+- 逐条复测.csv 对应每次返回路线与层变化，levels-verification.csv 检查交叉点直行，decks-verification.csv 检查指定桥面，heads-verification.csv 检查入口及同坐标换层。
+- release-manifest.json 固定最终 EXE、成品和测试数量，原始输入与输出均保存在 checks 中。
+"""
+(checks/'全岛桥面修复复测报告.md').write_text(report,encoding='utf-8-sig')
+print(json.dumps({k:info[k] for k in ['version','sha256','exe_sha256','bytes','entries','route_calls','transitions']},indent=2))

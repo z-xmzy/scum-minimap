@@ -41,6 +41,15 @@ namespace ScumMiniMap {
             return new RoadRoute { Mode=mode, PlayerPoint=playerPt, TargetPoint=targetPt, Polyline=new PointF[0] };
         }
 
+        internal static double[] BridgeHeights(PointF p) { return Ready?gridInstance.BridgeHeights(p):new double[0]; }
+        internal static int SurfaceGroup(PointF p,double? z) { return Ready?gridInstance.SurfaceGroup(p,z):0; }
+        internal static bool SameSurface(PointF p,double? z,PointF q,double? targetZ) {
+            int a=SurfaceGroup(p,z),b=SurfaceGroup(q,targetZ);
+            return a==b;
+        }
+        internal static RoadRoute FindAtHeight(PointF a,PointF b,RoadRouteMode mode,Func<bool> current,double? z,double? targetZ) {
+            return Ready?gridInstance.FindAtHeight(a,b,mode,current,z,targetZ):FindCurrentRoute(a,b,mode,current);
+        }
         internal static RoadRoute FindRoute(PointF playerPt, PointF targetPt) {
             return FindRoute(playerPt, targetPt, RoadRouteMode.Shortest);
         }

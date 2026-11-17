@@ -74,15 +74,15 @@ using System.Drawing.Drawing2D;
 
 
 
-[assembly: AssemblyVersion("2.4.9.0")]
+[assembly: AssemblyVersion("2.4.10.0")]
 
 
 
-[assembly: AssemblyFileVersion("2.4.9.0")]
+[assembly: AssemblyFileVersion("2.4.10.0")]
 
 
 
-[assembly: AssemblyInformationalVersion("2.4.9-local-map")]
+[assembly: AssemblyInformationalVersion("2.4.10-local-map")]
 
 
 
@@ -1726,7 +1726,7 @@ namespace ScumMiniMap {
 
 
 
-        public const string VersionString = "2.4.9";
+        public const string VersionString = "2.4.10";
 
 
 
@@ -4069,7 +4069,7 @@ namespace ScumMiniMap {
 
 
 
-            if(!object.ReferenceEquals(searchTarget,wpfUnsharedTarget)&&DestinationReached(searchTarget,currentPt)) {
+            if(!object.ReferenceEquals(searchTarget,wpfUnsharedTarget)&&DestinationReached(searchTarget,currentPt)&&NavigationRouter.SameSurface(currentPt,p.Z,searchTarget.Centroid,searchTarget.RouteHeightCm)) {
                 VoiceArrived();
 
 
@@ -7611,11 +7611,14 @@ namespace ScumMiniMap {
 
 
         void UpdateRouteAsync(PointF playerPt, MapZone target) { if(!InBunker)RequestRouteAsync(playerPt,target,false); }
+        int lastRouteSurfaceGroup;
         bool RequestRouteAsync(PointF playerPt, MapZone target,bool force) {
             if(closing || IsDisposed) return false;
             if(target==null || !(RoadRouter.Instance.IsLoaded || NavigationRouter.Ready)) { activeRoute=null; routeGeneration++; lastRouteTarget=null; return false; }
             if(!Object.ReferenceEquals(lastRouteTarget,target)) activeRoute=null;
-            if(!force && lastRouteTarget==target && lastRoutePlayerPt!=PointF.Empty && RoadRouter.DistanceMeters(lastRoutePlayerPt,playerPt)<25 && activeRoute!=null) return false;
+            double? gpsHeight=position==null?(double?)null:position.Z;
+            int startGroup=NavigationRouter.SurfaceGroup(playerPt,gpsHeight);
+            if(!force && lastRouteSurfaceGroup==startGroup && lastRouteTarget==target && lastRoutePlayerPt!=PointF.Empty && RoadRouter.DistanceMeters(lastRoutePlayerPt,playerPt)<25 && activeRoute!=null) return false;
             if(routeCalculating) return false;
             // Ensure a UI handle exists before queueing; async continuations in diagnostic
             // hosts do not necessarily have a WinForms synchronization context.
@@ -7626,7 +7629,7 @@ namespace ScumMiniMap {
             RoadRouteMode requestedMode=wpfRouteMode;
             ThreadPool.QueueUserWorkItem(state=> {
                 RoadRoute result=null; Exception failure=null;
-                try { result=NavigationRouter.FindCurrentRoute(playerPt,targetPoint,requestedMode,()=>!closing && Interlocked.Read(ref routeGeneration)==request); }
+                try { result=NavigationRouter.FindAtHeight(playerPt,targetPoint,requestedMode,()=>!closing && Interlocked.Read(ref routeGeneration)==request,gpsHeight,target.RouteHeightCm); }
                 catch(Exception ex) { failure=ex; }
                 try {
                     if(IsDisposed) return;
@@ -7635,7 +7638,7 @@ namespace ScumMiniMap {
                         if(wpfQueuedTarget!=null && request!=routeGeneration) { var queued=wpfQueuedTarget;wpfQueuedTarget=null;if(Object.ReferenceEquals(searchTarget,queued)&&position!=null)UpdateRouteAsync(ToMap(position),queued); }
                         if(failure!=null) { Program.LogException("Route",failure); if(force) FinishVoiceReroute(false); return; }
                         if(closing || IsDisposed || request!=routeGeneration || !Object.ReferenceEquals(searchTarget,target) || target.Centroid!=targetPoint) return;
-                        activeRoute=result; lastRouteTarget=target; lastRoutePlayerPt=playerPt;
+                        activeRoute=result;lastRouteSurfaceGroup=startGroup; lastRouteTarget=target; lastRoutePlayerPt=playerPt;
                         if(force) FinishVoiceReroute(result!=null && result.Success);
                         lastFrameKey=null;
                         if(SettingsVisible) canvas.Invalidate();

@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.4.10] - 2026-11-17
+
+- Separate the ground road and surveyed bridge surface at island crossings. Join them at height-matched approaches.
+- Use live position height for bridge navigation and offer a choice of bridge deck or lower road at overlapping map destinations.
+
 ## [2.4.9] - 2026-11-15
 
 - Save named routes, share and import LX- codes, and navigate ordered or repeating routes from the first stop.

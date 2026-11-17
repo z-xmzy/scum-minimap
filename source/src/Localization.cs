@@ -205,6 +205,8 @@ namespace ScumMiniMap {
         static void AddSavedRouteText() {
             var catalogues=new[]{StringsEn,StringsEsAr,StringsFr,StringsDe,StringsNl,StringsRu,StringsZh,StringsTr,StringsAr,StringsPt,StringsKo,StringsPl,StringsPtPt,StringsTh,StringsZhTw,StringsJa,StringsCs,StringsIt,StringsUk,StringsFi,StringsLt,StringsSw};
             string[][] entries={
+                new[]{"BridgeLower","Navigate below bridge","导航到桥下","導航至橋下"},
+                new[]{"BridgeUpper","Navigate onto bridge","导航到桥面","導航至橋面"},
                 new[]{"LxLibrary","Saved routes","已保存路线","已儲存路線"},
                 new[]{"LxHelp","Right-click the map to add stops in order. First is the start. A normal route ends at the last stop. A loop returns to the start and repeats.","在地图上右键按顺序添加站点。第一个是起点。普通路线在最后一站结束，循环路线经过最后一站后回到起点，开始下一圈。","在地圖上按右鍵依序新增站點。第一站為起點。一般路線於最後一站結束，循環路線則返回起點開始下一圈。"},
                 new[]{"LxName","Route name","路线名称","路線名稱"},

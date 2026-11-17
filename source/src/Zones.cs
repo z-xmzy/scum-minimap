@@ -39,6 +39,7 @@ namespace ScumMiniMap {
         public static string Normalize(string icon) { return Array.IndexOf(Ids,icon)>=0?icon:"pin"; }
     }
     public sealed class MapZone {
+        internal double? RouteHeightCm;
         public string Icon="pin";
         public const string DeathMarkerLayer="Death markers";
         public bool IsDeathMarker { get { return Category==ZoneCategory.Custom && Layer==DeathMarkerLayer && Points!=null && Points.Length==1; } }

@@ -1,0 +1,11 @@
+{
+  "nodes": 210773,
+  "ground_cells": 54423,
+  "cross_layer_links": 7373,
+  "under_road_links": 2794,
+  "handroad_target_matches": 3570,
+  "invalid_edges": 0,
+  "max_portal_rise_m": 1.997,
+  "max_portal_grade_ratio": 0.442,
+  "examples": []
+}

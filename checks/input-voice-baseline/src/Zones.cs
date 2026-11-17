@@ -1,0 +1,1887 @@
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Windows.Forms;
+using System.Diagnostics;
+using System.Threading.Tasks;
+using System.Drawing.Drawing2D;
+using System.Security.Cryptography;
+
+namespace ScumMiniMap {
+    public static class SafeMapImage {
+        public static Bitmap Decode(Stream stream) {
+            if(stream==null) throw new FileNotFoundException("The default map is missing.");
+            if(stream.CanSeek && stream.Length>128L*1024*1024) throw new InvalidDataException("Map file exceeds 128 MB.");
+            using(Image image=Image.FromStream(stream,false,false)) {
+                if(image.Width<1 || image.Height<1 || image.Width>16384 || image.Height>16384 || (long)image.Width*image.Height>256L*1024*1024)
+                    throw new InvalidDataException("Map dimensions exceed the supported memory budget.");
+                return new Bitmap(image);
+            }
+        }
+        public static Bitmap Load(string custom,Func<Stream> embedded,out string warning) {
+            warning=null;
+            if(File.Exists(custom)) {
+                try { using(var file=File.OpenRead(custom)) return Decode(file); }
+                catch(Exception ex) {
+                    if(!(ex is IOException) && !(ex is InvalidDataException) && !(ex is UnauthorizedAccessException) && !(ex is ArgumentException) && !(ex is OutOfMemoryException) && !(ex is System.Runtime.InteropServices.ExternalException)) throw;
+                    warning=Localization.Get("CustomMapRecovery");
+                }
+            }
+            using(Stream resource=embedded()) return Decode(resource);
+        }
+    }
+    public enum ZoneCategory { City, Town, Farm, Trader, Faction, Military, Bunker, GasStation, Custom, Unknown }
+    public static class WaypointIcons {
+        public static readonly string[] Ids={"pin","house","skull","car","box","tent","fuel","flag"};
+        public static string Normalize(string icon) { return Array.IndexOf(Ids,icon)>=0?icon:"pin"; }
+    }
+    public sealed class MapZone {
+        public string Icon="pin";
+        public const string DeathMarkerLayer="Death markers";
+        public bool IsDeathMarker { get { return Category==ZoneCategory.Custom && Layer==DeathMarkerLayer && Points!=null && Points.Length==1; } }
+        public DateTime? DeathCreatedUtc;
+        internal DateTime? DeathTimeUtc {
+            get {
+                if(DeathCreatedUtc.HasValue)return DeathCreatedUtc;
+                // Earlier versions stored a local timestamp at the end of the name.
+                DateTime legacy;
+                if(IsDeathMarker && Name!=null && Name.Length>=19 && DateTime.TryParseExact(Name.Substring(Name.Length-19),
+                    "yyyy-MM-dd HH:mm:ss",CultureInfo.InvariantCulture,DateTimeStyles.AssumeLocal,out legacy))return legacy.ToUniversalTime();
+                return null;
+            }
+        }
+        public string DisplayName { get { return DisplayNameAt(DateTime.UtcNow); } }
+        internal string DisplayNameAt(DateTime now) {
+            if(!IsDeathMarker)return IsMapObject ? Localization.GetMapObjectName(Name) : Localization.GetZoneName(Name);
+            DateTime? created=DeathTimeUtc;
+            if(!created.HasValue)return Localization.Get("DeathName");
+            TimeSpan age=now-created.Value;
+            string elapsed=age.TotalMinutes<1?Localization.T("HistorySecondsAgo",Math.Max(0,(int)age.TotalSeconds)):
+                age.TotalHours<1?Localization.T("HistoryMinutesAgo",(int)age.TotalMinutes):
+                age.TotalDays<1?Localization.T("HistoryHoursAgo",(int)age.TotalHours):Localization.T("HistoryDaysAgo",(int)age.TotalDays);
+            return Localization.Get("DeathName")+" "+elapsed;
+        }
+        public string Name;
+        public bool IsMapObject;
+        public string Subtitle;
+        public int Argb;
+        public int? FillArgb;
+        public PointF[] Points;
+        public ZoneCategory Category;
+        static readonly HashSet<string> FactionNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
+            "D4 Clock house", "D4 Stable ruins", "D4 City - Pharmacy", "D4 City - Police Station",
+            "D3 City Warehouse", "D3 - General Store", "D3 Gas Station", "D3 Little town - House",
+            "D2 Little bridge", "D2 Lumbermill cabin", "D2 Little town - House",
+            "D1 Graveyard", "D1 Food store", "D1 Farm",
+            "C4 Wine farm", "C4 WWII Bunker",
+            "C3 Little cabin", "C3 Workshop", "C3 Garage",
+            "C1 ww2 bunker", "C1 Little farm",
+            "B3 WWII Bunker", "B3 Little farm",
+            "B2 Little Farm", "B2 WWII Bunker", "B2 Farm",
+            "B1 Barn", "B1 WWII Bunker", "B1 Little Farm",
+            "A4 Street between 2 houses", "A4 Lighthouse", "A4 House ruins",
+            "A3 Farm", "A3 WWII bunker", "A3 Island WWII bunker",
+            "A2 Store with ATM", "A2 Stables",
+            "A1 Stables", "A1 School",
+            "A0 Offices", "A0 Camping",
+            "Z4 Lighthouse", "Z4 WWII Bunker", "Z4 Boatyard", "Z4 Graveyard",
+            "Z3 WWII Bunker", "Z3 Boat yard", "Z3 Island Lighthouse",
+            "Z2 light house",
+            "Z0 WWII bunker", "Z0 Lighthouse", "Z0 WWII Bunker South"
+        };
+        public static bool IsFactionName(string name) { return !string.IsNullOrEmpty(name) && FactionNames.Contains(name); }
+        public bool IsFaction { get { return Argb == -1 || Argb == -657931 || (Argb & 0xFFFFFF) == 0xFFFFFF || IsFactionName(Name); } }
+        public bool IsFuelStation { get { return Argb == -30720 || (Points != null && Points.Length < 3 && Name != null && Name.IndexOf("Gas", StringComparison.OrdinalIgnoreCase) >= 0); } }
+        public string Layer = "Default";
+        public MapZone Clone() { return new MapZone { Name=Name,Icon=Icon,Subtitle=Subtitle,Argb=Argb,FillArgb=FillArgb,Points=Points==null?new PointF[0]:(PointF[])Points.Clone(),Category=Category,Layer=Layer,DeathCreatedUtc=DeathCreatedUtc }; }
+        public PointF Centroid {
+            get {
+                if(Points==null || Points.Length==0) return new PointF(0,0);
+                float x=0,y=0;
+                for(int i=0;i<Points.Length;i++) { x+=Points[i].X; y+=Points[i].Y; }
+                return new PointF(x/Points.Length,y/Points.Length);
+            }
+        }
+        public double DistanceTo(PointF p) {
+            if(Points==null || Points.Length==0) return double.MaxValue;
+            if(Contains(p)) return 0;
+            double minDistSq=double.MaxValue;
+            for(int i=0,j=Points.Length-1; i<Points.Length; j=i++) {
+                PointF a=Points[j], b=Points[i];
+                double dx=b.X-a.X, dy=b.Y-a.Y;
+                double lenSq=dx*dx+dy*dy;
+                double u = lenSq>0 ? ((p.X-a.X)*dx + (p.Y-a.Y)*dy)/lenSq : 0;
+                u = Math.Max(0,Math.Min(1,u));
+                double px = a.X + u*dx, py = a.Y + u*dy;
+                double dSq = (p.X-px)*(p.X-px) + (p.Y-py)*(p.Y-py);
+                if(dSq<minDistSq) minDistSq=dSq;
+            }
+            return Math.Sqrt(minDistSq);
+        }
+        internal float minX, maxX, minY, maxY;
+        internal bool boundsReady;
+        public void ComputeBounds() {
+            if(Points==null || Points.Length==0) { minX=maxX=minY=maxY=0; boundsReady=true; return; }
+            minX=maxX=Points[0].X; minY=maxY=Points[0].Y;
+            for(int i=1;i<Points.Length;i++) {
+                float px=Points[i].X, py=Points[i].Y;
+                if(px<minX) minX=px; if(px>maxX) maxX=px;
+                if(py<minY) minY=py; if(py>maxY) maxY=py;
+            }
+            boundsReady=true;
+        }
+        public bool Contains(PointF p) {
+            if(Points==null || Points.Length<3) return false;
+            if(!boundsReady) ComputeBounds();
+            if(p.X < minX || p.X > maxX || p.Y < minY || p.Y > maxY) return false;
+            bool inside=false;
+            for(int i=0,j=Points.Length-1; i<Points.Length; j=i++) {
+                if(((Points[i].Y>p.Y)!=(Points[j].Y>p.Y)) &&
+                    (p.X < (Points[j].X-Points[i].X)*(p.Y-Points[i].Y)/(Points[j].Y-Points[i].Y) + Points[i].X)) {
+                    inside=!inside;
+                }
+            }
+            return inside;
+        }
+    }
+    public static class ZoneStore {
+        public const int MaxZones=10000, MaxPoints=512, MaxLineLength=65536;
+        const long MaxTextChars=32*1024*1024;
+        static string ReadBoundedLine(TextReader reader,ref long total) {
+            var line=new System.Text.StringBuilder(); int c;
+            while((c=reader.Read())!=-1) {
+                if(++total>MaxTextChars) throw new InvalidDataException("Zone file exceeds the size limit.");
+                if(c=='\n') return line.ToString().TrimEnd('\r');
+                if(line.Length>=MaxLineLength) throw new InvalidDataException("Zone line exceeds the size limit.");
+                line.Append((char)c);
+            }
+            return line.Length==0?null:line.ToString().TrimEnd('\r');
+        }
+        static string SafeUnescape(string value) {
+            try { return Uri.UnescapeDataString(value); }
+            catch(UriFormatException) { return value; }
+        }
+        public static ZoneCategory Classify(MapZone z) {
+            if(z.IsFuelStation) return ZoneCategory.GasStation;
+            if(z.IsFaction) return ZoneCategory.Faction;
+            if(z.Argb==-16737281) return ZoneCategory.Custom; // cyan 0xFF00C8FF
+            string n=z.Name??"";
+            string upper=n.ToUpperInvariant();
+            if(upper.Contains("BUNKER")) return ZoneCategory.Bunker;
+            if(z.Argb==-993486 || z.Argb==-1358291) { // gold or red = military
+                return ZoneCategory.Military;
+            }
+            if(upper.Contains("FARM") || upper.Contains("RANCH") || upper.Contains("VINEYARD") || upper.Contains("ORCHARD")) return ZoneCategory.Farm;
+            if(upper.Contains("OUTPOST") || upper.Contains("TRADER") || z.Argb==-9843406) return ZoneCategory.Trader;
+            // Large settlements vs small towns: check for known city names
+            string[] cities = { "SAMOBOR", "KLENOVNIK", "PRIBOJ" };
+            foreach(string c in cities) if(upper.Contains(c)) return ZoneCategory.City;
+            if(z.Points!=null && z.Points.Length>=3 && z.Argb==-6895376) return ZoneCategory.Town;
+            return ZoneCategory.Unknown;
+        }
+        public static List<MapZone> Load(string path) {
+            if(File.Exists(path)) {
+                using(Stream stream=File.OpenRead(path)) return Load(stream);
+            }
+            using(Stream stream=System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("zones.tsv")) {
+                if(stream!=null) return Load(stream);
+            }
+            return new List<MapZone>();
+        }
+        public static List<MapZone> Load(Stream stream) {
+            List<MapZone> result=new List<MapZone>();
+            if(stream==null)return result;
+            using(StreamReader reader=new StreamReader(stream)) {
+                string line; long total=0;
+                while((line=ReadBoundedLine(reader,ref total))!=null) {
+                    if(string.IsNullOrWhiteSpace(line)) continue;
+                    string[] parts=line.Split('\t'); int color;
+                    if(parts.Length<3 || !int.TryParse(parts[1],out color)) throw new InvalidDataException("Invalid zone record.");
+                    List<PointF> points=new List<PointF>(); bool valid=true;
+                    foreach(string point in parts[2].Split(';')) {
+                        string[] xy=point.Split(','); float x,y;
+                        if(xy.Length!=2 || !float.TryParse(xy[0],NumberStyles.Float,CultureInfo.InvariantCulture,out x) || !float.TryParse(xy[1],NumberStyles.Float,CultureInfo.InvariantCulture,out y) || float.IsNaN(x) || float.IsNaN(y) || x<-.1f || x>1.1f || y<-.1f || y>1.1f) { valid=false;break; }
+                        if(points.Count>=MaxPoints) throw new InvalidDataException("Zone has too many points.");
+                        points.Add(new PointF(Math.Max(0,Math.Min(1,x)),Math.Max(0,Math.Min(1,y))));
+                    }
+                    if(!valid || points.Count==0) throw new InvalidDataException("Invalid zone coordinates.");
+                    if(result.Count>=MaxZones) throw new InvalidDataException("Zone file exceeds the supported zone count.");
+                    {
+                        MapZone zone = new MapZone { Name=SafeUnescape(parts[0]),Argb=color,Points=points.ToArray() };
+                        if(parts.Length>3) {
+                            ZoneCategory cat;
+                            if(Enum.TryParse(parts[3], out cat) && Enum.IsDefined(typeof(ZoneCategory),cat)) zone.Category = cat;
+                            else zone.Category = Classify(zone);
+                        } else {
+                            zone.Category = Classify(zone);
+                        }
+                        if(parts.Length>4 && !string.IsNullOrWhiteSpace(parts[4])) {
+                            zone.Layer = SafeUnescape(parts[4]);
+                        } else {
+                            zone.Layer = "Default";
+                        }
+                        if(parts.Length<=3 && (zone.Name??"").ToUpperInvariant().Contains("BUNKER") && !zone.IsFuelStation && !zone.IsFaction && zone.Category != ZoneCategory.Faction) zone.Category = ZoneCategory.Bunker;
+                        DateTime created;
+                        if(zone.IsDeathMarker && parts.Length>5 && DateTime.TryParseExact(parts[5],"o",CultureInfo.InvariantCulture,
+                            DateTimeStyles.RoundtripKind,out created))zone.DeathCreatedUtc=created.ToUniversalTime();
+                        else if(zone.IsDeathMarker)zone.DeathCreatedUtc=zone.DeathTimeUtc;
+                        if(parts.Length>6&&!string.IsNullOrWhiteSpace(parts[6])) { int fill;if(!int.TryParse(parts[6],out fill))throw new InvalidDataException("Invalid zone fill colour.");zone.FillArgb=fill; }
+                        if(parts.Length>7)zone.Icon=WaypointIcons.Normalize(parts[7]);
+                        result.Add(zone);
+                    }
+                }
+            }
+            return result;
+        }
+        public static void Save(string path,List<MapZone> zones) {
+            if(zones==null || zones.Count>MaxZones) throw new InvalidDataException("Too many zones to save.");
+            string temp=path+"."+Guid.NewGuid().ToString("N")+".tmp";
+            var lines=new List<string>(); long total=0;
+            foreach(MapZone z in zones) {
+                if(z==null || z.Name==null || z.Points==null || z.Points.Length==0 || z.Points.Length>MaxPoints || !Enum.IsDefined(typeof(ZoneCategory),z.Category))
+                    throw new InvalidDataException("Invalid zone; nothing was saved.");
+                foreach(PointF point in z.Points)
+                    if(float.IsNaN(point.X)||float.IsInfinity(point.X)||float.IsNaN(point.Y)||float.IsInfinity(point.Y)||point.X<0||point.X>1||point.Y<0||point.Y>1)
+                        throw new InvalidDataException("Invalid zone coordinates; nothing was saved.");
+                string layer=string.IsNullOrWhiteSpace(z.Layer)?"Default":z.Layer;
+                string line=Uri.EscapeDataString(z.Name)+"\t"+z.Argb+"\t"+string.Join(";",z.Points.Select(pt=>pt.X.ToString("R",CultureInfo.InvariantCulture)+","+pt.Y.ToString("R",CultureInfo.InvariantCulture)))+"\t"+z.Category+"\t"+Uri.EscapeDataString(layer);
+                string icon=WaypointIcons.Normalize(z.Icon);bool hasIcon=icon!="pin";
+                if(z.IsDeathMarker&&z.DeathTimeUtc.HasValue||z.FillArgb.HasValue||hasIcon)line+="\t"+(z.IsDeathMarker&&z.DeathTimeUtc.HasValue?z.DeathTimeUtc.Value.ToString("o",CultureInfo.InvariantCulture):"");
+                if(z.FillArgb.HasValue||hasIcon)line+="\t"+(z.FillArgb.HasValue?z.FillArgb.Value.ToString(CultureInfo.InvariantCulture):"");
+                if(hasIcon)line+="\t"+icon;
+                total+=line.Length+2;
+                if(line.Length>MaxLineLength || total>MaxTextChars) throw new InvalidDataException("Zone data exceeds the size limit.");
+                lines.Add(line);
+            }
+            try {
+                File.WriteAllLines(temp,lines);
+                if(File.Exists(path))File.Replace(temp,path,null); else File.Move(temp,path);
+            } finally { if(File.Exists(temp)) File.Delete(temp); }
+        }
+
+        public static void DrawFuelIcon(Graphics g,float cx,float cy,float r=10f) {
+            using(Brush shadow=new SolidBrush(Color.FromArgb(90,0,0,0))) g.FillEllipse(shadow,cx-r,cy-r+1.5f,r*2,r*2);
+            using(Brush badge=new SolidBrush(Color.FromArgb(255,140,0))) g.FillEllipse(badge,cx-r,cy-r,r*2,r*2);
+            using(Pen border=new Pen(Color.FromArgb(220,20,25,30),1.4f)) g.DrawEllipse(border,cx-r,cy-r,r*2,r*2);
+            using(Brush white=new SolidBrush(Color.White)) g.FillRectangle(white,cx-4.5f,cy-4f,5f,8.5f);
+            using(Brush cutout=new SolidBrush(Color.FromArgb(255,140,0))) g.FillRectangle(cutout,cx-3.5f,cy-2.5f,3f,2.2f);
+            using(Pen whitePen=new Pen(Color.White,1.4f)) {
+                whitePen.StartCap=LineCap.Round; whitePen.EndCap=LineCap.Round;
+                g.DrawLine(whitePen,cx+0.5f,cy-2f,cx+4f,cy-1f);
+                g.DrawLine(whitePen,cx+4f,cy-1f,cx+4f,cy+4f);
+                g.DrawLine(whitePen,cx+4f,cy+4f,cx+2.5f,cy+2.5f);
+            }
+        }
+        public static void Draw(Graphics g,IEnumerable<MapZone> zones,RectangleF rect,bool showPolygons,float fontSize=9f,bool showGasStations=true,HashSet<ZoneCategory> hidden=null,bool showLabels=true,bool smartLod=true,float zoom=1.0f) {
+            using(Font font=new Font("Segoe UI",Math.Max(6f,Math.Min(24f,fontSize)),FontStyle.Bold)) {
+                StringFormat sf=new StringFormat { Alignment=StringAlignment.Center,LineAlignment=StringAlignment.Center };
+                List<RectangleF> placed=new List<RectangleF>();
+                List<KeyValuePair<string,RectangleF>> labelItems=new List<KeyValuePair<string,RectangleF>>();
+                bool zoomedOut = smartLod && zoom < 2.5f;
+                RectangleF clip = g.VisibleClipBounds;
+                if(clip.Width <= 0 || clip.Height <= 0) clip = new RectangleF(0, 0, 4000, 4000);
+                foreach(MapZone zone in zones??Enumerable.Empty<MapZone>()) {
+                    if(zone==null || zone.Points==null || zone.Points.Length==0) continue;
+                    if(hidden!=null && hidden.Contains(zone.Category)) continue;
+                    if(zone.Points.Length>=3) {
+                        if(!showPolygons) continue;
+                        if(!zone.boundsReady) zone.ComputeBounds();
+                        float polyMinX = rect.Left + zone.minX * rect.Width;
+                        float polyMaxX = rect.Left + zone.maxX * rect.Width;
+                        float polyMinY = rect.Top + zone.minY * rect.Height;
+                        float polyMaxY = rect.Top + zone.maxY * rect.Height;
+                        if(polyMaxX < clip.Left - 10 || polyMinX > clip.Right + 10 || polyMaxY < clip.Top - 10 || polyMinY > clip.Bottom + 10) continue;
+
+                        PointF[] points = new PointF[zone.Points.Length];
+                        float cx = 0, cy = 0;
+                        for(int pi = 0; pi < zone.Points.Length; pi++) {
+                            float px = rect.Left + zone.Points[pi].X * rect.Width;
+                            float py = rect.Top + zone.Points[pi].Y * rect.Height;
+                            points[pi] = new PointF(px, py);
+                            cx += px; cy += py;
+                        }
+                        cx /= zone.Points.Length; cy /= zone.Points.Length;
+
+                        Color color=Color.FromArgb(zone.Argb);
+                        int fillAlpha = (zone.IsFaction || zone.Category == ZoneCategory.Faction) ? 75 : 40;
+                        float penWidth = (zone.IsFaction || zone.Category == ZoneCategory.Faction) ? 2.5f : 1.8f;
+                        using(Brush fill=new SolidBrush(zone.FillArgb.HasValue?Color.FromArgb(zone.FillArgb.Value):Color.FromArgb(fillAlpha,color)))g.FillPolygon(fill,points);
+                        using(Pen pen=new Pen(Color.FromArgb(220,color),penWidth))g.DrawPolygon(pen,points);
+                        bool isMajor = zone.Category==ZoneCategory.City || zone.Category==ZoneCategory.Trader || zone.Category==ZoneCategory.Custom || zone.Category==ZoneCategory.Faction || zone.IsFaction;
+                        if(showLabels && (!zoomedOut || isMajor) && !string.IsNullOrEmpty(zone.Name)) {
+                            string displayName = zone.DisplayName;
+                            SizeF sz=g.MeasureString(displayName,font);
+                            RectangleF box=new RectangleF(cx-sz.Width/2f-4f,cy-sz.Height/2f-2f,sz.Width+8f,sz.Height+4f);
+                            for(int pass=0;pass<10;pass++) {
+                                bool clash=false;
+                                for(int j=0;j<placed.Count;j++) {
+                                    if(box.IntersectsWith(placed[j])) {
+                                        clash=true;
+                                        box.Y=placed[j].Bottom+2f;
+                                    }
+                                }
+                                if(!clash)break;
+                            }
+                            placed.Add(box);
+                            labelItems.Add(new KeyValuePair<string,RectangleF>(displayName,box));
+                        }
+                    } else {
+                        float cx=rect.Left+zone.Points[0].X*rect.Width, cy=rect.Top+zone.Points[0].Y*rect.Height;
+                        if(cx>=clip.Left-20 && cx<=clip.Right+20 && cy>=clip.Top-20 && cy<=clip.Bottom+20) {
+                            if(zone.IsFuelStation) {
+                                if(showGasStations) DrawFuelIcon(g,cx,cy);
+                            } else {
+                                Color c=Color.FromArgb(zone.Argb);
+                                if(zone.IsDeathMarker) {
+                                    using(var tombstone=new GraphicsPath()) {
+                                        tombstone.AddArc(cx-7,cy-10,14,14,180,180);
+                                        tombstone.AddLine(cx+7,cy-3,cx+7,cy+8);
+                                        tombstone.AddLine(cx+7,cy+8,cx-7,cy+8);
+                                        tombstone.CloseFigure();
+                                        using(Brush fill=new SolidBrush(c)) g.FillPath(fill,tombstone);
+                                        using(Pen outline=new Pen(Color.FromArgb(240,20,25,30),2)) {
+                                            g.DrawPath(outline,tombstone);
+                                            g.DrawLine(outline,cx,cy-5,cx,cy+4);
+                                            g.DrawLine(outline,cx-3,cy-2,cx+3,cy-2);
+                                            g.DrawLine(outline,cx-9,cy+9,cx+9,cy+9);
+                                        }
+                                    }
+                                } else {
+                                using(Brush shadow=new SolidBrush(Color.FromArgb(90,0,0,0))) g.FillEllipse(shadow,cx-7,cy-7+1.5f,14,14);
+                                using(Brush badge=new SolidBrush(c)) g.FillEllipse(badge,cx-7,cy-7,14,14);
+                                using(Pen border=new Pen(Color.FromArgb(220,20,25,30),1.4f)) g.DrawEllipse(border,cx-7,cy-7,14,14);
+                                using(Brush dot=new SolidBrush(Color.White)) g.FillEllipse(dot,cx-2.5f,cy-2.5f,5,5);
+                                }
+                                if(showLabels && !string.IsNullOrEmpty(zone.Name)) {
+                                    string displayName = zone.DisplayName;
+                                    SizeF sz=g.MeasureString(displayName,font);
+                                    RectangleF box=new RectangleF(cx-sz.Width/2f-4f,cy+9f,sz.Width+8f,sz.Height+4f);
+                                    placed.Add(box);
+                                    labelItems.Add(new KeyValuePair<string,RectangleF>(displayName,box));
+                                }
+                            }
+                        }
+                    }
+                }
+                foreach(KeyValuePair<string,RectangleF> item in labelItems) {
+                    using(Brush bg=new SolidBrush(Color.FromArgb(180,12,17,22)))g.FillRectangle(bg,item.Value);
+                    using(Pen border=new Pen(Color.FromArgb(130,255,255,255),1f))g.DrawRectangle(border,item.Value.X,item.Value.Y,item.Value.Width,item.Value.Height);
+                    g.DrawString(item.Key,font,Brushes.Black,item.Value.X+item.Value.Width/2f+1f,item.Value.Y+item.Value.Height/2f+1f,sf);
+                    g.DrawString(item.Key,font,Brushes.White,item.Value.X+item.Value.Width/2f,item.Value.Y+item.Value.Height/2f,sf);
+                }
+            }
+        }
+        public static PointF Align(PointF point,PointF s1,PointF s2,PointF m1,PointF m2) {
+            if(Math.Abs(s2.X-s1.X)<.05 || Math.Abs(s2.Y-s1.Y)<.05 || Math.Abs(m2.X-m1.X)<.02 || Math.Abs(m2.Y-m1.Y)<.02)throw new ArgumentException("Choose two landmarks separated both horizontally and vertically.");
+            float sx=(m2.X-m1.X)/(s2.X-s1.X),sy=(m2.Y-m1.Y)/(s2.Y-s1.Y);
+            if(sx<=0 || sy<=0)throw new ArgumentException("Use matching landmarks in the same order on a north-up map.");
+            return new PointF(m1.X+(point.X-s1.X)*sx,m1.Y+(point.Y-s1.Y)*sy);
+        }
+        public static void SelfTest() {
+            AppZoneFolder.SelfTest();
+            ZoneFileOpen.SelfTest();
+            using(MemoryStream stream=new MemoryStream(System.Text.Encoding.UTF8.GetBytes("Edge\t1\t-0.02,0.2;0.1,0.2;0.1,0.3"))) {
+                List<MapZone> edge=Load(stream);
+                if(edge.Count!=1 || edge[0].Points[0].X!=0)throw new Exception("Map-edge zone validation failed.");
+            }
+            PointF p=Align(new PointF(.5f,.5f),new PointF(.1f,.1f),new PointF(.9f,.9f),new PointF(.2f,.3f),new PointF(.6f,.7f));
+            if(Math.Abs(p.X-.4f)>.0001 || Math.Abs(p.Y-.5f)>.0001)throw new Exception("Screenshot alignment failed.");
+            bool rejected=false;try { Align(p,p,p,p,p); } catch(ArgumentException) { rejected=true; }
+            if(!rejected)throw new Exception("Degenerate alignment accepted.");
+            string path=Path.GetTempFileName();
+            try {
+                List<MapZone> sample=new List<MapZone>{
+                    new MapZone { Name="Test zone / 1",Argb=Color.Red.ToArgb(),Points=new[]{new PointF(.2f,.2f),new PointF(.5f,.2f),new PointF(.5f,.5f)} },
+                    new MapZone { Name="Gas Station - Test",Argb=-30720,Points=new[]{new PointF(.3f,.4f)} },
+                    new MapZone { Name="Death location test",Argb=Color.Beige.ToArgb(),Category=ZoneCategory.Custom,Layer=MapZone.DeathMarkerLayer,Points=new[]{new PointF(.6f,.7f)} }
+                };
+                Save(path,sample);List<MapZone> loaded=Load(path);
+                if(loaded.Count!=3 || loaded[0].Name!=sample[0].Name || loaded[1].Name!=sample[1].Name || loaded[1].Points[0]!=sample[1].Points[0])throw new Exception("Zone persistence failed.");
+                if(!loaded[2].IsDeathMarker || loaded[2].Points[0]!=sample[2].Points[0] || !loaded[2].Clone().IsDeathMarker)
+                    throw new Exception("Death marker persistence failed.");
+                using(var image=new Bitmap(100,100)) using(var graphics=Graphics.FromImage(image))
+                    Draw(graphics,new List<MapZone>{loaded[2]},new RectangleF(0,0,100,100),false,9,false,null,false);
+            } finally { File.Delete(path);if(File.Exists(path+".tmp"))File.Delete(path+".tmp"); }
+        }
+    }
+    // Folder packs stay separate from profile annotations: refresh/removal must never
+    // overwrite saved waypoints, deaths, or zones created in the editor.
+    internal sealed class AppZoneFolder {
+        readonly string root;
+        string applied,observed;
+        DateTime next;
+        Task<Pack> pending;
+        internal sealed class Pack { internal string Signature;internal List<MapZone> Zones; }
+        internal AppZoneFolder(string appFolder) { root=Path.Combine(appFolder,"zones"); }
+        static string[] Files(string root) {
+            var files=new List<string>();var directories=new Queue<Tuple<string,int>>();
+            if(Directory.Exists(root)&&(File.GetAttributes(root)&FileAttributes.ReparsePoint)==0)directories.Enqueue(Tuple.Create(root,0));
+            int visited=0;
+            while(directories.Count>0) {
+                var dir=directories.Dequeue();if(++visited>256)throw new InvalidDataException("Too many zone folders.");
+                foreach(string file in Directory.EnumerateFiles(dir.Item1,"*.tsv")) {
+                    if((File.GetAttributes(file)&FileAttributes.ReparsePoint)!=0)continue;
+                    // source-zones.tsv is an editor calibration file, not a map pack.
+                    if(!string.Equals(Path.GetFileName(file),"zones.tsv",StringComparison.OrdinalIgnoreCase))continue;
+                    files.Add(file);if(files.Count>128)throw new InvalidDataException("Too many zone packs.");
+                }
+                foreach(string child in Directory.EnumerateDirectories(dir.Item1)) {
+                    if((File.GetAttributes(child)&FileAttributes.ReparsePoint)!=0)continue;
+                    if(dir.Item2>=8)throw new InvalidDataException("Zone folders are too deeply nested.");
+                    directories.Enqueue(Tuple.Create(child,dir.Item2+1));
+                }
+            }
+            return files.OrderBy(f=>f,StringComparer.OrdinalIgnoreCase).ToArray();
+        }
+        static string Signature(string[] files) {
+            return string.Join("\n",files.Select(f=> { var info=new FileInfo(f);return f+"|"+info.Length+"|"+info.LastWriteTimeUtc.Ticks; }));
+        }
+        internal static Pack Read(string root,string previous,string stable) {
+            string[] files=Files(root);string signature=Signature(files);
+            if(signature==previous||signature!=stable)return new Pack { Signature=signature };
+            var zones=new List<MapZone>();long bytes=0;
+            foreach(string file in files) {
+                bytes+=new FileInfo(file).Length;if(bytes>32L*1024*1024)throw new InvalidDataException("Zone packs exceed the size limit.");
+                zones.AddRange(ZoneStore.Load(file));if(zones.Count>ZoneStore.MaxZones)throw new InvalidDataException("Too many packed zones.");
+            }
+            if(Signature(Files(root))!=signature)throw new IOException("Zone folder is still changing.");
+            return new Pack { Signature=signature,Zones=zones.Where(z=>!z.IsDeathMarker).ToList() };
+        }
+        internal bool Poll(out List<MapZone> zones) {
+            zones=null;
+            if(pending!=null&&pending.IsCompleted) {
+                try {
+                    var result=pending.GetAwaiter().GetResult();observed=result.Signature;
+                    if(result.Zones!=null) { applied=result.Signature;zones=result.Zones; }
+                } catch(IOException) { } catch(UnauthorizedAccessException) { } catch(InvalidDataException) { }
+                finally { pending=null; }
+            }
+            if(pending==null&&DateTime.UtcNow>=next) {
+                next=DateTime.UtcNow.AddSeconds(2);string previous=applied,stable=observed;
+                pending=Task.Run(()=>Read(root,previous,stable));
+            }
+            return zones!=null;
+        }
+        internal static void SelfTest() {
+            string root=Path.Combine(Path.GetTempPath(),"minimap-zone-pack-"+Guid.NewGuid().ToString("N"));
+            string nested=Path.Combine(root,"zones","skynett"),file=Path.Combine(nested,"zones.tsv");
+            try {
+                var absent=Read(Path.Combine(root,"zones"),null,null);if(absent.Zones!=null)throw new Exception("Zone pack debounce failed.");
+                Directory.CreateDirectory(nested);File.WriteAllText(file,"Pack zone\t-65536\t0.1,0.1;0.2,0.1;0.2,0.2\tCustom\tSkynett\n");
+                var first=Read(Path.Combine(root,"zones"),null,null);var pack=Read(Path.Combine(root,"zones"),null,first.Signature);
+                if(pack.Zones.Count!=1||pack.Zones[0].Layer!="Skynett")throw new Exception("Nested zone pack did not load.");
+                if(Read(Path.Combine(root,"zones"),pack.Signature,pack.Signature).Zones!=null)throw new Exception("Unchanged zone pack was reloaded.");
+                File.WriteAllText(file,"Updated pack zone\t-16711936\t0.1,0.1;0.3,0.1;0.3,0.3\tCustom\tSkynett\n");
+                var update=Read(Path.Combine(root,"zones"),pack.Signature,null);var updated=Read(Path.Combine(root,"zones"),pack.Signature,update.Signature);
+                if(updated.Zones.Count!=1||updated.Zones[0].Name!="Updated pack zone"||updated.Zones[0].Argb!=-16711936)throw new Exception("Changed zone pack was not refreshed.");
+                pack=updated;
+                File.WriteAllText(file,"invalid");var changed=Read(Path.Combine(root,"zones"),pack.Signature,null);
+                bool rejected=false;try { Read(Path.Combine(root,"zones"),pack.Signature,changed.Signature); }catch(InvalidDataException) { rejected=true; }
+                if(!rejected)throw new Exception("Incomplete zone pack was accepted.");
+                File.Delete(file);var removed=Read(Path.Combine(root,"zones"),pack.Signature,"");
+                if(removed.Zones==null||removed.Zones.Count!=0)throw new Exception("Removed zone pack was retained.");
+            } finally { if(File.Exists(file))File.Delete(file);if(Directory.Exists(nested))Directory.Delete(nested);if(Directory.Exists(Path.Combine(root,"zones")))Directory.Delete(Path.Combine(root,"zones"));if(Directory.Exists(root))Directory.Delete(root); }
+        }
+    }
+    internal static class ZoneFileOpen {
+        internal static string ParseArguments(string[] args) {
+            if(args==null)return null;
+            string path=args.Length==2&&args[0].Equals("--import-zones",StringComparison.OrdinalIgnoreCase)?args[1]:args.Length==1&&Path.GetExtension(args[0]).Equals(".tsv",StringComparison.OrdinalIgnoreCase)?args[0]:null;
+            if(path==null)return null;
+            if(!Path.GetExtension(path).Equals(".tsv",StringComparison.OrdinalIgnoreCase))throw new InvalidDataException("A zone TSV file is required.");
+            return Path.GetFullPath(path);
+        }
+        internal static string QueueFolder(string profile) { return Path.Combine(profile,"zone-open-requests"); }
+        internal static void Enqueue(string profile,string path) {
+            path=Path.GetFullPath(path);if(!File.Exists(path))throw new FileNotFoundException("Zone file was not found.",path);
+            if(!Path.GetExtension(path).Equals(".tsv",StringComparison.OrdinalIgnoreCase)||path.Length>4096||new FileInfo(path).Length>32L*1024*1024)throw new InvalidDataException("Invalid zone file.");
+            string folder=QueueFolder(profile);Directory.CreateDirectory(folder);string key;
+            using(var hash=SHA256.Create())key=BitConverter.ToString(hash.ComputeHash(System.Text.Encoding.UTF8.GetBytes(path.ToUpperInvariant()))).Replace("-","");
+            string target=Path.Combine(folder,key+".request"),temp=Path.Combine(folder,Guid.NewGuid().ToString("N")+".tmp");
+            try { File.WriteAllText(temp,path);if(!File.Exists(target))try { File.Move(temp,target); }catch(IOException) { if(!File.Exists(target))throw; } }
+            finally { if(File.Exists(temp))File.Delete(temp); }
+        }
+        internal static string Take(string profile) {
+            string folder=QueueFolder(profile);if(!Directory.Exists(folder))return null;
+            foreach(string file in Directory.EnumerateFiles(folder,"*.request").Take(64)) {
+                if((File.GetAttributes(file)&FileAttributes.ReparsePoint)!=0)continue;
+                string path=new FileInfo(file).Length<=16384?File.ReadAllText(file):null;
+                File.Delete(file);
+                if(!string.IsNullOrWhiteSpace(path)&&path.Length<=4096&&Path.IsPathRooted(path)&&Path.GetExtension(path).Equals(".tsv",StringComparison.OrdinalIgnoreCase))return path;
+            }
+            return null;
+        }
+        internal static string OpenCommand(string executable) { return "\""+Path.GetFullPath(executable)+"\" --import-zones \"%1\""; }
+        internal static void Register(string executable) {
+            // Advertise an Open With handler. Windows owns UserChoice/default selection.
+            const string id="SCUMMiniMap.ZoneFile";
+            using(var key=Microsoft.Win32.Registry.CurrentUser.CreateSubKey("Software\\Classes\\"+id)) {
+                key.SetValue("","SCUM MiniMap");
+                using(var icon=key.CreateSubKey("DefaultIcon"))icon.SetValue("","\""+Path.GetFullPath(executable)+"\",0");
+                using(var open=key.CreateSubKey("shell\\open")) { open.SetValue("MultiSelectModel","Single");using(var command=open.CreateSubKey("command"))command.SetValue("",OpenCommand(executable)); }
+            }
+            using(var key=Microsoft.Win32.Registry.CurrentUser.CreateSubKey("Software\\Classes\\.tsv\\OpenWithProgids"))key.SetValue(id,new byte[0],Microsoft.Win32.RegistryValueKind.None);
+            using(var app=Microsoft.Win32.Registry.CurrentUser.CreateSubKey("Software\\Classes\\Applications\\"+Path.GetFileName(executable))) {
+                app.SetValue("FriendlyAppName","SCUM MiniMap");
+                using(var types=app.CreateSubKey("SupportedTypes"))types.SetValue(".tsv","");
+                using(var command=app.CreateSubKey("shell\\open\\command"))command.SetValue("",OpenCommand(executable));
+            }
+            NotifyAssociationChanged(0x08000000,0,IntPtr.Zero,IntPtr.Zero);
+        }
+        [System.Runtime.InteropServices.DllImport("shell32.dll",EntryPoint="SHChangeNotify")]static extern void NotifyAssociationChanged(uint action,uint flags,IntPtr first,IntPtr second);
+        internal static void SelfTest() {
+            string root=Path.Combine(Path.GetTempPath(),"minimap-zone-open-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(root);string file=Path.Combine(root,"Zones with spaces 日本語.tsv");
+            try {
+                File.WriteAllText(file,"Synthetic\t-65536\t0.1,0.1;0.2,0.1;0.2,0.2\tCustom\tTest");
+                if(ParseArguments(new[]{"--import-zones",file})!=file||ParseArguments(new[]{file})!=file||ParseArguments(new[]{"--preview"})!=null)throw new Exception("Zone opening arguments failed.");
+                if(OpenCommand(Path.Combine(root,"MiniMap app.exe"))!="\""+Path.Combine(root,"MiniMap app.exe")+"\" --import-zones \"%1\"")throw new Exception("Zone association quoting failed.");
+                Enqueue(root,file);Enqueue(root,file);
+                if(Directory.GetFiles(QueueFolder(root),"*.request").Length!=1||Take(root)!=file||Take(root)!=null)throw new Exception("Zone opening handoff failed.");
+                bool rejected=false;try { ParseArguments(new[]{"--import-zones",Path.Combine(root,"not-zones.exe")}); }catch(InvalidDataException) { rejected=true; }
+                if(!rejected)throw new Exception("Non-TSV opening request was accepted.");
+            }finally { if(File.Exists(file))File.Delete(file);if(Directory.Exists(QueueFolder(root))) { foreach(string request in Directory.GetFiles(QueueFolder(root)))File.Delete(request);Directory.Delete(QueueFolder(root)); }Directory.Delete(root); }
+        }
+    }
+    internal sealed class MapSidecarPaths {
+        internal readonly string DataFolder,Folder,ZonesPath,WaypointsPath,ImagePath,MapId;
+        MapSidecarPaths(string dataFolder,string id) {
+            DataFolder=dataFolder;
+            Folder=Path.Combine(dataFolder,"maps",id);
+            ZonesPath=Path.Combine(Folder,"zones.tsv");
+            WaypointsPath=Path.Combine(Folder,"customwaypoints.tsv");
+            ImagePath=Path.Combine(Folder,"map.png");
+            MapId=id;
+            Directory.CreateDirectory(Folder);
+        }
+        internal static MapSidecarPaths ForMap(string dataFolder,string customMapPath) {
+            string id="default";
+            if(!string.IsNullOrWhiteSpace(customMapPath) && File.Exists(customMapPath)) {
+                using(SHA256 sha=SHA256.Create())
+                using(FileStream stream=File.OpenRead(customMapPath)) {
+                    id="custom-"+BitConverter.ToString(sha.ComputeHash(stream)).Replace("-","").ToLowerInvariant();
+                }
+            }
+            MapSidecarPaths paths=new MapSidecarPaths(dataFolder,id);
+            if(id!="default" && !File.Exists(paths.ImagePath)) File.Copy(customMapPath,paths.ImagePath);
+            return paths;
+        }
+        internal void EnsureImage(Image image) {
+            if(File.Exists(ImagePath)) return;
+            string temporary=ImagePath+"."+Guid.NewGuid().ToString("N")+".tmp";
+            try {
+                image.Save(temporary,System.Drawing.Imaging.ImageFormat.Png);
+                File.Move(temporary,ImagePath);
+            } finally { if(File.Exists(temporary)) File.Delete(temporary); }
+        }
+    }
+
+    internal static class MapSidecarStore {
+        internal static string SaveImport(string mapFolder,string sourcePath,List<MapZone> zones,List<MapZone> sourceZones,string report) {
+            // Each import has its own directory, so equal filenames and layer
+            // names cannot overwrite another image or its coordinate TSV.
+            string imports=Path.Combine(mapFolder,"imports");
+            Directory.CreateDirectory(imports);
+            string id=Guid.NewGuid().ToString("N");
+            string stage=Path.Combine(imports,".pending-"+id),destination=Path.Combine(imports,id);
+            Directory.CreateDirectory(stage);
+            try {
+                string extension=Path.GetExtension(sourcePath).ToLowerInvariant();
+                if(extension!=".png" && extension!=".jpg" && extension!=".jpeg" && extension!=".bmp" && extension!=".tsv" && extension!=".json")
+                    extension=".bin";
+                File.Copy(sourcePath,Path.Combine(stage,"source"+extension));
+                ZoneStore.Save(Path.Combine(stage,"zones.tsv"),zones);
+                if(sourceZones!=null) ZoneStore.Save(Path.Combine(stage,"source-zones.tsv"),sourceZones);
+                if(report!=null) File.WriteAllText(Path.Combine(stage,"detection.json"),report);
+                File.WriteAllText(Path.Combine(stage,"source-name.txt"),Path.GetFileName(sourcePath));
+                Directory.Move(stage,destination);
+                return destination;
+            } finally { if(Directory.Exists(stage)) Directory.Delete(stage,true); }
+        }
+        internal static bool IsWaypoint(MapZone zone) { return zone!=null && zone.Points!=null && zone.Points.Length==1; }
+        static List<MapZone> LoadFile(string path) { return File.Exists(path)?ZoneStore.Load(path):new List<MapZone>(); }
+        internal static List<MapZone> Load(MapSidecarPaths paths,string legacyPath,bool includeBundledZones,out bool migrated) {
+            migrated=false;
+            bool hasScoped=File.Exists(paths.ZonesPath)||File.Exists(paths.WaypointsPath);
+            List<MapZone> polygons,waypoints;
+            string migrationMarker=Path.Combine(paths.DataFolder,"zones-migration-v1.txt");
+            string migratedMapId=null;
+            try { if(File.Exists(migrationMarker)) migratedMapId=File.ReadAllText(migrationMarker).Trim(); }
+            catch(IOException) {} catch(UnauthorizedAccessException) {}
+            bool legacyBelongsToThisMap=string.IsNullOrEmpty(migratedMapId) || string.Equals(migratedMapId,paths.MapId,StringComparison.Ordinal);
+            if(!hasScoped && File.Exists(legacyPath) && legacyBelongsToThisMap) {
+                List<MapZone> legacy=ZoneStore.Load(legacyPath);
+                polygons=legacy.Where(zone=>!IsWaypoint(zone)).ToList();
+                waypoints=legacy.Where(IsWaypoint).ToList();
+                Save(paths,polygons.Concat(waypoints).ToList());
+                File.WriteAllText(migrationMarker,paths.MapId);
+                migrated=true;
+            } else {
+                polygons=File.Exists(paths.ZonesPath)?ZoneStore.Load(paths.ZonesPath):
+                    (!hasScoped && includeBundledZones?ZoneStore.Load(paths.ZonesPath):new List<MapZone>());
+                waypoints=LoadFile(paths.WaypointsPath);
+                if(waypoints.Any(zone=>!IsWaypoint(zone))) throw new InvalidDataException("Custom waypoint file contains a non-waypoint entry.");
+            }
+            return polygons.Concat(waypoints).ToList();
+        }
+        internal static List<MapZone> Reload(MapSidecarPaths paths) {
+            List<MapZone> polygons=File.Exists(paths.ZonesPath)?ZoneStore.Load(paths.ZonesPath):new List<MapZone>();
+            List<MapZone> waypoints=LoadFile(paths.WaypointsPath);
+            if(waypoints.Any(zone=>!IsWaypoint(zone))) throw new InvalidDataException("Custom waypoint file contains a non-waypoint entry.");
+            return polygons.Concat(waypoints).ToList();
+        }
+        internal static void Save(MapSidecarPaths paths,List<MapZone> all) {
+            SaveFiles(paths.ZonesPath,paths.WaypointsPath,all);
+        }
+        internal static void SaveFiles(string zonesPath,string waypointsPath,List<MapZone> all) {
+            if(all==null) throw new InvalidDataException("No map data was provided.");
+            if(all.Count>ZoneStore.MaxZones) throw new InvalidDataException("Too many map annotations to save.");
+            List<MapZone> polygons=all.Where(zone=>!IsWaypoint(zone)).ToList();
+            List<MapZone> waypoints=all.Where(IsWaypoint).ToList();
+            ZoneStore.Save(zonesPath,polygons);
+            ZoneStore.Save(waypointsPath,waypoints);
+        }
+    }
+
+    public sealed class ZoneEditor:Form {
+        sealed class EditorCanvas:Panel {
+            internal EditorCanvas() { DoubleBuffered=true;ResizeRedraw=true;TabStop=true;SetStyle(ControlStyles.Selectable|ControlStyles.StandardClick|ControlStyles.StandardDoubleClick,true); }
+            internal void Pointer(string kind,MouseEventArgs args) { switch(kind) { case "down":OnMouseDown(args);break;case "move":OnMouseMove(args);break;case "up":OnMouseUp(args);break;case "click":OnMouseClick(args);break;case "double":OnMouseDoubleClick(args);break;case "wheel":OnMouseWheel(args);break; } }
+        }
+        internal bool WpfMode;
+        internal IWin32Window WpfOwner;
+        IWin32Window DialogOwner { get { return WpfOwner??this; } }
+        internal Control WpfSource { get { return source; } }
+        internal Control WpfTarget { get { return target; } }
+        internal TextBox WpfName { get { return name; } }
+        internal TextBox WpfFilter { get { return filterBox; } }
+        internal ComboBox WpfLayer { get { return cboLayer; } }
+        internal ComboBox WpfDrawingTool { get { return drawingTool; } }
+        internal ListBox WpfList { get { return list; } }
+        internal string WpfInstruction { get { return instruction.Text; } }
+        internal string WpfDetails { get { return detailsLabel.Text; } }
+        internal bool WpfHasScreenshot { get { return screenshot!=null; } }
+        internal bool WpfBusy { get { return busy; } }
+        internal Color WpfColour { get { return color; } }
+        ZoneCategory? categoryFilter;
+        internal ZoneCategory? WpfCategoryFilter { get { return categoryFilter; } set { categoryFilter=value;RefreshViews(); } }
+        internal int[] WpfSelectedVisible { get { return list.SelectedIndices.Cast<int>().ToArray(); } }
+        int[] SelectedZoneIndices() { return list.SelectedIndices.Cast<int>().Where(i=>i>=0&&i<visibleIndices.Count&&visibleIndices[i]<zones.Count).Select(i=>visibleIndices[i]).ToArray(); }
+        internal void WpfSelectVisible(int[] indices) {
+            if(busy)return;list.BeginUpdate();list.ClearSelected();foreach(int i in indices.Distinct())if(i>=0&&i<list.Items.Count)list.SetSelected(i,true);list.EndUpdate();UpdateDetails();source.Invalidate();target.Invalidate();
+        }
+        internal void WpfSelectSameColour() { int first=GetSelectedZoneIndex();if(first<0)return;int argb=zones[first].Argb;WpfSelectVisible(visibleIndices.Select((z,i)=>new { z,i }).Where(x=>zones[x.z].Argb==argb).Select(x=>x.i).ToArray()); }
+        internal void WpfSetOutlineColour(Color value) {
+            if(busy)return;color=value;foreach(int i in SelectedZoneIndices()) { zones[i].Argb=value.ToArgb();var origin=SourceFor(zones[i]);if(origin!=null)origin.Argb=value.ToArgb(); }UpdateDetails();source.Invalidate();target.Invalidate();
+        }
+        internal void WpfChooseOutlineColour() { if(busy)return;using(var dialog=new ColorDialog { Color=color,FullOpen=true,AnyColor=true })if(dialog.ShowDialog(DialogOwner)==DialogResult.OK)WpfSetOutlineColour(dialog.Color); }
+        internal void WpfImportZonePack(List<MapZone> imported,string layer) {
+            if(busy)return;if(string.IsNullOrWhiteSpace(layer)||layer.Trim().Length>80)throw new InvalidDataException("Invalid map name.");
+            if(imported==null||imported.Count==0||zones.Count+imported.Count>ZoneStore.MaxZones)throw new InvalidDataException("Invalid zone pack size.");
+            var added=imported.Select(z=>z.Clone()).ToList();foreach(var z in added) { if(z.IsDeathMarker)throw new InvalidDataException("Zone packs cannot import death markers.");z.Layer=layer.Trim(); }
+            list.ClearSelected();zones.AddRange(added);PopulateLayerCombo(layer.Trim());RefreshViews();WpfSelectVisible(visibleIndices.Select((z,i)=>new { z,i }).Where(x=>added.Contains(zones[x.z])).Select(x=>x.i).ToArray());UpdateInstruction();
+        }
+        int? draftFillArgb;
+        internal Color WpfFillColour { get { int selected=GetSelectedZoneIndex();int alpha=selected>=0&&selected<zones.Count&&(zones[selected].IsFaction||zones[selected].Category==ZoneCategory.Faction)?75:40;return draftFillArgb.HasValue?Color.FromArgb(draftFillArgb.Value):Color.FromArgb(alpha,color); } }
+        internal void WpfSetFillColour(Color fill) {
+            if(busy)return;draftFillArgb=fill.ToArgb();
+            foreach(int selected in SelectedZoneIndices()) { zones[selected].FillArgb=draftFillArgb;var origin=SourceFor(zones[selected]);if(origin!=null)origin.FillArgb=draftFillArgb; }
+            source.Invalidate();target.Invalidate();
+        }
+        internal void WpfChooseFillColour() { if(busy)return;using(var dialog=new ColorDialog { Color=WpfFillColour,FullOpen=true,AnyColor=true })if(dialog.ShowDialog(DialogOwner)==DialogResult.OK)WpfSetFillColour(Color.FromArgb(WpfFillColour.A,dialog.Color)); }
+        internal void WpfSetFillOpacity(int percent) {
+            if(busy)return;int alpha=Math.Max(0,Math.Min(100,percent))*255/100;draftFillArgb=Color.FromArgb(alpha,WpfFillColour).ToArgb();
+            foreach(int i in SelectedZoneIndices()) { var fill=Color.FromArgb(zones[i].FillArgb??zones[i].Argb);zones[i].FillArgb=Color.FromArgb(alpha,fill).ToArgb();var origin=SourceFor(zones[i]);if(origin!=null)origin.FillArgb=zones[i].FillArgb; }source.Invalidate();target.Invalidate();
+        }
+        internal Control WpfAction(string key) { return FindWpfControl(this,key)??FindWpfControl(this,Localization.Get(key)); }
+        internal void WpfNameEnter() { typeof(Control).GetMethod("OnKeyDown",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).Invoke(name,new object[]{new KeyEventArgs(Keys.Enter)}); }
+        static Control FindWpfControl(Control parent,string text) { foreach(Control child in parent.Controls) { if(child.Text==text||child.Name==text)return child;var found=FindWpfControl(child,text);if(found!=null)return found; }return null; }
+        internal void WpfClick(Control control) { if(control==null||!control.Enabled||busy)return;typeof(Control).GetMethod("OnClick",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).Invoke(control,new object[]{EventArgs.Empty}); }
+        internal void WpfPointer(bool isSource,string kind,MouseButtons button,int x,int y,int delta=0,int clicks=1) { (isSource?source:target).Pointer(kind,new MouseEventArgs(button,clicks,x,y,delta)); }
+        internal void WpfCancelPointer() { panningPanel=null;draggedVertex=-1;draggedZone=null;rectangleStart=null;suppressClick=false; }
+        internal Bitmap WpfRender(bool isSource,int width,int height) {
+            var canvas=isSource?source:target;canvas.Dock=DockStyle.None;canvas.Size=new Size(Math.Max(1,width),Math.Max(1,height));
+            var bitmap=new Bitmap(canvas.Width,canvas.Height,System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+            using(var graphics=Graphics.FromImage(bitmap)) { graphics.Clear(canvas.BackColor);if(isSource)DrawSource(graphics);else DrawTarget(graphics); }return bitmap;
+        }
+        void CaptureEditor(Control panel,bool capture) { if(!WpfMode)panel.Capture=capture; }
+        readonly EditorCanvas source=new EditorCanvas(),target=new EditorCanvas();
+        readonly Image map;
+        Image editorPreview;
+        Image screenshot;
+        readonly Label instruction=new Label();
+        readonly ListBox list=new ListBox();
+        readonly TextBox name=new TextBox { Width=150,Text=Localization.Get("ZeNewZone") };
+        readonly TextBox filterBox=new TextBox { Width=130 };
+        readonly Label detailsLabel=new Label();
+        readonly ComboBox cboLayer=new ComboBox { DropDownStyle=ComboBoxStyle.DropDownList, Width=130 };
+        readonly Button btnNewLayer=new Button { Width=65 };
+        readonly Button btnDeleteLayer=new Button { Width=95 };
+        readonly CheckBox chkFill=new CheckBox();
+        readonly List<int> visibleIndices=new List<int>();
+        readonly List<PointF> draft=new List<PointF>();
+        readonly string path;
+        readonly Action<List<MapZone>> saved;
+        readonly List<MapZone> zones;
+        readonly List<MapZone> preservedWaypoints;
+        PointF s1,s2,m1,m2;
+        int step;
+        Color color=Color.OrangeRed;
+        bool automatic,busy,fillZones=true;
+        Timer busyTimer;
+        float spinAngle=0f;
+        List<MapZone> sourceZones=new List<MapZone>();
+        readonly Dictionary<MapZone,MapZone> importedSources=new Dictionary<MapZone,MapZone>();
+        readonly List<PointF> manualDraft=new List<PointF>();
+        readonly ComboBox drawingTool=new ComboBox { Name="ZoneDrawingTool",DropDownStyle=ComboBoxStyle.DropDownList,Width=220,DropDownWidth=320 };
+        sealed class EditorView { internal float Zoom=1;internal PointF Pan=new PointF(.5f,.5f); }
+        readonly EditorView sourceView=new EditorView(),targetView=new EditorView();
+        Control panningPanel;
+        Point panStart;
+        PointF viewPanStart;
+        bool suppressClick;
+        int draggedVertex=-1;
+        MapZone draggedZone;
+        PointF? rectangleStart;
+        PointF moveStart;
+        PointF[] moveOriginal;
+        void ChangeZoneShape(int shape) {
+            int selected=GetSelectedZoneIndex();if(busy || selected<0||list.SelectedIndices.Count!=1)return;var zone=zones[selected];RememberOutline(zone);
+            float left=zone.Points.Min(p=>p.X)*map.Width,right=zone.Points.Max(p=>p.X)*map.Width,top=zone.Points.Min(p=>p.Y)*map.Height,bottom=zone.Points.Max(p=>p.Y)*map.Height;
+            float cx=(left+right)/2,cy=(top+bottom)/2,w=right-left,h=bottom-top;
+            if(shape==1)w=h=Math.Min(w,h);
+            if(shape==2) { float radius=Math.Min(w,h)/2;zone.Points=Enumerable.Range(0,256).Select(i=>new PointF((cx+(float)Math.Cos(i*2*Math.PI/256)*radius)/map.Width,(cy+(float)Math.Sin(i*2*Math.PI/256)*radius)/map.Height)).ToArray(); }
+            else zone.Points=new[]{new PointF((cx-w/2)/map.Width,(cy-h/2)/map.Height),new PointF((cx+w/2)/map.Width,(cy-h/2)/map.Height),new PointF((cx+w/2)/map.Width,(cy+h/2)/map.Height),new PointF((cx-w/2)/map.Width,(cy+h/2)/map.Height)};
+            DetachEditedSource(zone);drawingTool.SelectedIndex=5;RefreshViews();SetSelectedZoneIndex(selected);
+        }
+        void DetachEditedSource(MapZone zone) { zone.boundsReady=false;var origin=SourceFor(zone);if(origin!=null) { sourceZones.Remove(origin);importedSources.Remove(zone); } }
+        void MoveZoneTo(PointF point) {
+            if(draggedZone==null || moveOriginal==null)return;
+            float dx=Math.Max(-moveOriginal.Min(p=>p.X),Math.Min(1-moveOriginal.Max(p=>p.X),point.X-moveStart.X));
+            float dy=Math.Max(-moveOriginal.Min(p=>p.Y),Math.Min(1-moveOriginal.Max(p=>p.Y),point.Y-moveStart.Y));
+            draggedZone.Points=moveOriginal.Select(p=>new PointF(p.X+dx,p.Y+dy)).ToArray();DetachEditedSource(draggedZone);
+        }
+        sealed class OutlineEdit { internal MapZone Zone,Source;internal PointF[] Points; }
+        readonly List<OutlineEdit> outlineHistory=new List<OutlineEdit>();
+        void RememberOutline(MapZone zone) { if(outlineHistory.Count==100)outlineHistory.RemoveAt(0);outlineHistory.Add(new OutlineEdit { Zone=zone,Source=SourceFor(zone),Points=(PointF[])zone.Points.Clone() }); }
+        void UndoEditorPoint() {
+            if(busy)return;
+            if((drawingTool.SelectedIndex==3 || drawingTool.SelectedIndex==5) && outlineHistory.Count>0) { var edit=outlineHistory.Last();outlineHistory.RemoveAt(outlineHistory.Count-1);if(zones.Contains(edit.Zone)) { edit.Zone.Points=edit.Points;edit.Zone.boundsReady=false;if(edit.Source!=null) { edit.Source.Name=edit.Zone.Name;edit.Source.Argb=edit.Zone.Argb;edit.Source.Layer=edit.Zone.Layer;edit.Source.Category=edit.Zone.Category;importedSources[edit.Zone]=edit.Source;if(!sourceZones.Contains(edit.Source))sourceZones.Add(edit.Source); }SetSelectedZoneIndex(zones.IndexOf(edit.Zone));UpdateDetails(); } }
+            else { var points=drawingTool.SelectedIndex>0?manualDraft:draft;if(points.Count>0)points.RemoveAt(points.Count-1); }
+            source.Invalidate();target.Invalidate();
+        }
+        MapZone SourceFor(MapZone zone) { MapZone result;return importedSources.TryGetValue(zone,out result)?result:null; }
+
+        string GetSelectedLayer() {
+            if(cboLayer.SelectedIndex<=0) return null;
+            return cboLayer.SelectedItem as string;
+        }
+
+        void PopulateLayerCombo(string selectLayer = null) {
+            string prev = selectLayer ?? (cboLayer.SelectedItem as string);
+            cboLayer.BeginUpdate();
+            cboLayer.Items.Clear();
+            cboLayer.Items.Add(Localization.Get("ZeAllLayers"));
+            HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach(MapZone z in zones) {
+                string lay = string.IsNullOrWhiteSpace(z.Layer) ? "Default" : z.Layer;
+                if(seen.Add(lay)) cboLayer.Items.Add(lay);
+            }
+            cboLayer.EndUpdate();
+            if(!string.IsNullOrEmpty(prev) && cboLayer.Items.Contains(prev)) {
+                cboLayer.SelectedItem = prev;
+            } else {
+                cboLayer.SelectedIndex = 0;
+            }
+            btnDeleteLayer.Enabled = GetSelectedLayer() != null;
+        }
+
+        int GetSelectedZoneIndex() {
+            if(list.SelectedIndex>=0 && list.SelectedIndex<visibleIndices.Count)
+                return visibleIndices[list.SelectedIndex];
+            return -1;
+        }
+
+        void SetSelectedZoneIndex(int zoneIndex) {
+            list.ClearSelected();
+            if(zoneIndex<0) { list.SelectedIndex=-1; return; }
+            for(int i=0;i<visibleIndices.Count;i++) {
+                if(visibleIndices[i]==zoneIndex) {
+                    list.SelectedIndex=i;
+                    return;
+                }
+            }
+            list.SelectedIndex=-1;
+        }
+
+        static string SectorFromMapPt(PointF p) {
+            int col = Math.Max(0, Math.Min(4, (int)Math.Floor(p.X * 5f)));
+            int row = Math.Max(0, Math.Min(4, (int)Math.Floor(p.Y * 5f)));
+            string[] letters = new string[] { "D", "C", "B", "A", "Z" };
+            return letters[row] + (4 - col);
+        }
+
+        void UpdateDetails() {
+            int count=list.SelectedIndices.Count;
+            if(count>1) { detailsLabel.Text=Localization.T("ZeSelectedCount",count);return; }
+            int selIdx = GetSelectedZoneIndex();
+            string selectedLayer = GetSelectedLayer();
+            if (selIdx >= 0 && selIdx < zones.Count) {
+                MapZone z = zones[selIdx];
+                int ptCount = z.Points != null ? z.Points.Length : 0;
+                PointF center = z.Centroid;
+                string sec = SectorFromMapPt(center);
+                Color c = Color.FromArgb(z.Argb);
+                string lay = string.IsNullOrWhiteSpace(z.Layer) ? "Default" : z.Layer;
+                detailsLabel.Text = string.Format(CultureInfo.InvariantCulture,
+                    "Zone {0}/{1} | \"{2}\" [{3}] | {4} pts | Sector {5} | #{6:X2}{7:X2}{8:X2}",
+                    selIdx + 1, zones.Count, z.Name??string.Empty, lay, ptCount, sec, c.R, c.G, c.B);
+            } else {
+                detailsLabel.Text = string.Format(CultureInfo.InvariantCulture,
+                    "Total: {0} zones ({1} visible){2} | Select a zone to inspect or edit",
+                    zones.Count, visibleIndices.Count, selectedLayer != null ? " in layer '" + selectedLayer + "'" : "");
+            }
+        }
+
+        void RefreshViews() {
+            foreach(var zone in importedSources.Keys.Where(zone=>!zones.Contains(zone)).ToArray()) { sourceZones.Remove(importedSources[zone]);importedSources.Remove(zone); }
+            var selected=SelectedZoneIndices().Select(i=>zones[i]).ToArray();
+            list.BeginUpdate();
+            list.Items.Clear();
+            visibleIndices.Clear();
+            string selectedLayer = GetSelectedLayer();
+            string q = (filterBox.Text ?? "").Trim().ToLowerInvariant();
+            for (int i = 0; i < zones.Count; i++) {
+                MapZone z = zones[i];
+                if(categoryFilter.HasValue&&z.Category!=categoryFilter.Value)continue;
+                string lay = string.IsNullOrWhiteSpace(z.Layer) ? "Default" : z.Layer;
+                if(selectedLayer != null && !string.Equals(lay, selectedLayer, StringComparison.OrdinalIgnoreCase)) continue;
+                string zoneName=z.Name??string.Empty;
+                if (string.IsNullOrEmpty(q) || zoneName.ToLowerInvariant().Contains(q)) {
+                    visibleIndices.Add(i);
+                    string tag = (selectedLayer == null) ? (" [" + lay + "]") : "";
+                    list.Items.Add(string.Format(CultureInfo.InvariantCulture, "#{0}: {1}{2}", i + 1, zoneName, tag));
+                }
+            }
+            list.EndUpdate();
+            WpfSelectVisible(visibleIndices.Select((z,i)=>new { z,i }).Where(x=>selected.Contains(zones[x.z])).Select(x=>x.i).ToArray());
+            UpdateDetails();
+            source.Invalidate();
+            target.Invalidate();
+        }
+
+        enum ImportMode { NewLayer, Append, Replace, Cancel }
+
+        ImportMode ShowImportDialog(string fileName, string targetLayer, out string newLayerName) {
+            newLayerName = Path.GetFileNameWithoutExtension(fileName);
+            if(string.IsNullOrWhiteSpace(newLayerName)) newLayerName = "Imported Layer";
+
+            using(Form dlg = new Form {
+                ClientSize = new Size(450, 260),
+                Text = Localization.Get("ZeImportActionTitle"),
+                StartPosition = FormStartPosition.CenterParent,
+                FormBorderStyle = FormBorderStyle.None,
+                MaximizeBox = false,
+                MinimizeBox = false,
+                ShowInTaskbar = false,
+                BackColor = OverlayTheme.Background,
+                ForeColor = OverlayTheme.Ink
+            }) {
+                OverlayTheme.Frame(dlg, Localization.Get("ZeImportActionTitle"), () => dlg.DialogResult = DialogResult.Cancel);
+
+                Label lblPrompt = new Label {
+                    Left = 20, Top = 46, Width = 410, Height = 36,
+                    Text = Localization.T("ZeImportModePrompt", Path.GetFileName(fileName)),
+                    ForeColor = OverlayTheme.InkMuted, Font = new Font("Segoe UI", 9f)
+                };
+
+                RadioButton rbNew = new RadioButton {
+                    Left = 24, Top = 86, Width = 145,
+                    Text = Localization.Get("ZeImportNewLayer"),
+                    Checked = true, AutoSize = true, ForeColor = OverlayTheme.Ink, Font = new Font("Segoe UI", 9f, FontStyle.Bold)
+                };
+
+                TextBox txtNewName = new TextBox {
+                    Left = 185, Top = 84, Width = 235,
+                    Text = newLayerName, BackColor = OverlayTheme.Surface, ForeColor = OverlayTheme.Ink,
+                    BorderStyle = BorderStyle.FixedSingle, Font = new Font("Segoe UI", 9f)
+                };
+
+                string activeLay = !string.IsNullOrEmpty(targetLayer) ? targetLayer : "Default";
+
+                RadioButton rbAppend = new RadioButton {
+                    Left = 24, Top = 120, Width = 400,
+                    Text = Localization.T("ZeImportAppend", activeLay),
+                    AutoSize = true, ForeColor = OverlayTheme.Ink, Font = new Font("Segoe UI", 9f)
+                };
+
+                RadioButton rbReplace = new RadioButton {
+                    Left = 24, Top = 152, Width = 400,
+                    Text = Localization.T("ZeImportReplace", activeLay),
+                    AutoSize = true, ForeColor = OverlayTheme.Ink, Font = new Font("Segoe UI", 9f)
+                };
+
+                Button btnOk = new Button {
+                    Text = Localization.Get("Done"), Left = 240, Top = 204, Width = 90, Height = 32,
+                    DialogResult = DialogResult.OK, BackColor = OverlayTheme.Accent, ForeColor = Color.FromArgb(12, 12, 12),
+                    Font = new Font("Segoe UI", 9f, FontStyle.Bold), FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand
+                };
+                btnOk.FlatAppearance.BorderColor = OverlayTheme.AccentHover;
+
+                Button btnCancel = new Button {
+                    Text = Localization.Get("Cancel"), Left = 340, Top = 204, Width = 80, Height = 32,
+                    DialogResult = DialogResult.Cancel, BackColor = OverlayTheme.Surface, ForeColor = OverlayTheme.Ink,
+                    FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand
+                };
+                btnCancel.FlatAppearance.BorderColor = OverlayTheme.Border;
+
+                dlg.Controls.AddRange(new Control[] { lblPrompt, rbNew, txtNewName, rbAppend, rbReplace, btnOk, btnCancel });
+                dlg.AcceptButton = btnOk;
+                dlg.CancelButton = btnCancel;
+
+                rbNew.CheckedChanged += (s, e) => { txtNewName.Enabled = rbNew.Checked; };
+                rbAppend.Enabled = rbReplace.Enabled = zones.Count > 0;
+                dlg.Shown += (s, e) => { txtNewName.Focus(); txtNewName.SelectAll(); };
+
+                if(dlg.ShowDialog(DialogOwner) == DialogResult.OK) {
+                    if(rbNew.Checked) {
+                        newLayerName = (!string.IsNullOrWhiteSpace(txtNewName.Text)) ? txtNewName.Text.Trim() : "Layer " + (cboLayer.Items.Count);
+                        return ImportMode.NewLayer;
+                    }
+                    if(rbAppend.Checked) return ImportMode.Append;
+                    if(rbReplace.Checked) return ImportMode.Replace;
+                }
+                return ImportMode.Cancel;
+            }
+        }
+
+        string PromptNewLayerName() {
+            using(Form prompt = new Form {
+                ClientSize = new Size(360, 160),
+                Text = Localization.Get("ZeNewLayerTitle"),
+                StartPosition = FormStartPosition.CenterParent,
+                FormBorderStyle = FormBorderStyle.None,
+                MaximizeBox = false, MinimizeBox = false,
+                ShowInTaskbar = false, BackColor = OverlayTheme.Background, ForeColor = OverlayTheme.Ink
+            }) {
+                OverlayTheme.Frame(prompt, Localization.Get("ZeNewLayerTitle"), () => prompt.DialogResult = DialogResult.Cancel);
+                Label lbl = new Label { Left = 20, Top = 50, Width = 320, Text = Localization.Get("ZeNewLayerPrompt"), ForeColor = OverlayTheme.InkMuted, Font = new Font("Segoe UI", 9f) };
+            TextBox txt = new TextBox { Left = 20, Top = 76, Width = 320, Text = Localization.Get("ZeLayer") + " " + cboLayer.Items.Count, BackColor = OverlayTheme.Surface, ForeColor = OverlayTheme.Ink, BorderStyle = BorderStyle.FixedSingle, Font = new Font("Segoe UI", 9.5f) };
+                Button ok = new Button { Text = Localization.Get("Done"), Left = 170, Top = 114, Width = 80, Height = 30, DialogResult = DialogResult.OK, BackColor = OverlayTheme.Accent, ForeColor = Color.FromArgb(12, 12, 12), Font = new Font("Segoe UI", 9f, FontStyle.Bold), FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand };
+                ok.FlatAppearance.BorderColor = OverlayTheme.AccentHover;
+                Button cn = new Button { Text = Localization.Get("Cancel"), Left = 260, Top = 114, Width = 80, Height = 30, DialogResult = DialogResult.Cancel, BackColor = OverlayTheme.Surface, ForeColor = OverlayTheme.Ink, FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand };
+                cn.FlatAppearance.BorderColor = OverlayTheme.Border;
+                prompt.Controls.AddRange(new Control[] { lbl, txt, ok, cn });
+                prompt.AcceptButton = ok; prompt.CancelButton = cn;
+                txt.KeyDown += (s, e) => { if(e.KeyCode == Keys.Enter) { ok.PerformClick(); e.Handled = true; e.SuppressKeyPress = true; } };
+                if(prompt.ShowDialog(DialogOwner) == DialogResult.OK && !string.IsNullOrWhiteSpace(txt.Text)) {
+                    return txt.Text.Trim();
+                }
+                return null;
+            }
+        }
+
+        void DeleteCurrentLayer() {
+            string selectedLayer = GetSelectedLayer();
+            if(string.IsNullOrEmpty(selectedLayer)) return;
+            int count = zones.Count(z => string.Equals(string.IsNullOrWhiteSpace(z.Layer) ? "Default" : z.Layer, selectedLayer, StringComparison.OrdinalIgnoreCase));
+            if(MessageBox.Show(DialogOwner, Localization.T("ZeDeleteLayerConfirm", selectedLayer, count), Localization.Get("ZeDeleteLayer"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes) {
+                zones.RemoveAll(z => string.Equals(string.IsNullOrWhiteSpace(z.Layer) ? "Default" : z.Layer, selectedLayer, StringComparison.OrdinalIgnoreCase));
+                sourceZones.RemoveAll(z => string.Equals(string.IsNullOrWhiteSpace(z.Layer) ? "Default" : z.Layer, selectedLayer, StringComparison.OrdinalIgnoreCase));
+                draft.Clear();
+                PopulateLayerCombo();
+                RefreshViews();
+                UpdateInstruction();
+            }
+        }
+
+        public ZoneEditor(Image map,List<MapZone> existing,string path,Action<List<MapZone>> saved,List<MapZone> preservedWaypoints=null) {
+            this.map=map;this.path=path;this.saved=saved;this.preservedWaypoints=preservedWaypoints==null?new List<MapZone>():preservedWaypoints.Select(zone=>zone.Clone()).ToList();zones=new List<MapZone>();
+            if(map!=null && (map.Width>2048 || map.Height>2048)) {
+                int maxDim=2048;
+                float s=Math.Min((float)maxDim/map.Width,(float)maxDim/map.Height);
+                Bitmap preview=new Bitmap((int)(map.Width*s),(int)(map.Height*s),System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+                using(Graphics g=Graphics.FromImage(preview)) {
+                    g.CompositingMode=System.Drawing.Drawing2D.CompositingMode.SourceCopy;
+                    g.InterpolationMode=System.Drawing.Drawing2D.InterpolationMode.Bilinear;
+                    g.DrawImage(map,0,0,preview.Width,preview.Height);
+                }
+                editorPreview=preview;
+            } else {
+                editorPreview=map;
+            }
+            foreach(MapZone existingZone in existing??new List<MapZone>()) if(existingZone!=null) zones.Add(existingZone.Clone());
+            Text=Localization.Get("ZoneEditorTitle");ClientSize=new Size(1150,740);MinimumSize=new Size(920,620);StartPosition=FormStartPosition.CenterScreen;
+            BackColor=OverlayTheme.Background;ForeColor=OverlayTheme.Ink;Font=new Font("Segoe UI",9);
+
+            FlowLayoutPanel bar=new FlowLayoutPanel { Dock=DockStyle.Top,AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,Padding=new Padding(8) };
+            Button open=new Button { Text=Localization.Get("ZeOpenScreenshot"),Width=125 };
+            open.Click+=(s,e)=>OpenScreenshot();
+            Button importFile=new Button { Text=Localization.Get("ZeImportFile"),Width=90 };
+            importFile.Click+=(s,e)=>ImportFile();
+            Button exportFile=new Button { Text=Localization.Get("ZeExport"),Width=75 };
+            exportFile.Click+=(s,e)=>ExportZones();
+            Label lblLayer=new Label { Text=Localization.Get("ZeLayer"),AutoSize=true,Margin=new Padding(6,8,2,3),ForeColor=OverlayTheme.InkMuted };
+            btnNewLayer.Text=Localization.Get("ZeNewLayer");
+            btnNewLayer.Click+=(s,e)=> {
+                if(busy)return;
+                string newName=PromptNewLayerName();
+                if(!string.IsNullOrWhiteSpace(newName)) {
+                    if(!cboLayer.Items.Contains(newName)) {
+                        cboLayer.Items.Add(newName);
+                    }
+                    cboLayer.SelectedItem=newName;
+                    btnDeleteLayer.Enabled=true;
+                    RefreshViews();
+                }
+            };
+            btnDeleteLayer.Text=Localization.Get("ZeDeleteLayer");
+            btnDeleteLayer.Click+=(s,e)=> {
+                if(busy)return;
+                DeleteCurrentLayer();
+            };
+            cboLayer.SelectedIndexChanged+=(s,e)=> {
+                btnDeleteLayer.Enabled=GetSelectedLayer()!=null;
+                RefreshViews();
+            };
+            Button reset=new Button { Text=Localization.Get("ZeManualFallback"),Width=115 };
+            reset.Click+=(s,e)=> { if(busy)return;automatic=false;step=0;draft.Clear();manualDraft.Clear();drawingTool.SelectedIndex=0;UpdateInstruction(); };
+            name.KeyDown+=(s,e)=> { if(e.KeyCode==Keys.Enter) { e.SuppressKeyPress=true;if(manualDraft.Count>=3)AddZone();else Rename(false); } };
+            Button choose=new Button { Text=Localization.Get("ZeZoneColour"),Width=95 };
+            choose.Click+=(s,e)=> { using(ColorDialog dialog=new ColorDialog { Color=color })if(dialog.ShowDialog(DialogOwner)==DialogResult.OK)color=dialog.Color; };
+            Button undo=new Button { Text=Localization.Get("ZeUndoPoint"),Width=90 };
+            undo.Click+=(s,e)=>UndoEditorPoint();
+            Button clearDraft=new Button { Text=Localization.Get("ZeClearDraft"),Width=85 };
+            clearDraft.Click+=(s,e)=>ClearDraft();
+            Button add=new Button { Name="CommitManualZone",Text=Localization.Get("ZeAddZone"),Width=85 };
+            add.Click+=(s,e)=>AddZone();
+            chkFill.Text=Localization.Get("ZeFillZones");
+            chkFill.Checked=true;chkFill.AutoSize=true;chkFill.ForeColor=Color.FromArgb(190,205,220);chkFill.Margin=new Padding(6,8,6,3);
+            chkFill.CheckedChanged+=(s,e)=> { fillZones=chkFill.Checked;source.Invalidate();target.Invalidate(); };
+            Button save=new Button { Text=Localization.Get("ZeSaveZones"),Width=105,BackColor=Color.FromArgb(20,70,40),ForeColor=Color.White };
+            save.Click+=(s,e)=> {
+                if(busy)return;
+                if(draft.Count>0 || manualDraft.Count>0) { MessageBox.Show(DialogOwner,Localization.Get("ZeDraftWarning"));return; }
+                try {
+                    string waypointPath=Path.Combine(Path.GetDirectoryName(path),"customwaypoints.tsv");
+                    MapSidecarStore.SaveFiles(path,waypointPath,zones.Concat(preservedWaypoints).ToList());
+                    saved(zones.Select(z=>z.Clone()).ToList());DialogResult=DialogResult.OK;Close();
+                }
+                catch(InvalidDataException ex) { MessageBox.Show(DialogOwner,Localization.T("ZeSaveZonesError",ex.Message)); }
+                catch(IOException ex) { MessageBox.Show(DialogOwner,Localization.T("ZeSaveZonesError",ex.Message)); }catch(UnauthorizedAccessException ex) { MessageBox.Show(DialogOwner,ex.Message); }
+            };
+
+            bar.Controls.Add(open);
+            bar.Controls.Add(importFile);
+            bar.Controls.Add(exportFile);
+            bar.Controls.Add(lblLayer);
+            bar.Controls.Add(cboLayer);
+            bar.Controls.Add(btnNewLayer);
+            bar.Controls.Add(btnDeleteLayer);
+            bar.Controls.Add(reset);
+            drawingTool.Items.AddRange(new object[]{Localization.Get("ZeSelectZone"),Localization.Get("ZeDrawPolygon"),Localization.Get("ZeDrawRectangle"),Localization.Get("ZeEditOutline"),Localization.Get("ZeDrawCircle"),Localization.Get("ZeMoveZone")});drawingTool.SelectedIndex=0;
+            drawingTool.SelectedIndexChanged+=(s,e)=> { draggedVertex=-1;rectangleStart=null;if(drawingTool.SelectedIndex==1 || drawingTool.SelectedIndex==2 || drawingTool.SelectedIndex==4)DeselectSelection();UpdateInstruction(); };
+            bar.Controls.Add(drawingTool);
+            var shapeChoice=new ComboBox { Name="ZoneShape",DropDownStyle=ComboBoxStyle.DropDownList,Width=150 };
+            shapeChoice.Items.AddRange(new object[]{Localization.Get("ZeRectangle"),Localization.Get("ZeSquare"),Localization.Get("ZeCircle")});shapeChoice.SelectedIndex=0;
+            var applyShape=new Button { Name="ApplyZoneShape",Text=Localization.Get("ZeChangeShape"),AutoSize=true };
+            applyShape.Click+=(s,e)=>ChangeZoneShape(shapeChoice.SelectedIndex);bar.Controls.Add(shapeChoice);bar.Controls.Add(applyShape);
+            var fitView=new Button { Name="ResetImportZoom",Text=Localization.Get("ControlResetZoom"),AutoSize=true };
+            fitView.Click+=(s,e)=> { sourceView.Zoom=targetView.Zoom=1;sourceView.Pan=targetView.Pan=new PointF(.5f,.5f);source.Invalidate();target.Invalidate(); };
+            bar.Controls.Add(fitView);
+            bar.Controls.Add(name);
+            bar.Controls.Add(choose);
+            bar.Controls.Add(add);
+            bar.Controls.Add(undo);
+            bar.Controls.Add(clearDraft);
+            bar.Controls.Add(chkFill);
+            bar.Controls.Add(save);
+
+            instruction.Dock=DockStyle.Top;instruction.Height=78;instruction.Padding=new Padding(8);
+            Action fitInstruction=()=>instruction.Height=Math.Max(78,TextRenderer.MeasureText(instruction.Text,instruction.Font,new Size(Math.Max(100,ClientSize.Width-16),int.MaxValue),TextFormatFlags.WordBreak).Height+16);
+            instruction.TextChanged+=(s,e)=>fitInstruction();ClientSizeChanged+=(s,e)=>fitInstruction();
+            SplitContainer split=new SplitContainer { Dock=DockStyle.Fill,Size=new Size(1130,500),SplitterDistance=565 };
+            source.Dock=DockStyle.Fill;target.Dock=DockStyle.Fill;source.BackColor=target.BackColor=Color.FromArgb(12,17,22);
+            split.Panel1.Controls.Add(source);split.Panel2.Controls.Add(target);
+
+            Panel bottom=new Panel { Dock=DockStyle.Bottom,Height=104,Padding=new Padding(8),BackColor=Color.FromArgb(22,27,32) };
+            FlowLayoutPanel listRow=new FlowLayoutPanel { Dock=DockStyle.Top,Height=46,WrapContents=false };
+            list.Width=520;list.Height=42;list.IntegralHeight=false;list.BackColor=Color.FromArgb(28,33,40);list.ForeColor=Color.WhiteSmoke;
+            Label filterLbl=new Label { Text=Localization.Get("ZeFilterZones"),AutoSize=true,Margin=new Padding(6,6,2,0) };
+            filterBox.TextChanged+=(s,e)=>RefreshViews();
+            detailsLabel.AutoSize=false;detailsLabel.Width=410;detailsLabel.Height=42;detailsLabel.Padding=new Padding(8,4,4,4);detailsLabel.ForeColor=Color.FromArgb(175,195,215);
+
+            listRow.Controls.Add(list);
+            listRow.Controls.Add(filterLbl);
+            listRow.Controls.Add(filterBox);
+            listRow.Controls.Add(detailsLabel);
+
+            FlowLayoutPanel actRow=new FlowLayoutPanel { Dock=DockStyle.Bottom,Height=44,WrapContents=false,Padding=new Padding(0,4,0,0) };
+            Button rename=new Button { Text=Localization.Get("ZeApplyName"),Width=95 };rename.Click+=(s,e)=>Rename(false);
+            Button recolorGroup=new Button { Text=Localization.Get("ZeRecolorGroup"),Width=110 };recolorGroup.Click+=(s,e)=>RecolorGroup();
+            Button group=new Button { Text=Localization.Get("ZeNameColour"),Width=125 };group.Click+=(s,e)=>Rename(true);
+            Button moveUp=new Button { Text="▲ "+Localization.Get("ZeMoveUp"),Width=70 };moveUp.Click+=(s,e)=>MoveZone(-1);
+            Button moveDown=new Button { Text="▼ "+Localization.Get("ZeMoveDown"),Width=70 };moveDown.Click+=(s,e)=>MoveZone(1);
+            Button duplicate=new Button { Text=Localization.Get("ZeDuplicate"),Width=85 };duplicate.Click+=(s,e)=>DuplicateSelected();
+            Button deselect=new Button { Text=Localization.Get("ZeDeselect"),Width=80 };deselect.Click+=(s,e)=>DeselectSelection();
+            Button delete=new Button { Text=Localization.Get("ZeDeleteSelected"),Width=115 };delete.Click+=(s,e)=>DeleteSelected();
+            Button deleteAll=new Button { Text=Localization.Get("ZeDeleteAll"),Width=110,BackColor=Color.FromArgb(85,25,25),ForeColor=Color.White };deleteAll.Click+=(s,e)=>DeleteAll();
+
+            actRow.Controls.Add(rename);
+            moveUp.Name="ZeMoveUp";moveDown.Name="ZeMoveDown";
+            actRow.Controls.Add(recolorGroup);
+            actRow.Controls.Add(group);
+            actRow.Controls.Add(moveUp);
+            actRow.Controls.Add(moveDown);
+            actRow.Controls.Add(duplicate);
+            actRow.Controls.Add(deselect);
+            actRow.Controls.Add(delete);
+            actRow.Controls.Add(deleteAll);
+
+            bottom.Controls.Add(listRow);bottom.Controls.Add(actRow);
+            Controls.Add(split);Controls.Add(instruction);Controls.Add(bar);Controls.Add(bottom);
+
+            source.Paint+=(s,e)=>DrawSource(e.Graphics);target.Paint+=(s,e)=>DrawTarget(e.Graphics);
+            WireEditorCanvas(source,true);WireEditorCanvas(target,false);
+            KeyPreview=true;
+            KeyDown+=(s,e)=> { if(e.KeyCode==Keys.Escape && (manualDraft.Count>0 || draft.Count>0)) { ClearDraft();e.Handled=true;e.SuppressKeyPress=true; } };
+            list.SelectionMode=SelectionMode.MultiExtended;
+            list.SelectedIndexChanged+=(s,e)=> {
+                if(list.SelectedIndices.Count>1&&(drawingTool.SelectedIndex==3||drawingTool.SelectedIndex==5))drawingTool.SelectedIndex=0;
+                int selIdx=GetSelectedZoneIndex();
+                if(selIdx>=0 && selIdx<zones.Count) {
+                    name.Text=zones[selIdx].Name;
+                    color=Color.FromArgb(zones[selIdx].Argb);
+                    draftFillArgb=zones[selIdx].FillArgb;
+                }
+                UpdateDetails();
+                source.Invalidate();target.Invalidate();
+            };
+            busyTimer=new Timer { Interval=25 };
+            busyTimer.Tick+=(s,e)=> {
+                if(!busy)return;
+                spinAngle=(spinAngle+12f)%360f;
+                if(source!=null && !source.IsDisposed)source.Invalidate();
+                if(target!=null && !target.IsDisposed)target.Invalidate();
+            };
+            FormClosed+=(s,e)=> {
+                if(busyTimer!=null) { busyTimer.Stop(); busyTimer.Dispose(); }
+                if(screenshot!=null)screenshot.Dispose();
+                if(editorPreview!=null && editorPreview!=map)editorPreview.Dispose();
+            };
+            OverlayTheme.Style(this);
+            bar.BackColor=OverlayTheme.Surface;
+            bottom.BackColor=OverlayTheme.Surface;
+            instruction.BackColor=OverlayTheme.Surface;
+            instruction.ForeColor=OverlayTheme.Accent;
+            cboLayer.BackColor=OverlayTheme.Surface;
+            cboLayer.ForeColor=OverlayTheme.Ink;
+            btnNewLayer.BackColor=OverlayTheme.Surface;
+            btnNewLayer.ForeColor=OverlayTheme.Ink;
+            btnDeleteLayer.BackColor=OverlayTheme.Surface;
+            btnDeleteLayer.ForeColor=OverlayTheme.Ink;
+            name.BackColor=OverlayTheme.Background;
+            name.ForeColor=OverlayTheme.Ink;
+            filterBox.BackColor=OverlayTheme.Background;
+            filterBox.ForeColor=OverlayTheme.Ink;
+            list.BackColor=OverlayTheme.Background;
+            list.ForeColor=OverlayTheme.Ink;
+            save.BackColor=OverlayTheme.Accent;
+            save.ForeColor=Color.FromArgb(14,17,20);
+            PopulateLayerCombo();
+            RefreshViews();UpdateInstruction();
+        }
+        RectangleF Fit(Control panel,Image image) {
+            float scale=Math.Min((float)panel.Width/image.Width,(float)panel.Height/image.Height);
+            var view=panel==source?sourceView:targetView;float width=image.Width*scale*view.Zoom,height=image.Height*scale*view.Zoom;
+            return new RectangleF(panel.Width/2f-view.Pan.X*width,panel.Height/2f-view.Pan.Y*height,width,height);
+        }
+        bool ImagePoint(Control panel,bool isSource,Point point,out PointF normalized) {
+            normalized=PointF.Empty;var image=isSource?screenshot:map;if(image==null || !panel.ClientRectangle.Contains(point))return false;
+            var rect=Fit(panel,image);if(!rect.Contains(point) || rect.Width<=0 || rect.Height<=0)return false;
+            normalized=new PointF((point.X-rect.Left)/rect.Width,(point.Y-rect.Top)/rect.Height);return true;
+        }
+        void ZoomEditor(Control panel,bool isSource,int delta,Point point) {
+            if(busy || delta==0)return;var image=isSource?screenshot:map;if(image==null)return;
+            var view=isSource?sourceView:targetView;var before=Fit(panel,image);
+            float x=(point.X-before.Left)/before.Width,y=(point.Y-before.Top)/before.Height;
+            view.Zoom=Math.Max(1,Math.Min(16,view.Zoom*(delta>0?1.25f:.8f)));
+            if(view.Zoom==1)view.Pan=new PointF(.5f,.5f);
+            else { var after=Fit(panel,image);view.Pan=new PointF(Math.Max(0,Math.Min(1,x-(point.X-panel.Width/2f)/after.Width)),Math.Max(0,Math.Min(1,y-(point.Y-panel.Height/2f)/after.Height))); }
+            panel.Invalidate();
+        }
+        void WireEditorCanvas(Control panel,bool isSource) {
+            panel.MouseCaptureChanged+=(s,e)=> { if(WpfMode)return;if(!panel.Capture) { if(panningPanel==panel)panningPanel=null;if(!isSource) { draggedVertex=-1;draggedZone=null;rectangleStart=null; } } };
+            panel.MouseWheel+=(s,e)=>ZoomEditor(panel,isSource,e.Delta,e.Location);
+            panel.MouseEnter+=(s,e)=>panel.Focus();
+            panel.MouseDown+=(s,e)=> {
+                if(busy)return;
+                if(e.Button==MouseButtons.Middle) { panningPanel=panel;panStart=e.Location;viewPanStart=(isSource?sourceView:targetView).Pan;CaptureEditor(panel,true);return; }
+                if(isSource || e.Button!=MouseButtons.Left)return;
+                PointF point;if(!ImagePoint(panel,false,e.Location,out point))return;
+                if(drawingTool.SelectedIndex==2 || drawingTool.SelectedIndex==4) { rectangleStart=point;manualDraft.Clear();CaptureEditor(panel,true); }
+                if(drawingTool.SelectedIndex==5) {
+                    int selected=GetSelectedZoneIndex();if(selected>=0 && zones[selected].Contains(point)) { draggedZone=zones[selected];moveStart=point;moveOriginal=(PointF[])draggedZone.Points.Clone();RememberOutline(draggedZone);CaptureEditor(panel,true); }
+                }
+                if(drawingTool.SelectedIndex==3) {
+                    int selected=GetSelectedZoneIndex();if(selected<0)return;var zone=zones[selected];var rect=Fit(target,map);
+                    draggedVertex=(ModifierKeys&Keys.Shift)!=0?InsertOutlineVertex(zone,rect,e.Location):NearestVertex(zone,rect,e.Location);
+                    draggedZone=draggedVertex>=0?zone:null;
+                    if(draggedVertex>=0 && (ModifierKeys&Keys.Shift)==0)RememberOutline(zone);
+                    if(draggedVertex>=0)CaptureEditor(panel,true);
+                }
+            };
+            panel.MouseMove+=(s,e)=> {
+                if(busy)return;
+                if(panningPanel==panel) { var image=isSource?screenshot:map;if(image==null)return;var rect=Fit(panel,image);var view=isSource?sourceView:targetView;
+                    view.Pan=new PointF(Math.Max(0,Math.Min(1,viewPanStart.X-(e.X-panStart.X)/rect.Width)),Math.Max(0,Math.Min(1,viewPanStart.Y-(e.Y-panStart.Y)/rect.Height)));panel.Invalidate();return; }
+                if(isSource)return;PointF point;if(!ImagePoint(panel,false,e.Location,out point))return;
+                if(drawingTool.SelectedIndex==5 && draggedZone!=null)MoveZoneTo(point);
+                if(rectangleStart.HasValue)SetRectangleDraft(rectangleStart.Value,point);
+                if(draggedVertex>=0 && draggedZone!=null && zones.Contains(draggedZone) && draggedVertex<draggedZone.Points.Length) { draggedZone.Points[draggedVertex]=point;draggedZone.boundsReady=false;var origin=SourceFor(draggedZone);if(origin!=null) { sourceZones.Remove(origin);importedSources.Remove(draggedZone); } }
+                target.Invalidate();
+            };
+            panel.MouseUp+=(s,e)=> {
+                if(e.Button==MouseButtons.Middle) { panningPanel=null;CaptureEditor(panel,false);return; }
+                if(isSource || e.Button!=MouseButtons.Left)return;
+                if(rectangleStart.HasValue) { PointF point;if(ImagePoint(panel,false,e.Location,out point))SetRectangleDraft(rectangleStart.Value,point);rectangleStart=null;suppressClick=panel.ClientRectangle.Contains(e.Location); }
+                if(draggedVertex>=0 || (drawingTool.SelectedIndex==5 && draggedZone!=null)) { draggedVertex=-1;draggedZone=null;suppressClick=panel.ClientRectangle.Contains(e.Location);UpdateDetails();source.Invalidate(); }
+                CaptureEditor(panel,false);
+            };
+            panel.MouseClick+=(s,e)=> {
+                if(suppressClick) { suppressClick=false;return; }
+                if(e.Button==MouseButtons.Right && !isSource && drawingTool.SelectedIndex==3) { int selected=GetSelectedZoneIndex();if(selected>=0 && zones[selected].Points.Length>3) { int vertex=NearestVertex(zones[selected],Fit(target,map),e.Location);if(vertex>=0) { RememberOutline(zones[selected]);zones[selected].Points=zones[selected].Points.Where((p,i)=>i!=vertex).ToArray();zones[selected].boundsReady=false;var origin=SourceFor(zones[selected]);if(origin!=null) { sourceZones.Remove(origin);importedSources.Remove(zones[selected]); }RefreshViews(); } }return; }
+                if(e.Button==MouseButtons.Right && !isSource && manualDraft.Count>0) { manualDraft.RemoveAt(manualDraft.Count-1);target.Invalidate();return; }
+                if(e.Button==MouseButtons.Left)ClickImage(isSource,e.Location);
+            };
+            panel.MouseDoubleClick+=(s,e)=> { if(!isSource && e.Button==MouseButtons.Left && drawingTool.SelectedIndex==1 && manualDraft.Count>=3)AddZone(); };
+        }
+        static int NearestVertex(MapZone zone,RectangleF rect,Point point) {
+            int best=-1;double distance=100;for(int i=0;i<zone.Points.Length;i++) { double x=rect.Left+zone.Points[i].X*rect.Width-point.X,y=rect.Top+zone.Points[i].Y*rect.Height-point.Y,d=x*x+y*y;if(d<distance) { best=i;distance=d; } }return best;
+        }
+        int InsertOutlineVertex(MapZone zone,RectangleF rect,Point point) {
+            int edge=-1;double best=100;PointF inserted=PointF.Empty;
+            for(int i=0;i<zone.Points.Length;i++) { var a=zone.Points[i];var b=zone.Points[(i+1)%zone.Points.Length];double x=rect.Left+a.X*rect.Width,y=rect.Top+a.Y*rect.Height,dx=(b.X-a.X)*rect.Width,dy=(b.Y-a.Y)*rect.Height,length=dx*dx+dy*dy;if(length==0)continue;
+                double t=Math.Max(0,Math.Min(1,((point.X-x)*dx+(point.Y-y)*dy)/length)),px=x+t*dx-point.X,py=y+t*dy-point.Y,d=px*px+py*py;
+                if(d<best) { best=d;edge=i;inserted=new PointF(a.X+(b.X-a.X)*(float)t,a.Y+(b.Y-a.Y)*(float)t); }
+            }
+            if(edge<0 || zone.Points.Length>=512)return -1;RememberOutline(zone);var points=zone.Points.ToList();points.Insert(edge+1,inserted);zone.Points=points.ToArray();zone.boundsReady=false;
+            var origin=SourceFor(zone);if(origin!=null) { sourceZones.Remove(origin);importedSources.Remove(zone); }target.Invalidate();return edge+1;
+        }
+        void SetRectangleDraft(PointF a,PointF b) {
+            if(drawingTool.SelectedIndex==4) {
+                manualDraft.Clear();
+                double dx=(b.X-a.X)*map.Width,dy=(b.Y-a.Y)*map.Height;
+                double radius=Math.Sqrt(dx*dx+dy*dy);
+                radius=Math.Min(radius,Math.Min(Math.Min(a.X,1-a.X)*map.Width,Math.Min(a.Y,1-a.Y)*map.Height));
+                if(radius<.01)return;
+                for(int i=0;i<256;i++) { double angle=2*Math.PI*i/256;manualDraft.Add(new PointF(a.X+(float)(Math.Cos(angle)*radius/map.Width),a.Y+(float)(Math.Sin(angle)*radius/map.Height))); }
+                target.Invalidate();return;
+            }
+            manualDraft.Clear();if(Math.Abs(a.X-b.X)<.0001 || Math.Abs(a.Y-b.Y)<.0001)return;
+            manualDraft.AddRange(new[]{new PointF(Math.Min(a.X,b.X),Math.Min(a.Y,b.Y)),new PointF(Math.Max(a.X,b.X),Math.Min(a.Y,b.Y)),new PointF(Math.Max(a.X,b.X),Math.Max(a.Y,b.Y)),new PointF(Math.Min(a.X,b.X),Math.Max(a.Y,b.Y))});target.Invalidate();
+        }
+        async void OpenScreenshot() {
+            if(busy)return;
+            try {
+                using(OpenFileDialog dialog=new OpenFileDialog { Filter=Localization.Get("ZeMapScreenshotsFilter"),Title=Localization.Get("ZeSelectScreenshotTitle") }) {
+                    if(dialog.ShowDialog(DialogOwner)!=DialogResult.OK)return;
+                    await ImportAutomatic(dialog.FileName);
+                }
+            } catch(Exception ex) {
+                try { MessageBox.Show(DialogOwner, ex.Message, Localization.Get("ZoneEditorTitle"), MessageBoxButtons.OK, MessageBoxIcon.Error); } catch {}
+            }
+        }
+        public async Task ImportAutomatic(string file) {
+            if(busy)return;
+            string chosenLayer;
+            ImportMode mode = ShowImportDialog(file, GetSelectedLayer() ?? "Default", out chosenLayer);
+            if(mode == ImportMode.Cancel) return;
+
+            busy=true;
+            spinAngle=0f;
+            if(busyTimer!=null)busyTimer.Start();
+            source.Invalidate();
+            target.Invalidate();
+            instruction.Text=Localization.Get("ZeAligningLocally");
+            string folder=Path.GetDirectoryName(path),temp=Path.Combine(Path.GetTempPath(),"scum-zones-"+Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(temp);
+            try {
+                string python=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Programs","Python","Python312","python.exe");
+                string config=Path.Combine(folder,"python-path.txt");if(File.Exists(config))python=File.ReadAllText(config).Trim();
+                if(!File.Exists(python)) {
+                    string localApp = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                    string[] pyCandidates = new string[] {
+                        Path.Combine(localApp, "Programs", "Python", "Python313", "python.exe"),
+                        Path.Combine(localApp, "Programs", "Python", "Python311", "python.exe"),
+                        Path.Combine(localApp, "Programs", "Python", "Python310", "python.exe")
+                    };
+                    foreach(string pyCand in pyCandidates) {
+                        if(File.Exists(pyCand)) { python = pyCand; break; }
+                    }
+                }
+                if(!File.Exists(python))python="python.exe";
+                string output=Path.Combine(temp,"zones.tsv"),sourceOutput=Path.Combine(temp,"source.tsv");
+                Func<string,string> quote=value=>"\""+value.Replace("\"","")+"\"";
+                string referenceFile=Path.Combine(temp,"reference.png");
+                string[] mapCandidates = new string[] {
+                    Path.Combine(folder, "map.png"),
+                    Path.Combine(folder, "..", "resources", "map.png"),
+                    Path.Combine(folder, "resources", "map.png"),
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "resources", "map.png"),
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "resources", "map.png"),
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "map.png")
+                };
+                foreach(string cand in mapCandidates) {
+                    try {
+                        if(File.Exists(cand)) {
+                            File.Copy(cand, referenceFile, true);
+                            break;
+                        }
+                    } catch {}
+                }
+                if(!File.Exists(referenceFile)) {
+                    try {
+                        using(Stream s = typeof(MapZone).Assembly.GetManifestResourceStream("map.png")) {
+                            if(s != null) {
+                                using(FileStream fs = new FileStream(referenceFile, FileMode.Create, FileAccess.Write, FileShare.None)) {
+                                    s.CopyTo(fs);
+                                }
+                            }
+                        }
+                    } catch {}
+                }
+                if(!File.Exists(referenceFile) && map != null) {
+                    try {
+                        lock(map) {
+                            map.Save(referenceFile, System.Drawing.Imaging.ImageFormat.Png);
+                        }
+                    } catch {}
+                }
+                if(!File.Exists(referenceFile)) {
+                    throw new FileNotFoundException("Base map reference image could not be prepared for zone detection.");
+                }
+                string detectScript = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "detect_zones.py");
+                if(!File.Exists(detectScript)) {
+                    string[] candidates = new string[] {
+                        Path.Combine(folder, "detect_zones.py"),
+                        Path.Combine(folder, "..", "detect_zones.py"),
+                        Path.Combine(folder, "..", "packaging", "detect_zones.py"),
+                        Path.Combine(folder, "packaging", "detect_zones.py"),
+                        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "packaging", "detect_zones.py"),
+                        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "packaging", "detect_zones.py"),
+                        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SkynettMiniMap", "detect_zones.py"),
+                        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "detect_zones.py")
+                    };
+                    foreach(string cand in candidates) {
+                        try {
+                            if(File.Exists(cand)) { detectScript = Path.GetFullPath(cand); break; }
+                        } catch {}
+                    }
+                }
+                if(!File.Exists(detectScript)) {
+                    try {
+                        using(Stream stream = typeof(MapZone).Assembly.GetManifestResourceStream("detect_zones.py")) {
+                            if(stream != null) {
+                                string extracted = Path.Combine(temp, "detect_zones.py");
+                                using(FileStream fs = new FileStream(extracted, FileMode.Create, FileAccess.Write)) {
+                                    stream.CopyTo(fs);
+                                }
+                                detectScript = extracted;
+                            }
+                        }
+                    } catch {}
+                }
+                if(!File.Exists(detectScript)) {
+                    throw new FileNotFoundException("detect_zones.py could not be found on disk or embedded resources.");
+                }
+                string scummapFile = null;
+                string[] scummapCandidates = new string[] {
+                    Path.Combine(folder, "scummap.bin"),
+                    Path.Combine(folder, "..", "resources", "scummap.bin"),
+                    Path.Combine(folder, "resources", "scummap.bin"),
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "resources", "scummap.bin"),
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "resources", "scummap.bin"),
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "scummap.bin")
+                };
+                foreach(string cand in scummapCandidates) {
+                    try {
+                        if(File.Exists(cand)) { scummapFile = Path.GetFullPath(cand); break; }
+                    } catch {}
+                }
+                if(string.IsNullOrEmpty(scummapFile)) {
+                    try {
+                        using(Stream s = typeof(ScumMapStore).Assembly.GetManifestResourceStream("scummap.bin")) {
+                            if(s != null) {
+                                string extracted = Path.Combine(temp, "scummap.bin");
+                                using(FileStream fs = new FileStream(extracted, FileMode.Create, FileAccess.Write, FileShare.None)) {
+                                    s.CopyTo(fs);
+                                }
+                                scummapFile = extracted;
+                            }
+                        }
+                    } catch {}
+                }
+                string scumArg = (!string.IsNullOrEmpty(scummapFile) && File.Exists(scummapFile)) ? (" --scummap " + quote(scummapFile)) : "";
+                ProcessStartInfo info=new ProcessStartInfo(python,quote(detectScript)+" --input "+quote(file)+" --reference "+quote(referenceFile)+" --output "+quote(output)+" --source-output "+quote(sourceOutput)+scumArg) { UseShellExecute=false,CreateNoWindow=true,RedirectStandardOutput=true,RedirectStandardError=true };
+                string report=await Task.Run(()=> {
+                    using(Process process=Process.Start(info)) {
+                        Task<string> stdout=process.StandardOutput.ReadToEndAsync(),stderr=process.StandardError.ReadToEndAsync();
+                        if(!process.WaitForExit(60000)) { process.Kill();throw new IOException("Detection timed out. Try a smaller screenshot."); }
+                        Task.WaitAll(stdout,stderr);
+                        if(process.ExitCode!=0)throw new IOException(stderr.Result.Trim());return stdout.Result.Trim();
+                    }
+                });
+                if(IsDisposed)return;
+                List<MapZone> imported=ZoneStore.Load(output),sourceImported=ZoneStore.Load(sourceOutput);
+                if(imported.Count==0 || imported.Count!=sourceImported.Count)throw new IOException("No usable zone outlines returned.");
+
+                string targetLayerName = (mode == ImportMode.NewLayer) ? chosenLayer : (GetSelectedLayer() ?? "Default");
+                foreach(MapZone importedZone in imported) {
+                    importedZone.Category = importedZone.IsFaction ? ZoneCategory.Faction : ZoneStore.Classify(importedZone);
+                    if(importedZone.Category == ZoneCategory.Unknown) importedZone.Category = ZoneCategory.Custom;
+                    importedZone.Layer = targetLayerName;
+                }
+                foreach(MapZone sourceZone in sourceImported) {
+                    sourceZone.Category = sourceZone.IsFaction ? ZoneCategory.Faction : ZoneStore.Classify(sourceZone);
+                    if(sourceZone.Category == ZoneCategory.Unknown) sourceZone.Category = ZoneCategory.Custom;
+                    sourceZone.Layer = targetLayerName;
+                }
+                using(Image loaded=Image.FromFile(file)) {
+                    Image copy=new Bitmap(loaded);
+                    try { MapSidecarStore.SaveImport(folder,file,imported,sourceImported,report); }
+                    catch { copy.Dispose(); throw; }
+                    if(screenshot!=null)screenshot.Dispose();screenshot=copy;
+                }
+
+                if(mode == ImportMode.Replace) {
+                    zones.RemoveAll(z => string.Equals(string.IsNullOrWhiteSpace(z.Layer) ? "Default" : z.Layer, targetLayerName, StringComparison.OrdinalIgnoreCase));
+                    sourceZones.RemoveAll(z => string.Equals(string.IsNullOrWhiteSpace(z.Layer) ? "Default" : z.Layer, targetLayerName, StringComparison.OrdinalIgnoreCase));
+                }
+
+                int insertIdx = zones.Count;
+                sourceZones.Clear();importedSources.Clear();
+                outlineHistory.Clear();
+                zones.AddRange(imported);sourceZones.AddRange(sourceImported);
+                for(int i=0;i<imported.Count;i++)importedSources[imported[i]]=sourceImported[i];
+                draft.Clear();manualDraft.Clear();automatic=true;step=4;
+                sourceView.Zoom=targetView.Zoom=1;sourceView.Pan=targetView.Pan=new PointF(.5f,.5f);
+                PopulateLayerCombo(targetLayerName);
+                RefreshViews();if(zones.Count>0)SetSelectedZoneIndex(insertIdx);UpdateInstruction();
+                try { File.WriteAllText(Path.Combine(folder,"last-detection.json"),report); }catch(IOException) {}catch(UnauthorizedAccessException) {}
+            } catch(Exception ex) {
+                if(!IsDisposed) { instruction.Text=Localization.Get("ZeAutoFailedKept");MessageBox.Show(DialogOwner,Localization.T("ZeCouldNotImportAuto",ex.Message)); }
+            } finally {
+                if(busyTimer!=null)busyTimer.Stop();
+                busy=false;
+                if(!IsDisposed) {
+                    source.Invalidate();
+                    target.Invalidate();
+                }
+                // Only files generated inside this unique import directory are removed.
+                try {
+                    foreach(string leaf in new[]{"zones.tsv","source.tsv","reference.png","detect_zones.py","scummap.bin"}) {
+                        string generated=Path.Combine(temp,leaf);
+                        if(File.Exists(generated)) {
+                            try { File.Delete(generated); } catch {}
+                        }
+                    }
+                    if(Directory.Exists(temp)) Directory.Delete(temp, true);
+                }catch(IOException) {}catch(UnauthorizedAccessException) {}
+            }
+        }
+        public int DetectedCount { get { return automatic?zones.Count:0; } }
+        public void PreviewAutomatic(string output) {
+            if(!automatic || zones.Count==0)throw new Exception("Automatic screenshot import returned no zones.");
+            list.SelectedIndex=0;name.Text="Naming check";Rename(false);
+            if(zones[0].Name!="Naming check" || SourceFor(zones[0])==null || SourceFor(zones[0]).Name!="Naming check")throw new Exception("Automatic zone rename failed.");
+            Application.DoEvents();
+            using(Bitmap bitmap=new Bitmap(Width,Height)) { DrawToBitmap(bitmap,new Rectangle(0,0,Width,Height));bitmap.Save(output); }
+        }
+        void Rename(bool sameColour) {
+            if(busy || list.SelectedIndex<0)return;
+            int index=GetSelectedZoneIndex();
+            if(index<0 || index>=zones.Count)return;
+            if(string.IsNullOrWhiteSpace(name.Text) || name.Text.Length>80) { MessageBox.Show(DialogOwner,Localization.Get("ZeLabelLengthWarning"));return; }
+            int original=zones[index].Argb;
+            var selected=new HashSet<int>(SelectedZoneIndices());
+            for(int i=0;i<zones.Count;i++)if(selected.Contains(i) || (sameColour && zones[i].Argb==original)) {
+                zones[i].Name=name.Text.Trim();if(!WpfMode||sameColour)zones[i].Argb=color.ToArgb();
+                var origin=SourceFor(zones[i]);if(origin!=null) { origin.Name=zones[i].Name;origin.Argb=zones[i].Argb; }
+            }
+            RefreshViews();
+        }
+        void RecolorGroup() {
+            if(busy || list.SelectedIndex<0)return;
+            int index=GetSelectedZoneIndex();
+            if(index<0 || index>=zones.Count)return;
+            int originalArgb=zones[index].Argb;
+            int newArgb=color.ToArgb();
+            for(int i=0;i<zones.Count;i++)if(zones[i].Argb==originalArgb) {
+                zones[i].Argb=newArgb;
+                var origin=SourceFor(zones[i]);if(origin!=null)origin.Argb=newArgb;
+            }
+            RefreshViews();SetSelectedZoneIndex(index);
+        }
+        void MoveZone(int direction) {
+            if(busy)return;
+            int idx=GetSelectedZoneIndex();
+            int targetIdx=idx+direction;
+            if(idx<0 || targetIdx<0 || targetIdx>=zones.Count)return;
+            MapZone temp=zones[idx];zones[idx]=zones[targetIdx];zones[targetIdx]=temp;
+            RefreshViews();SetSelectedZoneIndex(targetIdx);
+        }
+        void DuplicateSelected() {
+            if(busy)return;
+            var copies=new List<MapZone>();
+            foreach(int idx in SelectedZoneIndices().OrderByDescending(i=>i)) {
+                MapZone original=zones[idx],copy=original.Clone();copy.Name=original.Name+" (Copy)";zones.Insert(idx+1,copy);copies.Add(copy);
+                var origin=SourceFor(original);if(origin!=null) { var clone=origin.Clone();sourceZones.Add(clone);importedSources[copy]=clone; }
+            }
+            list.ClearSelected();RefreshViews();WpfSelectVisible(visibleIndices.Select((z,i)=>new { z,i }).Where(x=>copies.Contains(zones[x.z])).Select(x=>x.i).ToArray());
+        }
+        void DeselectSelection() {
+            list.ClearSelected();name.Text=Localization.Get("ZeNewZone");
+            UpdateDetails();source.Invalidate();target.Invalidate();
+        }
+        void ClearDraft() {
+            draft.Clear();manualDraft.Clear();rectangleStart=null;RefreshViews();UpdateInstruction();
+        }
+        void DeleteSelected() {
+            if(busy)return;
+            var selected=SelectedZoneIndices();int index=selected.Length==0?-1:selected.Min();
+            if(index>=0) {
+                list.ClearSelected();
+                foreach(int i in selected.OrderByDescending(i=>i)) { var origin=SourceFor(zones[i]);if(origin!=null)sourceZones.Remove(origin);importedSources.Remove(zones[i]);zones.RemoveAt(i); }
+                RefreshViews();
+                if(zones.Count>0) {
+                    int nextIdx=Math.Min(index,zones.Count-1);
+                    SetSelectedZoneIndex(nextIdx);
+                } else {
+                    name.Text=Localization.Get("ZeNewZone");
+                }
+                UpdateInstruction();
+            }
+        }
+        void DeleteAll() {
+            if(busy || zones.Count==0)return;
+            if(MessageBox.Show(DialogOwner,Localization.Get("ZeDeleteAllConfirm"),Localization.Get("ZeDeleteAllTitle"),MessageBoxButtons.YesNo,MessageBoxIcon.Warning)==DialogResult.Yes) {
+                zones.Clear();sourceZones.Clear();importedSources.Clear();draft.Clear();manualDraft.Clear();
+                PopulateLayerCombo();
+                RefreshViews();name.Text=Localization.Get("ZeNewZone");
+                UpdateInstruction();
+            }
+        }
+        void ExportZones() {
+            if(busy)return;
+            if(zones.Count==0) {
+                MessageBox.Show(DialogOwner,Localization.Get("ZeNoZonesToExport"),Localization.Get("ZeExportTitle"),MessageBoxButtons.OK,MessageBoxIcon.Information);
+                return;
+            }
+            using(SaveFileDialog sfd=new SaveFileDialog {
+                Filter="JSON files (*.json)|*.json|TSV files (*.tsv)|*.tsv|All files (*.*)|*.*",
+                Title=Localization.Get("ZeExportTitle"),FileName="zones.json",InitialDirectory=Path.GetDirectoryName(path)
+            }) {
+                if(sfd.ShowDialog(DialogOwner)==DialogResult.OK) {
+                    try {
+                        ZoneStore.Save(sfd.FileName,zones);
+                        MessageBox.Show(DialogOwner,Localization.T("ZeExportSuccess",zones.Count,Path.GetFileName(sfd.FileName)),Localization.Get("ZeExportTitle"),MessageBoxButtons.OK,MessageBoxIcon.Information);
+                    } catch(Exception ex) {
+                        MessageBox.Show(DialogOwner,Localization.T("ZeSaveZonesError",ex.Message));
+                    }
+                }
+            }
+        }
+        void ImportFile() {
+            if(busy)return;
+            using(OpenFileDialog ofd=new OpenFileDialog {
+                Filter="Zone files (*.json;*.tsv)|*.json;*.tsv|All files (*.*)|*.*",
+                Title=Localization.Get("ZeImportTitle"),InitialDirectory=Path.GetDirectoryName(path)
+            }) {
+                if(ofd.ShowDialog(DialogOwner)==DialogResult.OK) {
+                    try {
+                        List<MapZone> imported=ZoneStore.Load(ofd.FileName);
+                        if(imported.Count==0) {
+                            MessageBox.Show(DialogOwner,Localization.Get("ZeNoUsableZonesFound"),Localization.Get("ZeImportTitle"),MessageBoxButtons.OK,MessageBoxIcon.Warning);
+                            return;
+                        }
+
+                        ImportMode mode = ImportMode.NewLayer;
+                        string chosenLayer = Path.GetFileNameWithoutExtension(ofd.FileName);
+                        if(string.IsNullOrWhiteSpace(chosenLayer)) chosenLayer = "Imported Layer";
+
+                        if(zones.Count > 0) {
+                            mode = ShowImportDialog(ofd.FileName, GetSelectedLayer() ?? "Default", out chosenLayer);
+                            if(mode == ImportMode.Cancel) return;
+                        }
+
+                        string targetLayerName = (mode == ImportMode.NewLayer) ? chosenLayer : (GetSelectedLayer() ?? "Default");
+
+                        foreach(MapZone importedZone in imported) {
+                            if(importedZone.Category == ZoneCategory.Unknown) {
+                                importedZone.Category = importedZone.IsFaction ? ZoneCategory.Faction : ZoneStore.Classify(importedZone);
+                                if(importedZone.Category == ZoneCategory.Unknown) importedZone.Category = ZoneCategory.Custom;
+                            }
+                            if(mode == ImportMode.NewLayer || string.IsNullOrWhiteSpace(importedZone.Layer) || importedZone.Layer == "Default") {
+                                importedZone.Layer = targetLayerName;
+                            }
+                        }
+
+                        MapSidecarStore.SaveImport(Path.GetDirectoryName(path),ofd.FileName,imported,null,null);
+
+                        if(mode == ImportMode.Replace) {
+                            zones.RemoveAll(z => string.Equals(string.IsNullOrWhiteSpace(z.Layer) ? "Default" : z.Layer, targetLayerName, StringComparison.OrdinalIgnoreCase));
+                            sourceZones.RemoveAll(z => string.Equals(string.IsNullOrWhiteSpace(z.Layer) ? "Default" : z.Layer, targetLayerName, StringComparison.OrdinalIgnoreCase));
+                        }
+
+                        int insertIdx = zones.Count;
+                        zones.AddRange(imported);draft.Clear();
+                        PopulateLayerCombo(targetLayerName);
+                        RefreshViews();
+                        if(zones.Count>0)SetSelectedZoneIndex(insertIdx);UpdateInstruction();
+                        MessageBox.Show(DialogOwner,Localization.T("ZeImportSuccess",imported.Count,Path.GetFileName(ofd.FileName)),Localization.Get("ZeImportTitle"),MessageBoxButtons.OK,MessageBoxIcon.Information);
+                    } catch(Exception ex) {
+                        MessageBox.Show(DialogOwner,Localization.T("ZeCouldNotImportAuto",ex.Message));
+                    }
+                }
+            }
+        }
+        void ClickImage(bool isSource,Point point) {
+            if(busy)return;
+            if(isSource && screenshot==null)return;
+            RectangleF rect=Fit(isSource?source:target,isSource?screenshot:map);if(!rect.Contains(point))return;
+            PointF p=new PointF((point.X-rect.X)/rect.Width,(point.Y-rect.Y)/rect.Height);
+            if(!isSource && drawingTool.SelectedIndex==1) { if(manualDraft.Count<512 && (manualDraft.Count==0 || Math.Abs(manualDraft.Last().X-p.X)+Math.Abs(manualDraft.Last().Y-p.Y)>.0001f))manualDraft.Add(p);target.Invalidate();return; }
+            if(!isSource && (drawingTool.SelectedIndex==2 || drawingTool.SelectedIndex==4))return;
+            if(automatic || zones.Count>0) {
+                string selectedLayer = GetSelectedLayer();
+                List<MapZone> items=(automatic && isSource)?sourceZones:zones;
+                for(int i=items.Count-1;i>=0;i--) {
+                    if(selectedLayer != null) {
+                        string lay = string.IsNullOrWhiteSpace(items[i].Layer) ? "Default" : items[i].Layer;
+                        if(!string.Equals(lay, selectedLayer, StringComparison.OrdinalIgnoreCase)) continue;
+                    }
+                    if(items[i].Contains(p)) {
+                        int zoneIndex=(automatic && isSource)?zones.FindIndex(zone=>Object.ReferenceEquals(SourceFor(zone),items[i])):i;
+                        if(categoryFilter.HasValue&&items[i].Category!=categoryFilter.Value)continue;
+                        int visible=visibleIndices.IndexOf(zoneIndex);
+                        if((ModifierKeys&Keys.Control)!=0&&visible>=0)list.SetSelected(visible,!list.GetSelected(visible));else SetSelectedZoneIndex(zoneIndex);
+                        if(drawingTool.SelectedIndex!=3) { name.Focus();name.SelectAll(); }
+                        return;
+                    }
+                }
+                if(automatic)return;
+            }
+            if(screenshot==null)return;
+            if(step==0 && isSource) { s1=p;step=1; }
+            else if(step==1 && !isSource) { m1=p;step=2; }
+            else if(step==2 && isSource) { s2=p;step=3; }
+            else if(step==3 && !isSource) {
+                m2=p;try { ZoneStore.Align(s1,s1,s2,m1,m2);step=4; }catch(ArgumentException ex) { MessageBox.Show(DialogOwner,ex.Message);step=0; }
+            } else if(step==4 && isSource && draft.Count<512) {
+                PointF mapped=ZoneStore.Align(p,s1,s2,m1,m2);
+                if(mapped.X<0 || mapped.X>1 || mapped.Y<0 || mapped.Y>1) { MessageBox.Show(DialogOwner,Localization.Get("ZeOutsideMapWarning"));return; }
+                draft.Add(p);
+            }
+            UpdateInstruction();
+        }
+        void UpdateInstruction() {
+            if(drawingTool.SelectedIndex>0) { instruction.Text=drawingTool.SelectedIndex==5?Localization.Get("ZeMoveHelp"):drawingTool.SelectedIndex==4?Localization.Get("ZeCircleHelp"):Localization.Get("ZeDrawingHelp");source.Invalidate();target.Invalidate();return; }
+            if(automatic) {
+                instruction.Text=Localization.T("ZeDetectedOutlinesPrompt",zones.Count)+"\n"+Localization.Get("ZeDrawingHelp");
+                source.Invalidate();target.Invalidate();return;
+            }
+            string[] steps={
+                Localization.Get("ZeManualStep0"),
+                Localization.Get("ZeManualStep1"),
+                Localization.Get("ZeManualStep2"),
+                Localization.Get("ZeManualStep3"),
+                Localization.Get("ZeManualStep4")
+            };
+            instruction.Text=(screenshot==null?Localization.Get("ZeInitialPrompt"):steps[step])+"\n"+Localization.Get("ZeDrawingHelp");
+            source.Invalidate();target.Invalidate();
+        }
+        void AddZone() {
+            if(busy)return;
+            if(drawingTool.SelectedIndex==1 || drawingTool.SelectedIndex==2 || drawingTool.SelectedIndex==4) {
+                if(manualDraft.Count<3) { MessageBox.Show(DialogOwner,Localization.Get("ZePointsRequirementWarning"));return; }
+                if(string.IsNullOrWhiteSpace(name.Text) || name.Text.Length>80 || zones.Count>=500) { MessageBox.Show(DialogOwner,Localization.Get("ZeZonesMaxWarning"));return; }
+                string layer=GetSelectedLayer()??"Default";
+                var zone=new MapZone { Name=name.Text.Trim(),Argb=color.ToArgb(),FillArgb=draftFillArgb,Points=manualDraft.ToArray(),Category=ZoneCategory.Custom,Layer=layer };
+                zones.Add(zone);manualDraft.Clear();PopulateLayerCombo(layer);RefreshViews();SetSelectedZoneIndex(zones.Count-1);UpdateInstruction();return;
+            }
+            if(automatic || busy)return;
+            if(step!=4 || draft.Count<3) { MessageBox.Show(DialogOwner,Localization.Get("ZePointsRequirementWarning"));return; }
+            if(string.IsNullOrWhiteSpace(name.Text) || name.Text.Length>80 || zones.Count>=500) { MessageBox.Show(DialogOwner,Localization.Get("ZeZonesMaxWarning"));return; }
+            string targetLayer = GetSelectedLayer() ?? "Default";
+            zones.Add(new MapZone { Name=name.Text.Trim(),Argb=color.ToArgb(),FillArgb=draftFillArgb,Points=draft.Select(p=>ZoneStore.Align(p,s1,s2,m1,m2)).ToArray(),Category=ZoneCategory.Custom,Layer=targetLayer });
+            draft.Clear();
+            PopulateLayerCombo(targetLayer);
+            RefreshViews();
+        }
+        public void CheckAndPreview(string output) {
+            screenshot=new Bitmap(map); Show();Application.DoEvents();
+            Action<bool,float,float> click=(isSource,x,y)=> {
+                RectangleF rect=Fit(isSource?source:target,isSource?screenshot:map);
+                ClickImage(isSource,new Point((int)(rect.X+x*rect.Width),(int)(rect.Y+y*rect.Height)));
+            };
+            click(true,.1f,.1f);click(false,.1f,.1f);click(true,.9f,.9f);click(false,.9f,.9f);
+            if(step!=4)throw new Exception("Editor landmark alignment failed.");
+            click(true,.3f,.3f);click(true,.6f,.3f);click(true,.6f,.6f);
+            int before=zones.Count;name.Text="Example zone";AddZone();
+            if(zones.Count!=before+1 || zones[before].Points.Length!=3)throw new Exception("Zone tracing failed.");
+            Application.DoEvents();
+            using(Bitmap bitmap=new Bitmap(Width,Height)) { DrawToBitmap(bitmap,new Rectangle(0,0,Width,Height));bitmap.Save(output); }
+            Close();
+        }
+        void Cross(Graphics g,RectangleF rect,PointF p,string text) { float x=rect.X+p.X*rect.Width,y=rect.Y+p.Y*rect.Height;g.DrawEllipse(Pens.Cyan,x-5,y-5,10,10);g.DrawString(text,Font,Brushes.Cyan,x+7,y); }
+        void DrawSpinner(Graphics g,Rectangle bounds,string message) {
+            if(bounds.Width<60 || bounds.Height<60)return;
+            SmoothingMode prevSmooth=g.SmoothingMode;
+            g.SmoothingMode=SmoothingMode.AntiAlias;
+
+            float cardW=Math.Min(360f,bounds.Width-30f);
+            float cardH=136f;
+            float cx=bounds.X+bounds.Width/2f;
+            float cy=bounds.Y+bounds.Height/2f;
+            RectangleF cardRect=new RectangleF(cx-cardW/2f,cy-cardH/2f,cardW,cardH);
+
+            using(GraphicsPath path=new GraphicsPath()) {
+                float r=12f;
+                path.AddArc(cardRect.X,cardRect.Y,r*2,r*2,180,90);
+                path.AddArc(cardRect.Right-r*2,cardRect.Y,r*2,r*2,270,90);
+                path.AddArc(cardRect.Right-r*2,cardRect.Bottom-r*2,r*2,r*2,0,90);
+                path.AddArc(cardRect.X,cardRect.Bottom-r*2,r*2,r*2,90,90);
+                path.CloseFigure();
+
+                using(Brush bgBrush=new SolidBrush(Color.FromArgb(220,18,20,24))) {
+                    g.FillPath(bgBrush,path);
+                }
+                using(Pen borderPen=new Pen(Color.FromArgb(160,OverlayTheme.BorderHighlight),1.5f)) {
+                    g.DrawPath(borderPen,path);
+                }
+            }
+
+            float spinR=22f;
+            float spinCenterY=cy-20f;
+            RectangleF spinRect=new RectangleF(cx-spinR,spinCenterY-spinR,spinR*2,spinR*2);
+
+            using(Pen trackPen=new Pen(Color.FromArgb(40,255,255,255),4f)) {
+                g.DrawEllipse(trackPen,spinRect);
+            }
+            using(Pen arcPen=new Pen(OverlayTheme.Accent,4f)) {
+                arcPen.StartCap=LineCap.Round;
+                arcPen.EndCap=LineCap.Round;
+                g.DrawArc(arcPen,spinRect,spinAngle,100f);
+            }
+            using(Brush dotBrush=new SolidBrush(Color.FromArgb(180,OverlayTheme.Accent))) {
+                g.FillEllipse(dotBrush,cx-3f,spinCenterY-3f,6f,6f);
+            }
+
+            string text=string.IsNullOrEmpty(message)?Localization.Get("ZeAligningLocally"):message;
+            using(Font font=new Font("Segoe UI",9.5f,FontStyle.Bold))
+            using(StringFormat sf=new StringFormat { Alignment=StringAlignment.Center,LineAlignment=StringAlignment.Center,Trimming=StringTrimming.EllipsisWord }) {
+                RectangleF textRect=new RectangleF(cardRect.X+14f,cy+12f,cardRect.Width-28f,48f);
+                using(Brush shadowBrush=new SolidBrush(Color.FromArgb(200,0,0,0))) {
+                    g.DrawString(text,font,shadowBrush,new RectangleF(textRect.X+1f,textRect.Y+1f,textRect.Width,textRect.Height),sf);
+                }
+                using(Brush textBrush=new SolidBrush(OverlayTheme.Ink)) {
+                    g.DrawString(text,font,textBrush,textRect,sf);
+                }
+            }
+
+            g.SmoothingMode=prevSmooth;
+        }
+        void DrawSource(Graphics g) {
+            if(screenshot!=null) {
+                RectangleF rect=Fit(source,screenshot);g.DrawImage(screenshot,rect);
+                string selectedLayer = GetSelectedLayer();
+                List<MapZone> activeSource = (selectedLayer == null) ? sourceZones : sourceZones.Where(z => string.Equals(string.IsNullOrWhiteSpace(z.Layer) ? "Default" : z.Layer, selectedLayer, StringComparison.OrdinalIgnoreCase)).ToList();
+                if(automatic) { DrawDetected(g,activeSource,rect,true); }
+                else {
+                    if(step>=1)Cross(g,rect,s1,"1");if(step>=3)Cross(g,rect,s2,"2");
+                    PointF[] points=draft.Select(p=>new PointF(rect.X+p.X*rect.Width,rect.Y+p.Y*rect.Height)).ToArray();
+                    if(points.Length>1)using(Pen pen=new Pen(color,2))g.DrawLines(pen,points);
+                    foreach(PointF p in points)g.FillEllipse(Brushes.White,p.X-3,p.Y-3,6,6);
+                }
+            }
+            if(busy)DrawSpinner(g,source.ClientRectangle,Localization.Get("ZeAligningLocally"));
+        }
+        void DrawTarget(Graphics g) {
+            Image targetMap=editorPreview??map;
+            if(targetMap!=null) {
+                RectangleF rect=Fit(target,targetMap);g.DrawImage(targetMap,rect);
+                string selectedLayer = GetSelectedLayer();
+                List<MapZone> activeZones = (selectedLayer == null) ? zones : zones.Where(z => string.Equals(string.IsNullOrWhiteSpace(z.Layer) ? "Default" : z.Layer, selectedLayer, StringComparison.OrdinalIgnoreCase)).ToList();
+                if(automatic) { DrawDetected(g,activeZones,rect); }
+                else {
+                    if(fillZones) ZoneStore.Draw(g,activeZones,rect,true);
+                    else {
+                        foreach(MapZone item in activeZones) {
+                            if(item.Points==null || item.Points.Length<2) continue;
+                            PointF[] pts=item.Points.Select(p=>new PointF(rect.X+p.X*rect.Width,rect.Y+p.Y*rect.Height)).ToArray();
+                            using(Pen pen=new Pen(Color.FromArgb(item.Argb),2f)) {
+                                if(pts.Length>=3) g.DrawPolygon(pen,pts);
+                                else g.DrawLines(pen,pts);
+                            }
+                        }
+                    }
+                    foreach(int selIdx in SelectedZoneIndices()) {
+                    if(selIdx>=0 && selIdx<zones.Count && zones[selIdx].Points!=null && zones[selIdx].Points.Length>0) {
+                        PointF[] points=zones[selIdx].Points.Select(p=>new PointF(rect.X+p.X*rect.Width,rect.Y+p.Y*rect.Height)).ToArray();
+                        if(points.Length>=3) {
+                            using(Pen bgPen=new Pen(Color.FromArgb(200,0,0,0),4.5f))g.DrawPolygon(bgPen,points);
+                            using(Pen pen=new Pen(OverlayTheme.Accent,2.5f))g.DrawPolygon(pen,points);
+                        } else {
+                            using(Pen bgPen=new Pen(Color.FromArgb(200,0,0,0),4.5f))g.DrawEllipse(bgPen,points[0].X-12,points[0].Y-12,24,24);
+                            using(Pen pen=new Pen(OverlayTheme.Accent,2.5f))g.DrawEllipse(pen,points[0].X-12,points[0].Y-12,24,24);
+                        }
+                    }
+                    }
+                    if(step>=2)Cross(g,rect,m1,"1");if(step>=4)Cross(g,rect,m2,"2");
+                    if(step==4 && draft.Count>=3)ZoneStore.Draw(g,new[]{new MapZone { Name=name.Text,Argb=color.ToArgb(),Points=draft.Select(p=>ZoneStore.Align(p,s1,s2,m1,m2)).ToArray(),Layer=selectedLayer??"Default" }},rect,true);
+                }
+                if(manualDraft.Count>0) {
+                    var points=manualDraft.Select(p=>new PointF(rect.Left+p.X*rect.Width,rect.Top+p.Y*rect.Height)).ToArray();
+                    if(points.Length>1)using(var pen=new Pen(color,2)) { if(points.Length>2)g.DrawPolygon(pen,points);else g.DrawLines(pen,points); }
+                    foreach(var point in points)g.FillEllipse(Brushes.White,point.X-4,point.Y-4,8,8);
+                }
+                if(drawingTool.SelectedIndex==3) { int selected=GetSelectedZoneIndex();if(selected>=0)foreach(var vertex in zones[selected].Points)g.FillRectangle(Brushes.White,rect.Left+vertex.X*rect.Width-4,rect.Top+vertex.Y*rect.Height-4,8,8); }
+            }
+            if(busy)DrawSpinner(g,target.ClientRectangle,Localization.Get("ZeAligningLocally"));
+        }
+        void DrawDetected(Graphics g,List<MapZone> items,RectangleF rect,bool isSource=false) {
+            if(fillZones) ZoneStore.Draw(g,items,rect,true,9f,false,null,false);
+            else {
+                foreach(MapZone item in items) {
+                    if(item.Points==null || item.Points.Length<2) continue;
+                    PointF[] pts=item.Points.Select(p=>new PointF(rect.X+p.X*rect.Width,rect.Y+p.Y*rect.Height)).ToArray();
+                    using(Pen pen=new Pen(Color.FromArgb(item.Argb),2f)) {
+                        if(pts.Length>=3) g.DrawPolygon(pen,pts);
+                        else g.DrawLines(pen,pts);
+                    }
+                }
+            }
+            var selectedZones=new HashSet<MapZone>(SelectedZoneIndices().Select(i=>isSource?SourceFor(zones[i]):zones[i]).Where(z=>z!=null));
+            for(int i=0;i<items.Count;i++) {
+                PointF[] points=items[i].Points.Select(p=>new PointF(rect.X+p.X*rect.Width,rect.Y+p.Y*rect.Height)).ToArray();
+                if(selectedZones.Contains(items[i])) {
+                    if(points.Length>=3) {
+                        using(Pen bgPen=new Pen(Color.FromArgb(200,0,0,0),4.5f))g.DrawPolygon(bgPen,points);
+                        using(Pen pen=new Pen(OverlayTheme.Accent,2.5f))g.DrawPolygon(pen,points);
+                    } else {
+                        using(Pen bgPen=new Pen(Color.FromArgb(200,0,0,0),4.5f))g.DrawEllipse(bgPen,points[0].X-12,points[0].Y-12,24,24);
+                        using(Pen pen=new Pen(OverlayTheme.Accent,2.5f))g.DrawEllipse(pen,points[0].X-12,points[0].Y-12,24,24);
+                    }
+                }
+                float x=points.Average(p=>p.X),y=points.Average(p=>p.Y);
+                int num = (isSource?zones.FindIndex(zone=>Object.ReferenceEquals(SourceFor(zone),items[i])):zones.IndexOf(items[i])) + 1;
+                if(num <= 0) num = i + 1;
+                g.DrawString(num.ToString(),Font,Brushes.Black,x+1,y+1);
+                g.DrawString(num.ToString(),Font,Brushes.White,x,y);
+            }
+        }
+    }
+}

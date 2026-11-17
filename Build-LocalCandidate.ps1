@@ -13,13 +13,13 @@ $assetLines=@('map-tiles.bin','roads.bin' | ForEach-Object { $_+'='+(Get-FileHas
 [IO.File]::WriteAllLines($manifest,$assetLines,[Text.UTF8Encoding]::new($false))
 $sources=@(& (Join-Path $root 'scripts\Get-MiniMapSources.ps1'))
 $mainSource=Join-Path $root 'src\MiniMap.cs'
-$stamped=[IO.File]::ReadAllText($mainSource) -replace '\[assembly:\s*AssemblyVersion\("[^"]+"\)\]','[assembly: AssemblyVersion("2.4.9.0")]'
-$stamped=$stamped -replace '\[assembly:\s*AssemblyFileVersion\("[^"]+"\)\]','[assembly: AssemblyFileVersion("2.4.9.0")]'
-$stamped=$stamped -replace '\[assembly:\s*AssemblyInformationalVersion\("[^"]+"\)\]','[assembly: AssemblyInformationalVersion("2.4.9-local-map")]'
+$stamped=[IO.File]::ReadAllText($mainSource) -replace '\[assembly:\s*AssemblyVersion\("[^"]+"\)\]','[assembly: AssemblyVersion("2.4.10.0")]'
+$stamped=$stamped -replace '\[assembly:\s*AssemblyFileVersion\("[^"]+"\)\]','[assembly: AssemblyFileVersion("2.4.10.0")]'
+$stamped=$stamped -replace '\[assembly:\s*AssemblyInformationalVersion\("[^"]+"\)\]','[assembly: AssemblyInformationalVersion("2.4.10-local-map")]'
 $stampedPath=Join-Path $PSScriptRoot 'checks\MiniMap.build.cs'
 [IO.File]::WriteAllText($stampedPath,$stamped,[Text.UTF8Encoding]::new($false))
 $sources=@($sources | ForEach-Object { if([IO.Path]::GetFullPath($_) -eq $mainSource) { $stampedPath } else { $_ } })
-$embedded=@('nav-world-grid.bin','nav-world-terrain.bin','nav-world-grade.bin','zones.tsv','water-mask.bin','scummap.bin','spawn-items.tsv','spawn-compatibility.tsv','spawn-item-names-pl.tsv','keyboard-setup.png','steam-logo.png' | ForEach-Object { '/resource:'+(Join-Path $resources $_)+','+$_ })
+$embedded=@('nav-world-grid.bin','nav-world-terrain.bin','nav-world-grade.bin','nav-bridges.bin','zones.tsv','water-mask.bin','scummap.bin','spawn-items.tsv','spawn-compatibility.tsv','spawn-item-names-pl.tsv','keyboard-setup.png','steam-logo.png' | ForEach-Object { '/resource:'+(Join-Path $resources $_)+','+$_ })
 $embedded+=@('BarlowSemiCondensed-Regular.ttf','BarlowSemiCondensed-SemiBold.ttf' | ForEach-Object { '/resource:'+(Join-Path $resources ('fonts\'+$_))+','+$_ })
 $embedded+='/resource:'+$manifest+',installation-assets.txt'
 $embedded+='/resource:'+(Join-Path $root 'packaging\detect_zones.py')+',detect_zones.py'
@@ -39,7 +39,7 @@ if($LASTEXITCODE -ne 0){throw 'Fine raster compilation failed.'}
 $exe=Join-Path $output 'SkynettMiniMap.exe'
 & (Join-Path $framework 'csc.exe') /nologo /codepage:65001 /optimize+ /target:winexe /platform:x64 /define:MINIMAP_LOCAL @embedded "/out:$exe" @references "/win32icon:$resources\App-Icon.ico" "/win32manifest:$root\packaging\MiniMap.manifest" @sources
 if($LASTEXITCODE -ne 0) { throw 'Candidate compilation failed.' }
-$package=@('version=2.4.9',('SkynettMiniMap.exe='+(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()))+@($assetLines | ForEach-Object { 'assets/'+$_ })
+$package=@('version=2.4.10',('SkynettMiniMap.exe='+(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()))+@($assetLines | ForEach-Object { 'assets/'+$_ })
 [IO.File]::WriteAllLines((Join-Path $output 'package.txt'),$package,[Text.UTF8Encoding]::new($false))
 & powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File (Join-Path $root 'scripts\Test-PackagedMiniMap.ps1') -AssemblyPath $exe
 if($LASTEXITCODE -ne 0) { throw 'Candidate packaged check failed.' }

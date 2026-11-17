@@ -1,4 +1,4 @@
-
+﻿
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -28,6 +28,47 @@ namespace ScumMiniMap {
             return FindCurrentRoute(a,b,mode,null);
         }
         internal RoadRoute FindCurrentRoute(PointF a,PointF b,RoadRouteMode mode,Func<bool> current) {
+            return FindAtHeight(a,b,mode,current,null,null);
+        }
+        internal RoadRoute FindAtHeight(PointF a,PointF b,RoadRouteMode mode,Func<bool> current,double? startHeight,double? endHeight) {
+            bool valid=Finite(a.X)&&Finite(a.Y)&&Finite(b.X)&&Finite(b.Y)&&
+                a.X>=0&&a.Y>=0&&b.X>=0&&b.Y>=0&&a.X<1&&a.Y<1&&b.X<1&&b.Y<1&&Enum.IsDefined(typeof(RoadRouteMode),mode);
+            if(bridges!=null && valid){
+                int group=SurfaceGroup(a,startHeight);
+                double span=RoadRouter.DistanceMeters(a,b);
+                bool localUnder=group==0 && span<=120 && TouchesBridge(a,b);
+                int endGroup=SurfaceGroup(b,endHeight);
+                bool localChange=group!=endGroup && span<=140 && bridges.Ground.ContainsKey(bridges.Cell(a)) && bridges.Ground.ContainsKey(bridges.Cell(b));
+                if(localChange||((group!=0||localUnder) && group==endGroup)){
+                    var same=new BridgePath();
+                    if(BridgeSection(a,b,mode,current,startHeight,endHeight,same,!localChange)){
+                        lock(searchLock){
+                            var route=FineResult(same.Points,mode,new HashSet<PointF>(),same.Layers);
+                            if(localChange||group!=0||route.TotalDistanceMeters<=span*1.45+8){
+                                route.BridgeLayers=same.Layers.ToArray();route.PlayerPoint=a;route.TargetPoint=b;return route;
+                            }
+                        }
+                    }
+                }
+            }
+            // A short crossing can start and end on terrain while requiring a deck in between.
+            // Search the connected surfaces together before trusting the projected route at either end.
+            if(bridges!=null && valid && RoadRouter.DistanceMeters(a,b)<=800 &&
+                bridges.Ground.ContainsKey(bridges.Cell(a)) && bridges.Ground.ContainsKey(bridges.Cell(b))){
+                var crossing=new BridgePath();
+                if(BridgeSection(a,b,mode,current,startHeight,endHeight,crossing)){
+                    lock(searchLock){
+                        var route=FineResult(crossing.Points,mode,new HashSet<PointF>(),crossing.Layers);
+                        route.BridgeLayers=crossing.Layers.ToArray();route.PlayerPoint=a;route.TargetPoint=b;
+                        return route;
+                    }
+                }
+            }
+            var first=FindUnlayered(a,b,mode,current);
+            if(bridges==null||!valid)return first;
+            return ApplyBridgeLayers(first,a,b,mode,current,startHeight,endHeight);
+        }
+        RoadRoute FindUnlayered(PointF a,PointF b,RoadRouteMode mode,Func<bool> current) {
             RoadRoute first=FindBaseRoute(a,b,mode);
             if(first.Success||!isLoaded||worldGrade==null||mode==RoadRouteMode.Walking||
                 !Enum.IsDefined(typeof(RoadRouteMode),mode)||!Finite(a.X)||!Finite(a.Y)||!Finite(b.X)||!Finite(b.Y)||
@@ -68,7 +109,7 @@ namespace ScumMiniMap {
                 return first;
             } finally {Monitor.Exit(fineGate);}
         }
-        RoadRoute FineResult(List<PointF> path,RoadRouteMode mode,HashSet<PointF> cues) {
+        RoadRoute FineResult(List<PointF> path,RoadRouteMode mode,HashSet<PointF> cues,List<int> layers=null) {
             var r=new RoadRoute{Success=true,Mode=mode,PlayerPoint=path[0],TargetPoint=path[path.Count-1],Polyline=path.ToArray()};
             var indices=new List<int>();var fine=levels[LevelFine];bool road=false;double lastRoad=0;
             var overlay=trailOverlay==null?null:trailOverlay.Fine;
@@ -80,6 +121,11 @@ namespace ScumMiniMap {
                     var sample=new PointF((float)(a.X+(b.X-a.X)*t),(float)(a.Y+(b.Y-a.Y)*t));
                     int id=ClampCell((int)(sample.Y*fine.Height),fine.Height)*fine.Width+ClampCell((int)(sample.X*fine.Width),fine.Width);
                     byte cost=TrailCost(overlay,id,fine.Data[id]);
+                        if(layers!=null){
+                            BridgeGround ground;
+                            if(layers[i-1]>0||layers[i]>0)cost=CostPaved;
+                            else if(bridges.Ground.TryGetValue(id,out ground))cost=ground.Cost;
+                        }
                     if(cost==CostBlocked||cost==CostWater||cost==CostUndefined)cost=CostRough;
                     if(cost==CostPaved||cost==CostDirt){
                         if(!road){road=true;r.EntryDistanceMeters=r.TotalDistanceMeters+j*slice;r.RoadEntryPoint=sample;}

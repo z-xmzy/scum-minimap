@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.IO;
@@ -61,11 +61,11 @@ namespace ScumMiniMap {
                 var peer=current.FirstOrDefault(p=>p.Id==followingPeer);
                 if(peer==null||peer.Position==null) { bool clear=squadTarget!=null;squadTarget=null;if(clear)engine.WpfClear();return; }
                 var destination=MapWindow.ToMap(peer.Position);
-                if(now>=nextSquadRoute&&(squadTarget==null||DestinationSearch.Metres(squadTarget.Centroid,destination)>=25)) { squadTarget=new MapZone { Name=S("SquadFollow")+": "+peer.Name,Points=new[]{destination} };engine.WpfSquadTarget(squadTarget);nextSquadRoute=now.AddSeconds(2); }
+                if(now>=nextSquadRoute&&(squadTarget==null||DestinationSearch.Metres(squadTarget.Centroid,destination)>=25||!NavigationRouter.SameSurface(squadTarget.Centroid,squadTarget.RouteHeightCm,destination,peer.Position.Z))) { squadTarget=new MapZone { Name=S("SquadFollow")+": "+peer.Name,Points=new[]{destination},RouteHeightCm=peer.Position.Z };engine.WpfSquadTarget(squadTarget);nextSquadRoute=now.AddSeconds(2); }
             }
             else if(activeStops.Length>0&&activeStop<activeStops.Length) {
                 int previousStop=activeStop;
-                if(state.Position!=null&&state.Tracking&&!state.TrackingPaused&&PrivatePositions.Fresh(state.Updated,now)&&DestinationSearch.Metres(MapWindow.ToMap(state.Position),PointOf(activeStops[activeStop]))<ArrivalRadius()) {
+                if(state.Position!=null&&state.Tracking&&!state.TrackingPaused&&PrivatePositions.Fresh(state.Updated,now)&&DestinationSearch.Metres(MapWindow.ToMap(state.Position),PointOf(activeStops[activeStop]))<ArrivalRadius()&&NavigationRouter.SameSurface(MapWindow.ToMap(state.Position),state.Position.Z,PointOf(activeStops[activeStop]),null)) {
                     activeStop++;returningToStart=false;
                     if(activeStop==activeStops.Length&&activeSavedRoute!=null&&activeSavedRoute.Loop) {
                         activeStop=0;returningToStart=true;

@@ -1,20 +1,20 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Collections.Generic;
 using DrawingPoint=System.Drawing.PointF;
 
 namespace ScumMiniMap {
     internal sealed partial class WpfFieldConsoleRuntime {
-        readonly SquadRoutePlanner ownRoutePlanner=new SquadRoutePlanner(NavigationRouter.FindCurrentRoute);
-        readonly SquadRoutePlanner squadRoutePlanner=new SquadRoutePlanner(NavigationRouter.FindCurrentRoute);
-        sealed class RemoteRoute { internal string Signature;internal DrawingPoint? Origin;internal DateTime Requested;internal readonly SquadRoutePlanner Planner=new SquadRoutePlanner(NavigationRouter.FindCurrentRoute); }
+        readonly SquadRoutePlanner ownRoutePlanner=new SquadRoutePlanner(NavigationRouter.FindAtHeight);
+        readonly SquadRoutePlanner squadRoutePlanner=new SquadRoutePlanner(NavigationRouter.FindAtHeight);
+        sealed class RemoteRoute { internal string Signature;internal DrawingPoint? Origin;internal DateTime Requested;internal readonly SquadRoutePlanner Planner=new SquadRoutePlanner(NavigationRouter.FindAtHeight); }
         readonly Dictionary<string,RemoteRoute> remoteRoutes=new Dictionary<string,RemoteRoute>(StringComparer.Ordinal);
         string ownRouteSignature,activeRouteSignature;DrawingPoint? ownPlanOrigin,activePlanOrigin;DateTime ownPlanRequested,activePlanRequested;
         static string StopSignature(SharedMapMarker[] stops) { return string.Join(";",stops.Select(m=>m.Id+":"+m.X.ToString("R",System.Globalization.CultureInfo.InvariantCulture)+":"+m.Y.ToString("R",System.Globalization.CultureInfo.InvariantCulture)+":"+m.Name)); }
         static DrawingPoint[] StopPoints(SharedMapMarker[] stops) { return stops.Select(m=>new DrawingPoint((float)m.X,(float)m.Y)).ToArray(); }
         static bool OriginChanged(DrawingPoint? previous,DrawingPoint? next) { return previous.HasValue!=next.HasValue||previous.HasValue&&next.HasValue&&DestinationSearch.Metres(previous.Value,next.Value)>=25; }
         static DrawingPoint? PlanningPoint(Position position) { if(position==null)return null;var p=MapWindow.ToMap(position);return !float.IsNaN(p.X)&&!float.IsNaN(p.Y)&&p.X>=0&&p.X<=1&&p.Y>=0&&p.Y<=1?(DrawingPoint?)p:null; }
-        DrawingPoint? PlanningOrigin() { var state=engine.WpfSnapshot(false);return state.Position!=null&&PrivatePositions.Fresh(state.Updated,DateTime.UtcNow)?PlanningPoint(state.Position):null; }
+        DrawingPoint? PlanningOrigin(out double? z) { var state=engine.WpfSnapshot(false);z=state.Position==null?(double?)null:state.Position.Z;return state.Position!=null&&PrivatePositions.Fresh(state.Updated,DateTime.UtcNow)?PlanningPoint(state.Position):null; }
         SharedMapMarker[] ReceivedSquadMarkers(bool visible=true) { return (privatePositions==null?new SharedMapMarker[0]:privatePositions.SnapshotMarkers()).Concat(relayGroups==null?new SharedMapMarker[0]:relayGroups.Markers()).Where(m=>!visible||PlayerMarkerVisible(m)).ToArray(); }
         SharedMapMarker[] OwnSquadPublication() {
             // Following a squad route neither republishes it nor advertises a
@@ -53,16 +53,16 @@ namespace ScumMiniMap {
         }
         bool UsesOwnNavigationPlan { get { return activeSavedRoute==null&&activeStop==0&&activeStops.Length>0&&activeStops[0].OwnerId==null; } }
         void UpdateRoutePreviews() {
-            var now=DateTime.UtcNow;var origin=PlanningOrigin();var own=squad.Stops;string signature=engine.WpfRouteMode+":"+StopSignature(own);
+            var now=DateTime.UtcNow;double? z;var origin=PlanningOrigin(out z);string layer=origin.HasValue?NavigationRouter.SurfaceGroup(origin.Value,z).ToString():"";var own=squad.Stops;string signature=engine.WpfRouteMode+":"+layer+":"+StopSignature(own);
             if(own.Length==0) { if(ownRouteSignature!="")ownRoutePlanner.Clear();ownRouteSignature=""; }
             else if(signature!=ownRouteSignature||now-ownPlanRequested>=TimeSpan.FromSeconds(2)&&OriginChanged(ownPlanOrigin,origin)) {
-                ownRouteSignature=signature;ownPlanOrigin=origin;ownPlanRequested=now;ownRoutePlanner.Update(origin,StopPoints(own),engine.WpfRouteMode);
+                ownRouteSignature=signature;ownPlanOrigin=origin;ownPlanRequested=now;ownRoutePlanner.UpdateAtHeight(origin,StopPoints(own),engine.WpfRouteMode,z);
             }
             if(activeStops.Length==0||UsesOwnNavigationPlan) { if(activeRouteSignature!=null)squadRoutePlanner.Clear();activeRouteSignature=null; }
             else {
-                var remaining=RemainingStops().ToArray();signature=engine.WpfRouteMode+":"+StopSignature(remaining);
+                var remaining=RemainingStops().ToArray();signature=engine.WpfRouteMode+":"+layer+":"+StopSignature(remaining);
                 if(remaining.Length>0&&(signature!=activeRouteSignature||now-activePlanRequested>=TimeSpan.FromSeconds(2)&&OriginChanged(activePlanOrigin,origin))) {
-                    activeRouteSignature=signature;activePlanOrigin=origin;activePlanRequested=now;squadRoutePlanner.Update(origin,StopPoints(remaining),engine.WpfRouteMode);
+                    activeRouteSignature=signature;activePlanOrigin=origin;activePlanRequested=now;squadRoutePlanner.UpdateAtHeight(origin,StopPoints(remaining),engine.WpfRouteMode,z);
                 }
             }
             var markers=ReceivedSquadMarkers();var routes=SquadState.Routes(markers).ToList();
@@ -71,8 +71,8 @@ namespace ScumMiniMap {
                 string owner=route[0].OwnerId??"";if((PlayerVisibility(owner)&16)==0)continue;
                 string key=route[0].Id==SharedMapMarker.GpsId?owner+":gps":SquadState.RouteKey(route[0]);alive.Add(key);
                 var peer=playerRoster.FirstOrDefault(p=>p.Id==owner&&p.Position!=null);DrawingPoint? from=peer==null?(DrawingPoint?)null:PlanningPoint(peer.Position);
-                RemoteRoute remote;if(!remoteRoutes.TryGetValue(key,out remote))remoteRoutes[key]=remote=new RemoteRoute();signature=engine.WpfRouteMode+":"+StopSignature(route);
-                if(signature!=remote.Signature||now-remote.Requested>=TimeSpan.FromSeconds(2)&&OriginChanged(remote.Origin,from)) { remote.Signature=signature;remote.Origin=from;remote.Requested=now;remote.Planner.Update(from,StopPoints(route),engine.WpfRouteMode); }
+                RemoteRoute remote;if(!remoteRoutes.TryGetValue(key,out remote))remoteRoutes[key]=remote=new RemoteRoute();signature=engine.WpfRouteMode+":"+(from.HasValue?NavigationRouter.SurfaceGroup(from.Value,peer.Position.Z):0)+":"+StopSignature(route);
+                if(signature!=remote.Signature||now-remote.Requested>=TimeSpan.FromSeconds(2)&&OriginChanged(remote.Origin,from)) { remote.Signature=signature;remote.Origin=from;remote.Requested=now;remote.Planner.UpdateAtHeight(from,StopPoints(route),engine.WpfRouteMode,peer==null?(double?)null:peer.Position.Z); }
             }
             foreach(string key in remoteRoutes.Keys.Where(key=>!alive.Contains(key)).ToArray()) { remoteRoutes[key].Planner.Dispose();remoteRoutes.Remove(key); }
         }

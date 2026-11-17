@@ -51,6 +51,8 @@ namespace ScumMiniMap {
     public enum RoadSurface { Unknown, Paved, Dirt }
 
     public class RoadRoute {
+        internal int[] BridgeLayers;
+        internal bool BridgeBlocked;
         public RoadRouteMode Mode;
         public double EstimatedSeconds;
         public double PavedDistanceMeters;

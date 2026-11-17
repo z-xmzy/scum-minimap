@@ -1,0 +1,116 @@
+PASS X986-0 coordinates distinguish levels
+PASS X986-0 lower GPS cannot finish upper target
+PASS X986-0 lower GPS character offset
+PASS X986-0 upper GPS character offset
+PASS X986-0 context menu has distinct surfaces
+PASS X1025-0 coordinates distinguish levels
+PASS X1025-0 lower GPS cannot finish upper target
+PASS X1025-0 lower GPS character offset
+PASS X1025-0 upper GPS character offset
+PASS X1025-0 context menu has distinct surfaces
+PASS X1148-0 coordinates distinguish levels
+PASS X1148-0 lower GPS cannot finish upper target
+PASS X1148-0 lower GPS character offset
+PASS X1148-0 upper GPS character offset
+PASS X1148-0 context menu has distinct surfaces
+PASS X1150-0 coordinates distinguish levels
+PASS X1150-0 lower GPS cannot finish upper target
+PASS X1150-0 lower GPS character offset
+PASS X1150-0 upper GPS character offset
+PASS X1150-0 context menu has distinct surfaces
+PASS X1159-0 coordinates distinguish levels
+PASS X1159-0 lower GPS cannot finish upper target
+PASS X1159-0 lower GPS character offset
+PASS X1159-0 upper GPS character offset
+PASS X1159-0 context menu has distinct surfaces
+PASS X1383-0 coordinates distinguish levels
+PASS X1383-0 lower GPS cannot finish upper target
+PASS X1383-0 lower GPS character offset
+PASS X1383-0 upper GPS character offset
+PASS X1383-0 context menu has distinct surfaces
+PASS X1428-0 coordinates distinguish levels
+PASS X1428-0 lower GPS cannot finish upper target
+PASS X1428-0 lower GPS character offset
+PASS X1428-0 upper GPS character offset
+PASS X1428-0 context menu has distinct surfaces
+PASS X1428-1 coordinates distinguish levels
+PASS X1428-1 lower GPS cannot finish upper target
+PASS X1428-1 lower GPS character offset
+PASS X1428-1 upper GPS character offset
+PASS X1428-1 context menu has distinct surfaces
+PASS X2050-0 coordinates distinguish levels
+PASS X2050-0 lower GPS cannot finish upper target
+PASS X2050-0 lower GPS character offset
+PASS X2050-0 upper GPS character offset
+PASS X2050-0 context menu has distinct surfaces
+PASS X2442-0 coordinates distinguish levels
+PASS X2442-0 lower GPS cannot finish upper target
+PASS X2442-0 lower GPS character offset
+PASS X2442-0 upper GPS character offset
+PASS X2442-0 context menu has distinct surfaces
+PASS X2630-0 coordinates distinguish levels
+PASS X2630-0 lower GPS cannot finish upper target
+PASS X2630-0 lower GPS character offset
+PASS X2630-0 upper GPS character offset
+PASS X2630-0 context menu has distinct surfaces
+PASS X3330-0 coordinates distinguish levels
+PASS X3330-0 lower GPS cannot finish upper target
+PASS X3330-0 lower GPS character offset
+PASS X3330-0 upper GPS character offset
+PASS X3330-0 context menu has distinct surfaces
+PASS X3767-0 coordinates distinguish levels
+PASS X3767-0 lower GPS cannot finish upper target
+PASS X3767-0 lower GPS character offset
+PASS X3767-0 upper GPS character offset
+PASS X3767-0 context menu has distinct surfaces
+PASS X3768-0 coordinates distinguish levels
+PASS X3768-0 lower GPS cannot finish upper target
+PASS X3768-0 lower GPS character offset
+PASS X3768-0 upper GPS character offset
+PASS X3768-0 context menu has distinct surfaces
+PASS X3858-0 coordinates distinguish levels
+PASS X3858-0 lower GPS cannot finish upper target
+PASS X3858-0 lower GPS character offset
+PASS X3858-0 upper GPS character offset
+PASS X3858-0 context menu has distinct surfaces
+PASS X3964-0 coordinates distinguish levels
+PASS X3964-0 lower GPS cannot finish upper target
+PASS X3964-0 lower GPS character offset
+PASS X3964-0 upper GPS character offset
+PASS X3964-0 context menu has distinct surfaces
+PASS X3964-1 coordinates distinguish levels
+PASS X3964-1 lower GPS cannot finish upper target
+PASS X3964-1 lower GPS character offset
+PASS X3964-1 upper GPS character offset
+PASS X3964-1 context menu has distinct surfaces
+PASS X4366-0 coordinates distinguish levels
+PASS X4366-0 lower GPS cannot finish upper target
+PASS X4366-0 lower GPS character offset
+PASS X4366-0 upper GPS character offset
+PASS X4366-0 context menu has distinct surfaces
+PASS X4373-0 coordinates distinguish levels
+PASS X4373-0 lower GPS cannot finish upper target
+PASS X4373-0 lower GPS character offset
+PASS X4373-0 upper GPS character offset
+PASS X4373-0 context menu has distinct surfaces
+PASS X4374-0 coordinates distinguish levels
+PASS X4374-0 lower GPS cannot finish upper target
+PASS X4374-0 lower GPS character offset
+PASS X4374-0 upper GPS character offset
+PASS X4374-0 context menu has distinct surfaces
+PASS X4376-0 coordinates distinguish levels
+PASS X4376-0 lower GPS cannot finish upper target
+PASS X4376-0 lower GPS character offset
+PASS X4376-0 upper GPS character offset
+PASS X4376-0 context menu has distinct surfaces
+PASS X4383-0 coordinates distinguish levels
+PASS X4383-0 lower GPS cannot finish upper target
+PASS X4383-0 lower GPS character offset
+PASS X4383-0 upper GPS character offset
+PASS X4383-0 context menu has distinct surfaces
+PASS invalid map position rejected
+PASS invalid map position rejected
+PASS invalid map position rejected
+PASS cancelled bridge search cannot publish a route
+PASS cancelled bridge search returns promptly
+115 checks, 0 failures

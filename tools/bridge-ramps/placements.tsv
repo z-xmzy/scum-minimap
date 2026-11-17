@@ -1,0 +1,16 @@
+/Game/ConZ_Files/Maps/The_Island/C_3_Marof_01	BP_ChickenCoop_01a_2	SM_ChickenCoop_01_Ramp	/Game/ConZ_Files/Models/Objects/Outdoor/ChickenCoop/Objects/SM_ChickenCoop_01_Ramp.SM_ChickenCoop_01_Ramp	182249.2	244137.94	32031.16	1
+/Game/ConZ_Files/Maps/The_Island/C_3_Marof_02	BP_ChickenCoop_01a2_2	SM_ChickenCoop_01_Ramp	/Game/ConZ_Files/Models/Objects/Outdoor/ChickenCoop/Objects/SM_ChickenCoop_01_Ramp.SM_ChickenCoop_01_Ramp	180189.64	236775.94	31907.955	1
+/Game/ConZ_Files/Maps/The_Island/C_3_Marof_02	BP_ChickenCoop_01a3	SM_ChickenCoop_01_Ramp	/Game/ConZ_Files/Models/Objects/Outdoor/ChickenCoop/Objects/SM_ChickenCoop_01_Ramp.SM_ChickenCoop_01_Ramp	173515.31	235431.5	32237.041	1
+/Game/ConZ_Files/Maps/The_Island/C_4_Porat_a_01	BP_ChickenCoop_01_2	SM_ChickenCoop_01_Ramp	/Game/ConZ_Files/Models/Objects/Outdoor/ChickenCoop/Objects/SM_ChickenCoop_01_Ramp.SM_ChickenCoop_01_Ramp	569493	227849.22	5159.074	2
+/Game/ConZ_Files/Maps/The_Island/D_4_Ston_01	BP_ChickenCoop_3	SM_ChickenCoop_01_Ramp	/Game/ConZ_Files/Models/Objects/Outdoor/ChickenCoop/Objects/SM_ChickenCoop_01_Ramp.SM_ChickenCoop_01_Ramp	568957.1	328363.53	459.60135	2
+/Game/ConZ_Files/Maps/The_Island/Z_3_Motocross_Track	SM_Track_5	StaticMeshComponent0	/Game/ConZ_Files/Models/Custom/Z_3_Motocross_Track/Track/SM_Track.SM_Track	261358.3	-753152.56	10266.637	7888
+/Game/ConZ_Files/Maps/The_Island/Z_3_Motocross_Track	Platform_02_3	StaticMeshComponent0	/Game/ConZ_Files/Models/Custom/Z_3_Motocross_Track/Platform_02/Platform_02.Platform_02	264637.4	-751811.9	11759.925	85
+/Game/ConZ_Files/Maps/The_Island/Z_3_Motocross_Track	Platform_01_End_3	StaticMeshComponent0	/Game/ConZ_Files/Models/Custom/Z_3_Motocross_Track/Platform_01/Platform_01_End.Platform_01_End	271538.97	-750230.8	11759.925	5
+/Game/ConZ_Files/Maps/The_Island/Z_3_Motocross_Track	Platform_01HISMA_1	instance	/Game/ConZ_Files/Models/Custom/Z_3_Motocross_Track/Platform_01/Platform_01.Platform_01	271538.97	-750230.8	11759.925	206
+/Game/ConZ_Files/Maps/The_Island/Z_3_Motocross_Track	Platform_01HISMA_1	instance	/Game/ConZ_Files/Models/Custom/Z_3_Motocross_Track/Platform_01/Platform_01.Platform_01	263920.34	-751976.2	11759.925	208
+/Game/ConZ_Files/Maps/The_Island/Z_3_Motocross_Track	Platform_01HISMA_1	instance	/Game/ConZ_Files/Models/Custom/Z_3_Motocross_Track/Platform_01/Platform_01.Platform_01	265353.62	-751647.8	11759.925	206
+/Game/ConZ_Files/Maps/The_Island/Z_3_Motocross_Track	Platform_01HISMA_1	instance	/Game/ConZ_Files/Models/Custom/Z_3_Motocross_Track/Platform_01/Platform_01.Platform_01	266384.47	-751411.7	11759.925	211
+/Game/ConZ_Files/Maps/The_Island/Z_3_Motocross_Track	Platform_01HISMA_1	instance	/Game/ConZ_Files/Models/Custom/Z_3_Motocross_Track/Platform_01/Platform_01.Platform_01	267415.3	-751175.5	11759.925	214
+/Game/ConZ_Files/Maps/The_Island/Z_3_Motocross_Track	Platform_01HISMA_1	instance	/Game/ConZ_Files/Models/Custom/Z_3_Motocross_Track/Platform_01/Platform_01.Platform_01	268446.25	-750939.4	11759.925	216
+/Game/ConZ_Files/Maps/The_Island/Z_3_Motocross_Track	Platform_01HISMA_1	instance	/Game/ConZ_Files/Models/Custom/Z_3_Motocross_Track/Platform_01/Platform_01.Platform_01	269477.16	-750703.2	11759.925	226
+/Game/ConZ_Files/Maps/The_Island/Z_3_Motocross_Track	Platform_01HISMA_1	instance	/Game/ConZ_Files/Models/Custom/Z_3_Motocross_Track/Platform_01/Platform_01.Platform_01	270509.75	-750466.6	11759.925	216

@@ -1,0 +1,2 @@
+2026-11-17T06:13:54.7818679Z [SaveWaypoints] System.IO.InvalidDataException: Could not load saved zones.
+   在 ScumMiniMap.MapWindow.TryCommitZonesCore(List`1 candidate, IWin32Window owner, Boolean silent)
