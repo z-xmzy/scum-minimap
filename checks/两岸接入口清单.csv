@@ -1,5 +1,5 @@
 ﻿层,区域,类别,跨度米,接入口边数,首端无入口比例,末端无入口比例,结论,模型
-1,B110;B111;B111;B120;B111,桥面,387.1,77,0.0,0.0,两端均有接入口,SM_Tudman_Bridge_01;SM_Tudman_Bridge_End
+1,B111;B120;B110;B111;B111,桥面,387.1,77,0.0,0.0,两端均有接入口,SM_Tudman_Bridge_01;SM_Tudman_Bridge_End
 96,B103,建筑或步行桥,10.9,0,1.0,1.0,端部需核实,SM_BuildingBridge
 98,B109,桥面,1104.9,61,0.0,0.0,两端均有接入口,SM_KrkBridge_Base;SM_KrkBridge_Fill;SM_KrkBridge_NoUnderside
 816,B104,建筑或步行桥,3.9,0,1.0,1.0,端部需核实,SM_SB_Bridge_A
@@ -26,7 +26,7 @@
 1054,B090,建筑或步行桥,11.0,0,1.0,1.0,端部需核实,SM_SB_Bridge_A
 1061,B080,桥面,13.8,16,0.0,0.0,两端均有接入口,SM_RiverBridge_02
 1063,B081,桥面,29.6,39,0.0,0.0,两端均有接入口,SM_RiverBridge_02
-1069,B027;B025;B028;B029,浮桥,228.6,52,0.0,0.0,两端均有接入口,Pontoon_Bridge_Part;Pontoon_Bridge_Part_01;Pontoon_Bridge_Part_02
+1069,B029;B027;B025;B028,浮桥,228.6,52,0.0,0.0,两端均有接入口,Pontoon_Bridge_Part;Pontoon_Bridge_Part_01;Pontoon_Bridge_Part_02
 1072,B026,坝顶,519.2,260,0.14,0.12,两端均有接入口,SM_Dam_Main_01
 1081,B040;B041,建筑或步行桥,15.5,0,1.0,1.0,端部需核实,SM_Prison_Bridge
 1087,B048,建筑或步行桥,8.9,8,0.0,0.0,两端均有接入口,SM_WoodWall_Bridge_01
@@ -55,7 +55,7 @@
 1128,B073,建筑或步行桥,3.3,0,1.0,1.0,端部需核实,SM_SB_Bridge_A
 1130,,建筑或步行桥,3.6,0,1.0,1.0,端部需核实,SM_SB_Bridge_A
 1133,,建筑或步行桥,3.4,0,1.0,1.0,端部需核实,SM_SB_Bridge_A
-1135,;B070;B068;B069,建筑或步行桥,20.6,0,1.0,1.0,端部需核实,SM_SB_Bridge_A;SM_SB_Bridge_A_Corner
+1135,;B068;B070;B069,建筑或步行桥,20.6,0,1.0,1.0,端部需核实,SM_SB_Bridge_A;SM_SB_Bridge_A_Corner
 1146,B034,建筑或步行桥,3.1,0,1.0,1.0,端部需核实,SM_SB_Bridge_A
 1159,B017,建筑或步行桥,20.2,0,1.0,1.0,端部需核实,SM_DR_ControlBuilding_Bridge
 1183,B014,建筑或步行桥,19.4,15,0.0,0.0,两端均有接入口,SM_Pond_Bridge
@@ -66,9 +66,9 @@
 1197,B101,桥面,311.9,143,0.0,0.0,两端均有接入口,SM_SkradinBridge_DoubleLane
 1315,B100,桥面,154.4,92,0.0,0.0,两端均有接入口,SM_RiverBridge_03_DoubleLane
 1372,B099,桥面,89.2,60,0.0,0.0,两端均有接入口,SM_RiverBridge_03_DoubleLane
-1383,B107,铁路,194.6,10,0.98,0.0,端部需核实,SM_RailBridge_Arch
-1403,B102,铁路,190.2,30,0.0,0.0,两端均有接入口,SM_RailBridge_Arch
-1428,B098,铁路,215.2,37,0.0,0.0,两端均有接入口,SM_RailBridge_Arch
+1383,B107,铁路,223.4,20,0.0,0.0,两端均有接入口,SM_RailBridge_Arch
+1403,B102,铁路,213.4,22,0.0,0.0,两端均有接入口,SM_RailBridge_Arch
+1428,B098,铁路,242.5,21,0.0,0.0,两端均有接入口,SM_RailBridge_Arch
 1446,B095,桥面,212.8,280,0.0,0.0,两端均有接入口,SM_KrkBridge_Fill
 1572,B093,桥面,195.4,85,0.0,0.0,两端均有接入口,SM_RiverBridge_02_End_01;SM_RiverBridge_02_SingleLane_01
 1643,B087,桥面,146.0,32,0.0,0.0,两端均有接入口,SM_RiverBridge_02_End_01;SM_RiverBridge_02_SingleLane_01
@@ -79,7 +79,7 @@
 1860,B094,桥面,87.0,43,0.0,0.0,两端均有接入口,SM_RiverBridge_02_DoubleLane_01
 1937,B092,桥面,304.0,40,0.0,0.0,两端均有接入口,SM_SkradinBridge_DoubleLane
 2049,B088,桥面,31.0,42,0.0,0.0,两端均有接入口,SM_RiverBridge_01
-2050,B097,铁路,343.7,30,0.0,0.0,两端均有接入口,SM_RailBridge_Arch
+2050,B097,铁路,371.7,21,0.0,0.0,两端均有接入口,SM_RailBridge_Arch
 2093,B077,桥面,210.4,32,0.0,0.0,两端均有接入口,SM_RiverBridge_03_SingleLane
 2140,B071,桥面,340.5,108,0.0,0.0,两端均有接入口,SM_Tudman_Bridge_02
 2238,B074,桥面,107.0,39,0.0,0.0,两端均有接入口,SM_RiverBridge_03_SingleLane
@@ -87,10 +87,10 @@
 2442,B037,铁路,193.4,16,0.0,0.0,两端均有接入口,SM_RailroadBridge;SM_RailroadBridge_End_L;SM_RailroadBridge_End_R
 2630,B036,铁路,121.9,29,0.0,0.0,两端均有接入口,SM_RailroadBridge;SM_RailroadBridge_End_L;SM_RailroadBridge_End_R
 2727,B038,桥面;铁路,334.0,38,0.0,0.0,两端均有接入口,SM_RailroadBridge;SM_RailroadBridge_End_L;SM_RailroadBridge_End_R;SM_RiverBridge_02_DoubleLane_01
-2774,B022;B024;B020;B022;B022,桥面,365.9,50,0.0,0.0,两端均有接入口,SM_Tudman_Bridge_02;SM_Tudman_Bridge_End
+2774,B020;B022;B022;B022;B024,桥面,365.9,50,0.0,0.0,两端均有接入口,SM_Tudman_Bridge_02;SM_Tudman_Bridge_End
 2931,B021,桥面,233.2,107,0.0,0.0,两端均有接入口,SM_RiverBridge_02_DoubleLane_01
 3112,;B072,桥面,123.4,37,0.0,0.0,两端均有接入口,SM_KrkBridge_Fill;SM_RiverBridge_03_Transition
-3172,B052;B049;B052,桥面,96.2,27,0.0,0.0,两端均有接入口,SM_RiverBridge_02
+3172,B049;B052;B052,桥面,96.2,27,0.0,0.0,两端均有接入口,SM_RiverBridge_02
 3184,B035,桥面,32.4,33,0.0,0.0,两端均有接入口,SM_RiverBridge_01
 3185,B023,桥面,49.9,168,0.0,0.0,两端均有接入口,SM_RiverBridge_01
 3187,B019,桥面,25.8,21,0.0,0.0,两端均有接入口,SM_RiverBridge_02
@@ -145,4 +145,4 @@
 4351,B129,建筑或步行桥,3.6,0,1.0,1.0,端部需核实,SM_SB_Bridge_A
 4353,;B145,建筑或步行桥,10.4,0,1.0,1.0,端部需核实,SM_SB_Bridge_A
 4356,;B144,建筑或步行桥,7.0,0,1.0,1.0,端部需核实,SM_SB_Bridge_A
-4358,;B146,建筑或步行桥,7.6,0,1.0,1.0,端部需核实,SM_SB_Bridge_A
+4358,B146;,建筑或步行桥,7.6,0,1.0,1.0,端部需核实,SM_SB_Bridge_A

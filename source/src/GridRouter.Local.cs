@@ -110,6 +110,8 @@ namespace ScumMiniMap {
             } finally {Monitor.Exit(fineGate);}
         }
         RoadRoute FineResult(List<PointF> path,RoadRouteMode mode,HashSet<PointF> cues,List<int> layers=null) {
+            int[] layerCues = layers != null && mode == RoadRouteMode.Quickest
+                ? BuildRouteJunctionIndices(path, false, false, layers) : null;
             var r=new RoadRoute{Success=true,Mode=mode,PlayerPoint=path[0],TargetPoint=path[path.Count-1],Polyline=path.ToArray()};
             var indices=new List<int>();var fine=levels[LevelFine];bool road=false;double lastRoad=0;
             var overlay=trailOverlay==null?null:trailOverlay.Fine;
@@ -140,7 +142,7 @@ namespace ScumMiniMap {
             r.RoadDistanceMeters=r.PavedDistanceMeters+r.DirtDistanceMeters;
             if(road)r.ExitDistanceMeters=Math.Max(0,r.TotalDistanceMeters-lastRoad);
             else {r.RoadEntryPoint=r.PlayerPoint;r.RoadExitPoint=r.TargetPoint;r.EntryDistanceMeters=r.TotalDistanceMeters;}
-            r.JunctionIndices=indices.ToArray();return r;
+            r.JunctionIndices=layerCues ?? indices.ToArray();return r;
         }
         // A Windows job owns both the portable interpreter and its raster worker, including on abrupt map exit.
         sealed class FineSession:IDisposable {

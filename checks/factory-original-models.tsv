@@ -1,0 +1,5 @@
+case	scene	actor	component	originalRoadModel	roadZcm	deckZcm	clearanceCm
+B128-X1	Landscape_Z_1_4	LandscapeStreamingProxy_0	SplineMeshComponent_14	SM_Asphalt_Road_Gravel_Border_01	244.5953369140625	4501.0966796875	4256.5015
+B128-X2	Landscape_Z_1_4	LandscapeStreamingProxy_0	SplineMeshComponent_14	SM_Asphalt_Road_Gravel_Border_01	247.48886108398438	4495.748046875	4248.2593
+B128-X3	Landscape_Z_1_4	LandscapeStreamingProxy_0	SplineMeshComponent_170	SM_Asphalt_Road_Gravel_Border_01	245.2494354248047	4489.31005859375	4244.0605
+B128-X4	Landscape_Z_1_4	LandscapeStreamingProxy_0	SplineMeshComponent_170	SM_Asphalt_Road_Gravel_Border_01	245.11581420898438	4479.75341796875	4234.6377

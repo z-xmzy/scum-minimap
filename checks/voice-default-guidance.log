@@ -1,0 +1,29 @@
+PASS: East to south is turn right on map coordinates
+PASS: East to north is turn left on map coordinates
+PASS: Shallow junction decisions use turn instructions instead of unsupported keep instructions
+PASS: Sharp reversal uses U-turn clip
+PASS: 100 metre turn composes clips in spoken order
+PASS: Stationary position does not repeat the same turn prompt
+PASS: Routine reroute does not repeat an announced turn
+PASS: Approaching turn advances to 50 metre prompt
+PASS: Immediate turn uses the action clip alone
+PASS: Do not announce 250 metres when the turn is 180 metres away
+PASS: Off-route location suppresses outdated turn instructions
+PASS: Unavailable routes do not receive road-turn instructions
+PASS: A curved road without branch nodes produces no turn or keep prompts
+PASS: Rounded T-junction uses the approach and departure to announce turn left
+PASS: Crossing route sections keep the current progress and next junction
+PASS: Parallel route sections use the closest segment for deviation checks
+PASS: Sustained reverse travel interrupts speech with U-turn and requests recalculation
+PASS: Wrong-way warning is not repeated every position sample
+PASS: Moving along the route clears wrong-way state
+PASS: A single off-route sample does not interrupt guidance
+PASS: Timer ticks do not count a repeated coordinate as new deviation evidence
+PASS: Sustained deviation across distinct positions requests recalculation
+PASS: Following the displayed entry connector is on-route
+PASS: Entry connector contributes to distance to the next junction
+PASS: Following the displayed exit connector does not loop in recalculation
+PASS: Vehicle-speed turn call starts three seconds before the junction
+PASS: Urgent turn interrupts a previous distance phrase without six-second cooldown
+PASS: Optional recalculating clip is supported without changing the 12 required clips
+28 passed

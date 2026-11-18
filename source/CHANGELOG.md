@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.4.11] - 2026-11-19
+
+- Rebuild junction cues from connected bridge and ground layers after route repair.
+- Recheck unresolved bridge surfaces against placed game meshes.
+
 ## [2.4.10] - 2026-11-17
 
 - Separate the ground road and surveyed bridge surface at island crossings. Join them at height-matched approaches.

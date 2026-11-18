@@ -1,0 +1,13 @@
+PASS same-level T turn route
+projected detector same-level T turn 1
+PASS same-level T turn cues
+PASS same-level T turn replay
+PASS bend with other-level projected road route
+projected detector bend with other-level projected road 1
+PASS bend with other-level projected road cues
+PASS bend with other-level projected road replay
+PASS straight through T route
+projected detector straight through T 0
+PASS straight through T cues
+PASS straight through T replay
+9 passed; 0 failed

@@ -1,0 +1,13 @@
+B128-X1 plain GPS -420094,-690115,348.7644958496094 target {X=0.6818152, Y=0.8586028} lowerZ=240.1 upperZ=4501.1 route=9.59m endLayer=0 lowerArrival=True
+B128-X1 lower GPS -420094,-690115,348.7644958496094 target {X=0.6818152, Y=0.8586028} lowerZ=240.1 upperZ=4501.1 route=9.59m endLayer=0 lowerArrival=True
+B128-X1 upper GPS -420094,-690115,348.7644958496094 target {X=0.6818152, Y=0.8586028} lowerZ=240.1 upperZ=4501.1 route=1881.48m endLayer=3858 lowerArrival=False
+B128-X2 plain GPS -419694,-689314,344.1087341308594 target {X=0.6820781, Y=0.8591285} lowerZ=244.0 upperZ=4495.7 route=14.54m endLayer=0 lowerArrival=True
+B128-X2 lower GPS -419694,-689314,344.1087341308594 target {X=0.6820781, Y=0.8591285} lowerZ=244.0 upperZ=4495.7 route=14.54m endLayer=0 lowerArrival=True
+B128-X2 upper GPS -419694,-689314,344.1087341308594 target {X=0.6820781, Y=0.8591285} lowerZ=244.0 upperZ=4495.7 route=1882.05m endLayer=3858 lowerArrival=False
+B128-X3 plain GPS -419694,-689314,344.1087341308594 target {X=0.6824067, Y=0.8596543} lowerZ=235.5 upperZ=4489.3 route=24.57m endLayer=0 lowerArrival=True
+B128-X3 lower GPS -419694,-689314,344.1087341308594 target {X=0.6824067, Y=0.8596543} lowerZ=235.5 upperZ=4489.3 route=24.57m endLayer=0 lowerArrival=True
+B128-X3 upper GPS -419694,-689314,344.1087341308594 target {X=0.6824067, Y=0.8596543} lowerZ=235.5 upperZ=4489.3 route=1892.13m endLayer=3858 lowerArrival=False
+B128-X4 plain GPS -419694,-689314,344.1087341308594 target {X=0.6829324, Y=0.8602458} lowerZ=243.0 upperZ=4479.8 route=34.64m endLayer=0 lowerArrival=True
+B128-X4 lower GPS -419694,-689314,344.1087341308594 target {X=0.6829324, Y=0.8602458} lowerZ=243.0 upperZ=4479.8 route=34.64m endLayer=0 lowerArrival=True
+B128-X4 upper GPS -419694,-689314,344.1087341308594 target {X=0.6829324, Y=0.8602458} lowerZ=243.0 upperZ=4479.8 route=1904.45m endLayer=3858 lowerArrival=False
+PASS 12 WPF menu/GPS/arrival cases

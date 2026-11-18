@@ -1,0 +1,193 @@
+﻿版本	套件	区域	方向	模式	成功	距离米	层序	过渡距请求岸点米	在请求岸点换层	目标层序吻合
+old	through	B107	两岸穿桥去	Quickest	True	314.18	0		0	0
+old	through	B107	两岸穿桥去	Shortest	True	383.27	0		0	0
+old	through	B107	两岸穿桥去	PavedOnly	True	379.96	0		0	0
+old	through	B107	两岸穿桥去	Walking	True	292.7	0		0	0
+old	through	B107	两岸穿桥回	Quickest	True	315.07	0		0	0
+old	through	B107	两岸穿桥回	Shortest	True	383.27	0		0	0
+old	through	B107	两岸穿桥回	PavedOnly	True	376.65	0		0	0
+old	through	B107	两岸穿桥回	Walking	True	292.7	0		0	0
+old	through	B102	两岸穿桥去	Quickest	True	2075.99	0		0	0
+old	through	B102	两岸穿桥去	Shortest	True	244.53	0,1403,0	195.94	0	1
+old	through	B102	两岸穿桥去	PavedOnly	True	254.61	0		0	0
+old	through	B102	两岸穿桥去	Walking	True	240.78	0,1403,0	195.94	0	1
+old	through	B102	两岸穿桥回	Quickest	True	2076.56	0		0	0
+old	through	B102	两岸穿桥回	Shortest	True	237.82	0,1403,0	195.94	0	1
+old	through	B102	两岸穿桥回	PavedOnly	True	252.5	0		0	0
+old	through	B102	两岸穿桥回	Walking	True	234.42	0,1403,0	195.94	0	1
+old	through	B098	两岸穿桥去	Quickest	True	257.36	0,1428,0	17.59	0	1
+old	through	B098	两岸穿桥去	Shortest	True	257.44	0,1428,0	17.59	0	1
+old	through	B098	两岸穿桥去	PavedOnly	True	257.26	0,1428,0	18.58	0	1
+old	through	B098	两岸穿桥去	Walking	True	257.15	0,1428,0	18.58	0	1
+old	through	B098	两岸穿桥回	Quickest	True	257.64	0,1428,0	18.58	0	1
+old	through	B098	两岸穿桥回	Shortest	True	257.26	0,1428,0	18.58	0	1
+old	through	B098	两岸穿桥回	PavedOnly	True	257.44	0,1428,0	18.58	0	1
+old	through	B098	两岸穿桥回	Walking	True	257.15	0,1428,0	18.58	0	1
+old	through	B097	两岸穿桥去	Quickest	False	0.0			0	0
+old	through	B097	两岸穿桥去	Shortest	True	432.91	0,2050,0	17.91	0	1
+old	through	B097	两岸穿桥去	PavedOnly	True	433.02	0		0	0
+old	through	B097	两岸穿桥去	Walking	True	398.64	0		0	0
+old	through	B097	两岸穿桥回	Quickest	False	0.0			0	0
+old	through	B097	两岸穿桥回	Shortest	True	435.58	0,2050,0	17.91	0	1
+old	through	B097	两岸穿桥回	PavedOnly	True	435.89	0		0	0
+old	through	B097	两岸穿桥回	Walking	True	400.24	0		0	0
+old	via	B107	两岸穿桥去入桥	Quickest	False	0.0			0	0
+old	via	B107	两岸穿桥去离桥	Quickest	True	114.62	1383,0	15.58	0	1
+old	via	B107	两岸穿桥去入桥	Shortest	True	469.23	0,1383	206.89	0	1
+old	via	B107	两岸穿桥去离桥	Shortest	True	114.62	1383,0	15.58	0	1
+old	via	B107	两岸穿桥去入桥	PavedOnly	True	465.92	0,1383	206.89	0	1
+old	via	B107	两岸穿桥去离桥	PavedOnly	True	114.62	1383,0	15.58	0	1
+old	via	B107	两岸穿桥去入桥	Walking	True	378.66	0,1383	206.89	0	1
+old	via	B107	两岸穿桥去离桥	Walking	True	114.62	1383,0	15.58	0	1
+old	via	B107	两岸穿桥回入桥	Quickest	True	114.62	0,1383	15.58	0	1
+old	via	B107	两岸穿桥回离桥	Quickest	False	0.0			0	0
+old	via	B107	两岸穿桥回入桥	Shortest	True	114.62	0,1383	15.58	0	1
+old	via	B107	两岸穿桥回离桥	Shortest	True	469.23	1383,0	206.89	0	1
+old	via	B107	两岸穿桥回入桥	PavedOnly	True	114.62	0,1383	15.58	0	1
+old	via	B107	两岸穿桥回离桥	PavedOnly	True	462.61	1383,0	206.89	0	1
+old	via	B107	两岸穿桥回入桥	Walking	True	114.62	0,1383	15.58	0	1
+old	via	B107	两岸穿桥回离桥	Walking	True	378.66	1383,0	206.89	0	1
+old	via	B102	两岸穿桥去入桥	Quickest	False	0.0			0	0
+old	via	B102	两岸穿桥去离桥	Quickest	True	129.88	1403,0	16.53	0	1
+old	via	B102	两岸穿桥去入桥	Shortest	True	364.48	0,1403	19.31	0	1
+old	via	B102	两岸穿桥去离桥	Shortest	True	130.06	1403,0	16.53	0	1
+old	via	B102	两岸穿桥去入桥	PavedOnly	True	362.17	0,1403	19.31	0	1
+old	via	B102	两岸穿桥去离桥	PavedOnly	True	130.06	1403,0	16.53	0	1
+old	via	B102	两岸穿桥去入桥	Walking	True	130.36	0,1403	19.31	0	1
+old	via	B102	两岸穿桥去离桥	Walking	True	129.68	1403,0	16.59	0	1
+old	via	B102	两岸穿桥回入桥	Quickest	True	129.68	0,1403	16.59	0	1
+old	via	B102	两岸穿桥回离桥	Quickest	False	0.0			0	0
+old	via	B102	两岸穿桥回入桥	Shortest	True	129.68	0,1403	16.59	0	1
+old	via	B102	两岸穿桥回离桥	Shortest	True	365.72	1403,0	200.36	0	1
+old	via	B102	两岸穿桥回入桥	PavedOnly	True	129.89	0,1403	20.04	0	1
+old	via	B102	两岸穿桥回离桥	PavedOnly	True	365.66	1403,0	197.45	0	1
+old	via	B102	两岸穿桥回入桥	Walking	True	129.68	0,1403	16.59	0	1
+old	via	B102	两岸穿桥回离桥	Walking	True	130.36	1403,0	19.31	0	1
+old	via	B098	两岸穿桥去入桥	Quickest	True	125.45	0,1428	14.6	0	1
+old	via	B098	两岸穿桥去离桥	Quickest	True	131.91	1428,0	17.59	0	1
+old	via	B098	两岸穿桥去入桥	Shortest	True	125.53	0,1428	14.25	0	1
+old	via	B098	两岸穿桥去离桥	Shortest	True	131.91	1428,0	17.59	0	1
+old	via	B098	两岸穿桥去入桥	PavedOnly	True	125.53	0,1428	14.25	0	1
+old	via	B098	两岸穿桥去离桥	PavedOnly	True	131.73	1428,0	18.58	0	1
+old	via	B098	两岸穿桥去入桥	Walking	True	125.45	0,1428	14.6	0	1
+old	via	B098	两岸穿桥去离桥	Walking	True	131.7	1428,0	18.58	0	1
+old	via	B098	两岸穿桥回入桥	Quickest	True	131.73	0,1428	18.58	0	1
+old	via	B098	两岸穿桥回离桥	Quickest	True	125.91	1428,0	14.53	0	1
+old	via	B098	两岸穿桥回入桥	Shortest	True	131.73	0,1428	18.58	0	1
+old	via	B098	两岸穿桥回离桥	Shortest	True	125.53	1428,0	14.25	0	1
+old	via	B098	两岸穿桥回入桥	PavedOnly	True	131.91	0,1428	18.58	0	1
+old	via	B098	两岸穿桥回离桥	PavedOnly	True	125.53	1428,0	14.25	0	1
+old	via	B098	两岸穿桥回入桥	Walking	True	131.7	0,1428	18.58	0	1
+old	via	B098	两岸穿桥回离桥	Walking	True	125.45	1428,0	14.6	0	1
+old	via	B097	两岸穿桥去入桥	Quickest	False	0.0			0	0
+old	via	B097	两岸穿桥去离桥	Quickest	True	211.96	2050,0	16.53	0	1
+old	via	B097	两岸穿桥去入桥	Shortest	True	220.94	0,2050	17.91	0	1
+old	via	B097	两岸穿桥去离桥	Shortest	True	211.96	2050,0	16.53	0	1
+old	via	B097	两岸穿桥去入桥	PavedOnly	True	221.33	0,2050	25.94	0	1
+old	via	B097	两岸穿桥去离桥	PavedOnly	True	211.77	2050,0	16.59	0	1
+old	via	B097	两岸穿桥去入桥	Walking	True	221.09	0,2050	17.91	0	1
+old	via	B097	两岸穿桥去离桥	Walking	True	211.77	2050,0	16.59	0	1
+old	via	B097	两岸穿桥回入桥	Quickest	True	211.77	0,2050	16.59	0	1
+old	via	B097	两岸穿桥回离桥	Quickest	False	0.0			0	0
+old	via	B097	两岸穿桥回入桥	Shortest	True	215.08	0,2050	16.71	0	1
+old	via	B097	两岸穿桥回离桥	Shortest	True	220.59	2050,0	17.91	0	1
+old	via	B097	两岸穿桥回入桥	PavedOnly	True	215.08	0,2050	16.59	0	1
+old	via	B097	两岸穿桥回离桥	PavedOnly	True	220.59	2050,0	17.91	0	1
+old	via	B097	两岸穿桥回入桥	Walking	True	211.77	0,2050	16.59	0	1
+old	via	B097	两岸穿桥回离桥	Walking	True	219.72	2050,0	17.91	0	1
+new	through	B107	两岸穿桥去	Quickest	True	234.73	0,1383,0	2.12	1	1
+new	through	B107	两岸穿桥去	Shortest	True	234.73	0,1383,0	2.12	1	1
+new	through	B107	两岸穿桥去	PavedOnly	True	234.73	0,1383,0	2.12	1	1
+new	through	B107	两岸穿桥去	Walking	True	234.73	0,1383,0	2.12	1	1
+new	through	B107	两岸穿桥回	Quickest	True	234.73	0,1383,0	2.12	1	1
+new	through	B107	两岸穿桥回	Shortest	True	234.73	0,1383,0	2.12	1	1
+new	through	B107	两岸穿桥回	PavedOnly	True	234.73	0,1383,0	2.12	1	1
+new	through	B107	两岸穿桥回	Walking	True	234.73	0,1383,0	2.12	1	1
+new	through	B102	两岸穿桥去	Quickest	True	257.71	0,1403,0	2.92	1	1
+new	through	B102	两岸穿桥去	Shortest	True	257.71	0,1403,0	2.92	1	1
+new	through	B102	两岸穿桥去	PavedOnly	True	257.71	0,1403,0	2.92	1	1
+new	through	B102	两岸穿桥去	Walking	True	230.22	0		0	0
+new	through	B102	两岸穿桥回	Quickest	True	258.33	0,1403,0	2.92	1	1
+new	through	B102	两岸穿桥回	Shortest	True	258.33	0,1403,0	2.92	1	1
+new	through	B102	两岸穿桥回	PavedOnly	True	257.66	0,1403,0	2.92	1	1
+new	through	B102	两岸穿桥回	Walking	True	230.22	0		0	0
+new	through	B098	两岸穿桥去	Quickest	True	257.39	0,1428,0	3.54	1	1
+new	through	B098	两岸穿桥去	Shortest	True	257.39	0,1428,0	3.54	1	1
+new	through	B098	两岸穿桥去	PavedOnly	True	257.25	0,1428,0	3.81	1	1
+new	through	B098	两岸穿桥去	Walking	True	257.25	0,1428,0	3.81	1	1
+new	through	B098	两岸穿桥回	Quickest	True	257.25	0,1428,0	3.81	1	1
+new	through	B098	两岸穿桥回	Shortest	True	257.25	0,1428,0	3.81	1	1
+new	through	B098	两岸穿桥回	PavedOnly	True	257.25	0,1428,0	3.81	1	1
+new	through	B098	两岸穿桥回	Walking	True	257.25	0,1428,0	3.81	1	1
+new	through	B097	两岸穿桥去	Quickest	True	428.57	0,2050,0	1.58	1	1
+new	through	B097	两岸穿桥去	Shortest	True	428.57	0,2050,0	1.58	1	1
+new	through	B097	两岸穿桥去	PavedOnly	True	428.22	0		0	0
+new	through	B097	两岸穿桥去	Walking	True	394.7	0		0	0
+new	through	B097	两岸穿桥回	Quickest	True	428.57	0,2050,0	1.58	1	1
+new	through	B097	两岸穿桥回	Shortest	True	428.57	0,2050,0	1.58	1	1
+new	through	B097	两岸穿桥回	PavedOnly	True	428.22	0		0	0
+new	through	B097	两岸穿桥回	Walking	True	394.7	0		0	0
+new	via	B107	两岸穿桥去入桥	Quickest	True	120.0	0,1383	2.12	1	1
+new	via	B107	两岸穿桥去离桥	Quickest	True	114.73	1383,0	1.58	1	1
+new	via	B107	两岸穿桥去入桥	Shortest	True	120.0	0,1383	2.12	1	1
+new	via	B107	两岸穿桥去离桥	Shortest	True	114.73	1383,0	1.58	1	1
+new	via	B107	两岸穿桥去入桥	PavedOnly	True	120.0	0,1383	2.12	1	1
+new	via	B107	两岸穿桥去离桥	PavedOnly	True	114.73	1383,0	1.58	1	1
+new	via	B107	两岸穿桥去入桥	Walking	True	120.0	0,1383	2.12	1	1
+new	via	B107	两岸穿桥去离桥	Walking	True	114.73	1383,0	1.58	1	1
+new	via	B107	两岸穿桥回入桥	Quickest	True	114.73	0,1383	1.58	1	1
+new	via	B107	两岸穿桥回离桥	Quickest	True	120.0	1383,0	2.12	1	1
+new	via	B107	两岸穿桥回入桥	Shortest	True	114.73	0,1383	1.58	1	1
+new	via	B107	两岸穿桥回离桥	Shortest	True	120.0	1383,0	2.12	1	1
+new	via	B107	两岸穿桥回入桥	PavedOnly	True	114.73	0,1383	1.58	1	1
+new	via	B107	两岸穿桥回离桥	PavedOnly	True	120.0	1383,0	2.12	1	1
+new	via	B107	两岸穿桥回入桥	Walking	True	114.73	0,1383	1.58	1	1
+new	via	B107	两岸穿桥回离桥	Walking	True	120.0	1383,0	2.12	1	1
+new	via	B102	两岸穿桥去入桥	Quickest	True	127.81	0,1403	2.92	1	1
+new	via	B102	两岸穿桥去离桥	Quickest	True	129.9	1403,0	2.55	1	1
+new	via	B102	两岸穿桥去入桥	Shortest	True	127.81	0,1403	2.92	1	1
+new	via	B102	两岸穿桥去离桥	Shortest	True	129.9	1403,0	2.55	1	1
+new	via	B102	两岸穿桥去入桥	PavedOnly	True	127.81	0,1403	2.92	1	1
+new	via	B102	两岸穿桥去离桥	PavedOnly	True	129.9	1403,0	2.55	1	1
+new	via	B102	两岸穿桥去入桥	Walking	True	127.81	0,1403	2.92	1	1
+new	via	B102	两岸穿桥去离桥	Walking	True	129.85	1403,0	2.92	1	1
+new	via	B102	两岸穿桥回入桥	Quickest	True	129.85	0,1403	2.92	1	1
+new	via	B102	两岸穿桥回离桥	Quickest	True	128.48	1403,0	1.58	1	1
+new	via	B102	两岸穿桥回入桥	Shortest	True	129.85	0,1403	2.92	1	1
+new	via	B102	两岸穿桥回离桥	Shortest	True	128.48	1403,0	1.58	1	1
+new	via	B102	两岸穿桥回入桥	PavedOnly	True	129.85	0,1403	2.92	1	1
+new	via	B102	两岸穿桥回离桥	PavedOnly	True	127.81	1403,0	2.92	1	1
+new	via	B102	两岸穿桥回入桥	Walking	True	129.85	0,1403	2.92	1	1
+new	via	B102	两岸穿桥回离桥	Walking	True	127.81	1403,0	2.92	1	1
+new	via	B098	两岸穿桥去入桥	Quickest	True	125.66	0,1428	0.71	1	1
+new	via	B098	两岸穿桥去离桥	Quickest	True	131.73	1428,0	3.54	1	1
+new	via	B098	两岸穿桥去入桥	Shortest	True	125.66	0,1428	0.71	1	1
+new	via	B098	两岸穿桥去离桥	Shortest	True	131.73	1428,0	3.54	1	1
+new	via	B098	两岸穿桥去入桥	PavedOnly	True	125.66	0,1428	0.71	1	1
+new	via	B098	两岸穿桥去离桥	PavedOnly	True	131.59	1428,0	3.81	1	1
+new	via	B098	两岸穿桥去入桥	Walking	True	125.66	0,1428	0.71	1	1
+new	via	B098	两岸穿桥去离桥	Walking	True	131.59	1428,0	3.81	1	1
+new	via	B098	两岸穿桥回入桥	Quickest	True	131.59	0,1428	3.81	1	1
+new	via	B098	两岸穿桥回离桥	Quickest	True	125.66	1428,0	0.71	1	1
+new	via	B098	两岸穿桥回入桥	Shortest	True	131.59	0,1428	3.81	1	1
+new	via	B098	两岸穿桥回离桥	Shortest	True	125.66	1428,0	0.71	1	1
+new	via	B098	两岸穿桥回入桥	PavedOnly	True	131.59	0,1428	3.81	1	1
+new	via	B098	两岸穿桥回离桥	PavedOnly	True	125.66	1428,0	0.71	1	1
+new	via	B098	两岸穿桥回入桥	Walking	True	131.59	0,1428	3.81	1	1
+new	via	B098	两岸穿桥回离桥	Walking	True	125.66	1428,0	0.71	1	1
+new	via	B097	两岸穿桥去入桥	Quickest	True	216.02	0,2050	1.58	1	1
+new	via	B097	两岸穿桥去离桥	Quickest	True	212.56	2050,0	0.71	1	1
+new	via	B097	两岸穿桥去入桥	Shortest	True	216.02	0,2050	1.58	1	1
+new	via	B097	两岸穿桥去离桥	Shortest	True	212.56	2050,0	0.71	1	1
+new	via	B097	两岸穿桥去入桥	PavedOnly	True	216.02	0,2050	1.58	1	1
+new	via	B097	两岸穿桥去离桥	PavedOnly	True	212.56	2050,0	0.71	1	1
+new	via	B097	两岸穿桥去入桥	Walking	True	216.02	0,2050	1.58	1	1
+new	via	B097	两岸穿桥去离桥	Walking	True	212.56	2050,0	0.71	1	1
+new	via	B097	两岸穿桥回入桥	Quickest	True	212.56	0,2050	0.71	1	1
+new	via	B097	两岸穿桥回离桥	Quickest	True	216.02	2050,0	1.58	1	1
+new	via	B097	两岸穿桥回入桥	Shortest	True	212.56	0,2050	0.71	1	1
+new	via	B097	两岸穿桥回离桥	Shortest	True	216.02	2050,0	1.58	1	1
+new	via	B097	两岸穿桥回入桥	PavedOnly	True	212.56	0,2050	0.71	1	1
+new	via	B097	两岸穿桥回离桥	PavedOnly	True	216.02	2050,0	1.58	1	1
+new	via	B097	两岸穿桥回入桥	Walking	True	212.56	0,2050	0.71	1	1
+new	via	B097	两岸穿桥回离桥	Walking	True	216.02	2050,0	1.58	1	1

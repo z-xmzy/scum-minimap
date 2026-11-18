@@ -603,7 +603,11 @@ namespace ScumMiniMap {
         }
 
         internal int[] BuildJunctionIndices(List<PointF> polyline, bool startConnector, bool endConnector) {
-            if (polyline == null || polyline.Count < 4) return new int[0];
+            return BuildRouteJunctionIndices(polyline, startConnector, endConnector, null);
+        }
+
+        int[] BuildRouteJunctionIndices(List<PointF> polyline, bool startConnector, bool endConnector, List<int> layers) {
+            if (polyline == null || polyline.Count < (layers == null ? 4 : 3)) return new int[0];
             int count = polyline.Count;
             double[] dists = new double[count];
             for (int i = 1; i < count; i++) {
@@ -620,18 +624,45 @@ namespace ScumMiniMap {
             int[] armsStack = new int[JunctionWindowCells];
             byte[] ring = new byte[13 * 13];
             int[] ringStack = new int[13 * 13];
+            var bridgeArms = new Dictionary<int, int>();
+            Func<PointF, int, bool, int> countArms = (point, layer, exact) => {
+                if (layers != null && UsesBridgeTopology(point, layer))
+                    return BridgeJunctionArms(point, layer, exact, bridgeArms);
+                return exact
+                    ? TopologicalArmsAtExact(point.X, point.Y, armsRoad, armsFull, armsLab, armsStack)
+                    : TopologicalArmsAt(point.X, point.Y, armsRoad, armsFull, armsLab, armsStack);
+            };
             // 1) 4 m candidate scan on the road section with pre-filter + arm test.
             List<double> hits = new List<double>(8);
             DebugJunctionCandidates = 0;
             DebugJunctionPrefilterPass = 0;
             DebugJunctionArmsCalls = 0;
-            for (double arc = roadStart + 8.0; arc <= roadEnd - 8.0; arc += JunctionSampleStep) {
+            double firstArc = roadStart + 8.0, lastArc = roadEnd - 8.0;
+            if (layers != null) {
+                // No later sample can become a cue without both the turn and the exact arms.
+                lastArc = firstArc + Math.Floor((lastArc - firstArc) / JunctionSampleStep) * JunctionSampleStep;
+                for (; lastArc >= firstArc; lastArc -= JunctionSampleStep) {
+                    if (Math.Abs(RouteTurnAtArc(polyline, dists, lastArc)) < JunctionTurnMinDegrees) continue;
+                    PointF point = PointAtArc(polyline, dists, lastArc);
+                    int layer = RouteLayerAtArc(dists, layers, lastArc);
+                    if (!UsesBridgeTopology(point, layer) || countArms(point, layer, true) >= 3) break;
+                }
+            }
+            double clusterEnd = double.NegativeInfinity;
+            for (double arc = firstArc; arc <= lastArc; arc += JunctionSampleStep) {
                 DebugJunctionCandidates++;
                 PointF point = PointAtArc(polyline, dists, arc);
-                if (!RoadBranchCandidate(point.X, point.Y, ring, ringStack)) continue;
+                int layer = RouteLayerAtArc(dists, layers, arc);
+                if (layers != null && UsesBridgeTopology(point, layer)) {
+                    // A flat first hit still anchors the existing 60 m grouping.
+                    if (arc <= clusterEnd && Math.Abs(RouteTurnAtArc(polyline, dists, arc)) < JunctionTurnMinDegrees) continue;
+                } else if (!RoadBranchCandidate(point.X, point.Y, ring, ringStack)) continue;
                 DebugJunctionPrefilterPass++;
                 DebugJunctionArmsCalls++;
-                if (TopologicalArmsAt(point.X, point.Y, armsRoad, armsFull, armsLab, armsStack) >= 3) hits.Add(arc);
+                if (countArms(point, layer, false) >= 3) {
+                    hits.Add(arc);
+                    if (arc > clusterEnd) clusterEnd = arc + JunctionMergeArc;
+                }
             }
             if (hits.Count == 0) return new int[0];
             // 2) cluster hits and accept one representative per cluster: strongest
@@ -647,7 +678,7 @@ namespace ScumMiniMap {
                     double absTurn = Math.Abs(RouteTurnAtArc(polyline, dists, hits[k]));
                     if (absTurn < JunctionTurnMinDegrees || absTurn <= bestAbsTurn) continue;
                     PointF candidatePoint = PointAtArc(polyline, dists, hits[k]);
-                    if (TopologicalArmsAtExact(candidatePoint.X, candidatePoint.Y, armsRoad, armsFull, armsLab, armsStack) < 3) continue;
+                    if (countArms(candidatePoint, RouteLayerAtArc(dists, layers, hits[k]), true) < 3) continue;
                     bestAbsTurn = absTurn;
                     bestArc = hits[k];
                 }
@@ -658,6 +689,7 @@ namespace ScumMiniMap {
             // 3) insert the cue junctions into the polyline (only when >5 m from the
             //    nearest vertex) and map them to final 0-based indices.
             List<PointF> work = new List<PointF>(polyline);
+            List<int> workLayers = layers == null ? null : new List<int>(layers);
             List<double> workArc = new List<double>(dists);
             List<int> indices = new List<int>(cueArcs.Count);
             for (int i = 0; i < cueArcs.Count; i++) {
@@ -674,9 +706,15 @@ namespace ScumMiniMap {
                     while (pos < workArc.Count && workArc[pos] < cueArc) pos++;
                     if (pos < 1) pos = 1;
                     if (pos > work.Count - 1) pos = work.Count - 1;
-                    work.Insert(pos, point);
-                    workArc.Insert(pos, cueArc);
-                    nearest = pos;
+                    // Preserve the exact endpoints of an inter-layer connection.
+                    if (workLayers != null && workLayers[pos - 1] != workLayers[pos]) {
+                        nearest = cueArc - workArc[pos - 1] <= workArc[pos] - cueArc ? pos - 1 : pos;
+                    } else {
+                        work.Insert(pos, point);
+                        workArc.Insert(pos, cueArc);
+                        if (workLayers != null) workLayers.Insert(pos, RouteLayerAtArc(dists, layers, cueArc));
+                        nearest = pos;
+                    }
                 }
                 if (nearest > 0 && nearest < work.Count - 1 && !indices.Contains(nearest)) indices.Add(nearest);
             }
@@ -693,12 +731,13 @@ namespace ScumMiniMap {
                 int v = indices[i];
                 if (v <= 0 || v >= work.Count - 1) continue;
                 if (Math.Abs(RouteTurnAtArc(work, finalArcs, finalArcs[v])) < JunctionTurnMinDegrees) continue;
-                if (TopologicalArmsAtExact(work[v].X, work[v].Y, armsRoad, armsFull, armsLab, armsStack) < 3) continue;
+                if (countArms(work[v], workLayers == null ? 0 : workLayers[v], true) < 3) continue;
                 kept.Add(v);
             }
             if (kept.Count == 0) return new int[0];
             polyline.Clear();
             polyline.AddRange(work);
+            if (layers != null) { layers.Clear(); layers.AddRange(workLayers); }
             return kept.ToArray();
         }
 

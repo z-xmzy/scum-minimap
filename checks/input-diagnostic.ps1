@@ -1,0 +1,12 @@
+﻿$ErrorActionPreference='Stop'
+$root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../source'))
+$output=Join-Path $root ('release\checks\input-voice-'+[guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $output -Force | Out-Null
+$compiler=Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
+$sources=@(& (Join-Path "$root/scripts" 'Get-MiniMapSources.ps1'))
+$resources=@(& (Join-Path "$root/scripts" 'Get-VoiceResources.ps1'))
+$exe=Join-Path $output 'InputVoiceTests.exe'
+& $compiler /nologo /codepage:65001 /target:exe /platform:x64 /main:InputVoiceTests "/out:$exe" /reference:System.Drawing.dll /reference:System.Windows.Forms.dll /reference:Accessibility.dll "/reference:$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\WPF\PresentationCore.dll" "/reference:$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\WPF\PresentationFramework.dll" "/reference:$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\WPF\WindowsBase.dll" /reference:System.Xaml.dll /reference:System.IO.Compression.dll "/resource:$root\resources\roads.bin,roads.bin" "/resource:$root\resources\water-mask.bin,water-mask.bin" @resources @sources (Join-Path $PSScriptRoot 'InputVoiceDiagnostic.cs')
+if($LASTEXITCODE -ne 0) { throw 'Input/voice test compilation failed.' }
+& $exe
+if($LASTEXITCODE -ne 0) { throw 'Input/voice tests failed.' }

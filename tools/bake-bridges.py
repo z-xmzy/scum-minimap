@@ -28,9 +28,11 @@ def is_deck(n):
  return not any(k in n for k in ('_wm','_es','_fn','fence','rope','cable','pillar','railing','support','traffic_light','cement_curb','_door','_wall','windows','_rvt'))
 buf=np.fromfile(mesh/'cells.bin',[('key','<i4'),('z','<f4')])
 bins=defaultdict(list);keys=[];zs=[];off=0
+rail_arch=[]
 for r in csv.reader(open(mesh/'placements.tsv',encoding='utf-8-sig'),delimiter='\t'):
  n=int(r[-1]);part=buf[off:off+n];off+=n
  if not is_deck(r[3].split('.')[-1]):continue
+ if r[3].endswith('.SM_RailBridge_Arch') and n:rail_arch.append(part)
  for pt in part:
   k=int(pt['key']);z=float(pt['z'])
   if any(abs(zs[i]-z)<=20 for i in bins[k]):continue
@@ -41,11 +43,21 @@ assert off==len(buf)
 # with several metres of clearance cannot contribute to this upper surface.
 from scipy.spatial import cKDTree
 original=np.asarray(keys);xyz=np.c_[original%S,original//S,np.asarray(zs)/35]
-road=np.fromfile(root/'tools/bridge-underroads/cells.bin',[('key','<i4'),('z','<f4')])
+road_folder=root/'tools/bridge-underroads'
+road=np.fromfile(road_folder/'cells.bin',[('key','<i4'),('z','<f4')])
+# Tunnel portals include the roof above the drivable opening. Their upward
+# faces must not create a bridge layer or replace the ground road at its mouth.
+deck_candidate=np.ones(len(road),bool);off=0
+for placement in csv.reader((road_folder/'placements.tsv').open(encoding='utf-8-sig'),delimiter='\t'):
+ n=int(placement[-1])
+ if 'tunnel' in placement[3].split('.')[-1].lower():deck_candidate[off:off+n]=False
+ off+=n
+assert off==len(road)
 rk=road['key'];rh=road['z'];distance,idx=cKDTree(xyz).query(np.c_[rk%S,rk//S,rh/35])
 on_ground=ground(rk%S,rk//S)
 bridge_road=(distance<=6.5)&(abs(rh-np.asarray(zs)[idx])<=38)
 bridge_road|=rh>on_ground+150
+bridge_road&=deck_candidate
 for k,z in zip(rk[bridge_road],rh[bridge_road]):
  k=int(k);z=float(z)
  if any(abs(zs[i]-z)<=20 for i in bins[k]):continue
@@ -54,6 +66,34 @@ for k,z in np.fromfile(root/'tools/bridge-ramps/joined.bin',[('key','<i4'),('z',
  k=int(k);z=float(z)
  if any(abs(zs[i]-z)<=20 for i in bins[k]):continue
  bins[k].append(len(keys));keys.append(k);zs.append(z)
+# Only the adjoining original rail spline on each bank belongs to the approach.
+# Require several grid cells touching the arch in XYZ at one end of that spline.
+rail_dir={};rail_nodes=set()
+arch=np.concatenate(rail_arch)
+def rail_xyz(part):
+ k=part['key'];return np.c_[k%S,k//S,part['z']/40.]
+arch_tree=cKDTree(rail_xyz(arch))
+rail_folder=root/'tools/bridge-rail-approaches'
+rail_cells=np.fromfile(rail_folder/'cells.bin',dtype=arch.dtype);off=0
+for r in csv.reader((rail_folder/'placements.tsv').open(encoding='utf-8-sig'),delimiter='\t'):
+ n=int(r[-1]);part=rail_cells[off:off+n];off+=n
+ if n<3:continue
+ xyz=rail_xyz(part);dist,j=arch_tree.query(xyz)
+ mates=(dist<=1.75)&(abs(part['z']-arch['z'][j])<=40)
+ if len(np.unique(part['key'][mates]))<3:continue
+ p=xyz[:,:2];axis=np.linalg.eigh(np.cov(p.T))[1][:,-1];t=(p-p.mean(0))@axis
+ if t[mates].max()<=t.min()+2:out=axis
+ elif t[mates].min()>=t.max()-2:out=-axis
+ else:continue
+ along=p@out
+ for (k,z),projection in zip(part,along):
+  k=int(k);z=float(z)
+  node=next((i for i in bins[k] if abs(zs[i]-z)<=20),None)
+  if node is None:
+   node=len(keys);bins[k].append(node);keys.append(k);zs.append(z)
+  rail_nodes.add(node)
+  if along.max()-projection<=3:rail_dir[node]=out
+assert off==len(rail_cells)
 keys=np.array(keys,dtype='i4');zs=np.array(zs,dtype='f4');xs=keys%S;ys=keys//S
 N=len(keys);edges=[[] for _ in keys]
 for i,(k,z) in enumerate(zip(keys.tolist(),zs.tolist())):
@@ -64,6 +104,7 @@ for i,(k,z) in enumerate(zip(keys.tolist(),zs.tolist())):
 orig=np.repeat(np.arange(N),[len(t) for t in edges]);dest=np.fromiter((j for v in edges for j in v),np.int32)
 graph=coo_matrix((np.ones(len(orig),'u1'),(orig,dest)),shape=(N,N)).tocsr();count,groups=connected_components(graph,directed=False)
 del graph
+rail_groups={groups[i] for i in rail_nodes}
 xy=np.c_[xs,ys];groundZ=ground(xs,ys);gx=xs//4;gy=ys//4
 wet=(G<=0)|(water>G+15);actualroad=np.isfinite(R)&(abs(R-G)<240)&(~wet | (R>water+35))
 foot=np.zeros((W,W),bool);foot[gy,gx]=True;foot|=np.isfinite(old)
@@ -118,6 +159,8 @@ for i in range(N):
  k=int(keys[i]);z=float(zs[i]);x=int(xs[i]);y=int(ys[i]);a=x//4;b=y//4
  axis=axdir.get(groups[i])
  if axis is None:continue
+ on_rail=groups[i] in rail_groups
+ if on_rail and i not in rail_dir:continue
  if len(edges[i])>=8 and marks[b,a]==0:continue
  gz=float(groundZ[i]);surface=R[b,a] if actualroad[b,a] else gz
  if abs(z-surface)>85:continue
@@ -127,9 +170,12 @@ for i in range(N):
    if info is None or info[0]>=16 or info[1]>=4:continue
    ex=xx*4+1.5;ey=yy*4+1.5;dist=math.hypot(x-ex,y-ey)
    if dist>5 or dist<.1 or abs(z-info[2])>45+32*dist:continue
+   if on_rail:
+    outward=rail_dir[i]
+    if ((ex-x)*outward[0]+(ey-y)*outward[1])/dist<=.6:continue
    forward=abs(((ex-x)*axis[0]+(ey-y)*axis[1])/dist)>.6
    buried=forward and marks[b,a]>0 and marks[yy,xx]>0 and info[2]>=z and abs(z-gz)<60 and G[yy,xx]>gz+8
-   if not (endcap[i] and forward) and not buried and not(actualroad[b,a] and info[3] and abs(z-R[b,a])<55):continue
+   if not on_rail and not (endcap[i] and forward) and not buried and not(actualroad[b,a] and info[3] and abs(z-R[b,a])<55):continue
    # Require the ground centre outside this deck at this height, with the mesh
    # actually ending in its direction. Never join through an interior deck cell.
    beyond=k+int(round((ex-x)/dist))+S*int(round((ey-y)/dist))
@@ -161,8 +207,13 @@ for _ in range(struct.unpack_from('<I',data,8)[0]):
     j=np.argmin(ds);i=int(part[j]);score=ds[j]+3/np.sqrt(len(part))
     if score<scores.get(gc,1e10):scores[gc]=score;snap[gc]=i
 fmt=struct.Struct('<iffi');report=root/'checks'
+# Keep sub-cell road coverage where a 4 m ground-cell centre misses the road.
+# These samples resolve XY targets only; they never create graph edges.
+rx=rk%S//4;ry=rk//S//4
+lower_mask=near[ry,rx]&~actualroad[ry,rx]&~wet[ry,rx]&(abs(rh-on_ground)<=55)&(rh>water[ry,rx]+35)
+lower_pixels=np.unique(rk[lower_mask]).astype('<i4')
 with gzip.open(root/'source/resources/nav-bridges.bin','wb',compresslevel=6) as f:
- f.write(struct.pack('<4siii',b'BRG1',W,len(lower),N))
+ f.write(struct.pack('<4siii',b'BRG2',W,len(lower),N))
  for gc,(cost_,cl,height,rd) in lower.items():f.write(struct.pack('<iBBf?',gc,cost_,cl,height,rd))
  for i,row in enumerate(edges):
   f.write(struct.pack('<ifii',int(keys[i]),float(zs[i]),int(groups[i])+1,len(row)))
@@ -170,5 +221,6 @@ with gzip.open(root/'source/resources/nav-bridges.bin','wb',compresslevel=6) as 
  f.write(struct.pack('<i',len(snap)))
  for cell,node in snap.items():f.write(struct.pack('<ii',cell,groundCount+node))
  f.write((root/'tools/bridge-underroads/links.bin').read_bytes())
+ f.write(struct.pack('<i',len(lower_pixels)));f.write(lower_pixels.tobytes())
 np.savez(report/'bridge-geometry.npz',keys=keys,z=zs,groups=groups,portals=np.array(portal),ground=groundZ)
 print('1m bridge nodes',N,'components',count,'ground cells',len(lower),'portal links',len(portal),'components with portals',len(set(groups[i] for i,j in portal)))

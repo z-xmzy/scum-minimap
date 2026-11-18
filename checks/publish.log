@@ -1,0 +1,87 @@
+{
+  "package": "D:\\codex\\SCUM-MiniMap-2.4.11-桥区语音修复版.zip",
+  "sha256": "A28302E3DB47CB541145E7F36532A60A7C120A99457B868CDE767032099F6939",
+  "size_bytes": 742510315,
+  "entries": 1878,
+  "exe_sha256": "3C13D3AF40D635AF9D2CCD2BA5867240F35D9AC04FFEC272A3785A666B5E4EAC",
+  "old_package_sha256": "9459FA49B62BF77E993795AE403659A6FD81C3EAFFE70312C3B9EF8E5D239055",
+  "changed_files": [
+    "SCUM-MiniMap/app/fine/WorldRaster.exe",
+    "SCUM-MiniMap/app/package.txt",
+    "SCUM-MiniMap/app/SkynettMiniMap.exe",
+    "SCUM-MiniMap/使用说明.md"
+  ],
+  "cases": {
+    "area": {
+      "requests": 2064,
+      "success": 1966
+    },
+    "extra": {
+      "requests": 7640,
+      "success": 6732
+    },
+    "approach": {
+      "requests": 1168,
+      "success": 1080
+    },
+    "other": {
+      "requests": 416,
+      "success": 154
+    },
+    "stacked": {
+      "requests": 392,
+      "success": 392
+    },
+    "levels": {
+      "requests": 208,
+      "success": 208
+    },
+    "decks": {
+      "requests": 4712,
+      "success": 4712
+    },
+    "heads": {
+      "requests": 1664,
+      "success": 1588
+    },
+    "through": {
+      "requests": 592,
+      "success": 592
+    },
+    "via-deck": {
+      "requests": 1184,
+      "success": 1184
+    }
+  },
+  "transitions_checked": 6238,
+  "invalid_transitions": 0,
+  "topology": {
+    "nodes": 210701,
+    "ground_cells": 53504,
+    "cross_layer_links": 7312,
+    "under_road_links": 2794,
+    "lower_road_pixels": 3529,
+    "handroad_target_matches": 3570,
+    "invalid_edges": 0,
+    "max_portal_rise_m": 1.997,
+    "max_portal_grade_ratio": 0.442,
+    "examples": []
+  },
+  "bank_route_actual": {
+    "指定桥层覆盖两岸间至少一半": 494,
+    "全程采用其他路径": 94,
+    "部分经过指定桥层": 4
+  },
+  "via_route_actual": {
+    "按指定桥头连续换层": 1168,
+    "其他走层": 16
+  },
+  "release_checks": {
+    "Packaged": "0",
+    "Startup": "0",
+    "SquadUi": "0",
+    "MutedNavigation": "0",
+    "BridgeIntegration": "0",
+    "BridgeVoice": "0"
+  }
+}

@@ -226,6 +226,7 @@ source\src\SquadRoutePlanner.cs(24,67): warning CS0649: ��δ���ֶΡ�
 source\src\SquadRoutePlanner.cs(24,86): warning CS0649: ��δ���ֶΡ�ScumMiniMap.SquadRouteDrawing.Shared����ֵ���ֶν�һֱ������Ĭ��ֵ false
 source\src\SquadRoutePlanner.cs(24,117): warning CS0649: ��δ���ֶΡ�ScumMiniMap.SquadRouteDrawing.Plan����ֵ���ֶν�һֱ������Ĭ��ֵ null
 source\src\RoadRouter.cs(54,24): warning CS0649: ��δ���ֶΡ�ScumMiniMap.RoadRoute.BridgeLayers����ֵ���ֶν�һֱ������Ĭ��ֵ null
+source\src\RoadRouter.cs(55,23): warning CS0649: ��δ���ֶΡ�ScumMiniMap.RoadRoute.BridgeBlocked����ֵ���ֶν�һֱ������Ĭ��ֵ false
 PASS: Every stage is road-calculated automatically, including the player-to-first-stop leg
 PASS: Route stages preserve the placed stop order
 PASS: Inter-stop routes still calculate without a fresh player origin
@@ -1667,7 +1668,7 @@ PASS: Growing a player viewport reuses unchanged cards instead of rebuilding the
 PASS: Restoring the window size recalculates pages and retains the visible player range
 PASS: Shrinking a player viewport preserves its unchanged cards
 PASS: Searching from the last page starts at the first matching result
-Player directory responsiveness: max UI gap=82 ms during Resize; live cards=1 of 1000 players.
+Player directory responsiveness: max UI gap=77 ms during Resize; live cards=1 of 1000 players.
 PASS: Large-directory paging and scrolling keep the UI heartbeat within 500 ms
 PASS: A warm profile reuses its snapshot without reading a locked database
 PASS: Changed database content invalidates the cache and returns the new report
@@ -2208,20 +2209,583 @@ PASS: Settings exposes the admin tools pill toggle
 PASS: Admin panel uses native topmost style above SCUM
 PASS: Fresh admin panel values stay unknown and each toggle offers explicit ON and OFF requests
 PASS: Admin panel shows the exact singular player-info command
-
-
-   由于 Exception.ToString() 失败，因此无法打印异常字符串。
-Input/voice tests failed.
-At D:\codex\SCUM-MiniMap-2.4.10-map\source\scripts\Test-InputVoice.ps1:12 char:27
-+ if($LASTEXITCODE -ne 0) { throw 'Input/voice tests failed.' }
-+                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : OperationStopped: (Input/voice tests failed.:String) [], RuntimeException
-    + FullyQualifiedErrorId : Input/voice tests failed.
- 
-Check failed: scripts\Test-InputVoice.ps1
-At D:\codex\SCUM-MiniMap-2.4.10-map\source\scripts\Invoke-MiniMapChecks.ps1:23 char:32
-+     if ($LASTEXITCODE -ne 0) { throw "Check failed: $check" }
-+                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : OperationStopped: (Check failed: s...-InputVoice.ps1:String) [], RuntimeException
-    + FullyQualifiedErrorId : Check failed: scripts\Test-InputVoice.ps1
- 
+PASS: Teleport here is disabled without a full-map click target
+PASS: Fresh full-map admin menu exposes both requested values without claiming an initial game state
+PASS: Explicit OFF is available on a fresh session and sends false on its first request
+PASS: An Enter-down interruption records the submitted ON request despite incomplete chat cleanup
+PASS: The next toggle sends OFF after Enter-down interruption instead of repeating ON
+PASS: Repeated admin toggles use the current submitted value: True
+PASS: Repeated admin toggles use the current submitted value: False
+PASS: Repeated admin toggles use the current submitted value: True
+PASS: An unsuccessful OFF request preserves the previous submitted ON value
+PASS: Submitting one admin toggle leaves other command values independent
+PASS: Equivalent normalized commands share their submitted value instead of sending ON repeatedly
+PASS: The next shared-state toggle can return the command to ON
+PASS: An asynchronous submission sends the requested OFF command
+PASS: An in-progress request does not change the previously submitted admin value
+PASS: The requested admin value changes only after asynchronous submission succeeds
+PASS: Toggling after asynchronous completion uses the updated submitted value
+PASS: Shared submissions refresh the panel and reopened menu with consistent requested values
+PASS: Repeated opening restores the admin panel above SCUM
+PASS: New installations default to NumPad Divide without a modifier
+PASS: Copy-key reminder appears by default
+PASS: Automatic death markers are enabled for new profiles
+PASS: First-run guide matches the NumPad Divide single-key default
+PASS: Reset button retains the NumPad Divide single-key default without checkbox events re-enabling Ctrl
+PASS: Reset clears all previous SCUM physical scan codes
+PASS: Default setup bindings have no conflicts
+PASS: Setup rejects SCUM map conflicts with MiniMap settings
+PASS: Setup detects physical key conflicts across different virtual keys
+PASS: Invalid setup bindings cannot be committed while navigating the guide
+PASS: Failed physical capture preserves the previous mapKey binding
+PASS: Right Alt cannot become the setup mapKey binding
+PASS: Failed physical capture preserves the previous chatKey binding
+PASS: Right Alt cannot become the setup chatKey binding
+PASS: Copy completion does not restart the response deadline
+PASS: Startup keeps a minimized taskbar window
+PASS: Minimized taskbar window does not count as open settings or pause tracking
+PASS: Opening settings restores the taskbar window
+PASS: Done remains clickable with unfinished settings edits
+PASS: Dismissing settings retains the taskbar button
+PASS: Home restores minimized settings as a visible topmost window
+PASS: Repeated Home keeps already-open settings visible
+PASS: Home inside the settings form no longer minimizes it
+PASS: Escape still dismisses settings to the taskbar
+PASS: Voice guidance defaults off
+PASS: Loading virtual-key-only settings clears stale shortcut scan codes
+PASS: Existing Ctrl+C bindings survive the new-install default change
+PASS: Voice preference, selected pack and volume load correctly
+PASS: Voice choices persist across restarts
+PASS: On-connector guidance does not truncate the phrase after 'In'
+PASS: MP3 sequence completed without decoder errors
+PASS: Busy router explicitly rejects a new request instead of reporting it started
+PASS: Forced recalculation reports an accepted request
+PASS: Recalculation completion clears the in-progress status or reports failure
+PASS: Window audio worker shuts down without leaving MP3 files locked
+PASS: Physical copy scan code is saved
+PASS: Physical map and chat scan codes are saved
+PASS: All configurable MiniMap shortcut scan codes are saved
+PASS: Launching MiniMap again does not reuse submitted ON values as the live SCUM state
+PASS: Automatic death marker opt-out survives restart
+PASS: Captured function-key and number-pad shortcut preferences survive restart
+PASS: Rebound shortcut reaches keyboard dispatch: 117
+PASS: Rebound shortcut reaches keyboard dispatch: 103
+PASS: Rebound shortcut reaches keyboard dispatch: 118
+PASS: Settings, waypoint and search bindings are dispatched by physical scan code across layouts
+PASS: Shortcut capture rejects duplicate and SCUM chat bindings
+PASS: Shortcut conflict checks use physical position, not matching layout-specific virtual keys
+PASS: Shortcut capture rejects modifier combinations
+PASS: Shortcut dialog captures the virtual key and physical scan code
+PASS: History duration and visibility preferences survive restart
+PASS: Copy-key reminder opt-out persists across restarts
+PASS: Physical copy scan code survives restart
+PASS: Physical map and chat scan codes survive restart
+PASS: All configurable MiniMap shortcut scan codes survive restart
+PASS: Settings exposes rebinding for Settings
+PASS: Settings exposes rebinding for AddWaypoint
+PASS: Settings exposes rebinding for Search
+PASS: Settings exposes rebinding for ToggleOverlay
+PASS: Settings exposes rebinding for ZoomIn
+PASS: Settings exposes rebinding for ZoomOut
+PASS: Settings exposes rebinding for DeathMarker
+PASS: Settings exposes rebinding for ResetZoom
+PASS: Settings exposes rebinding for ClearWaypoint
+PASS: Settings exposes rebinding for ZoneEditor
+PASS: Settings exposes rebinding for StartupGuide
+PASS: Settings exposes rebinding for AdminCommands
+PASS: Settings exposes rebinding for AdminPlayers
+PASS: Settings exposes rebinding for PingDanger
+PASS: Settings exposes rebinding for PingLoot
+PASS: Settings exposes rebinding for PingPickup
+PASS: Applying bindings takes a copy of the draft
+PASS: All app keys and physical scan codes survive restart
+PASS: Every rebound action reaches keyboard dispatch through its physical position
+PASS: Runtime resolves the rebound physical key to Settings
+PASS: Runtime resolves the rebound physical key to AddWaypoint
+PASS: Runtime resolves the rebound physical key to Search
+PASS: Runtime resolves the rebound physical key to ToggleOverlay
+PASS: Runtime resolves the rebound physical key to ZoomIn
+PASS: Runtime resolves the rebound physical key to ZoomOut
+PASS: Runtime resolves the rebound physical key to DeathMarker
+PASS: Runtime resolves the rebound physical key to ResetZoom
+PASS: Runtime resolves the rebound physical key to ClearWaypoint
+PASS: Runtime resolves the rebound physical key to ZoneEditor
+PASS: Runtime resolves the rebound physical key to StartupGuide
+PASS: Runtime resolves the rebound physical key to AdminCommands
+PASS: Runtime resolves the rebound physical key to AdminPlayers
+PASS: Runtime resolves the rebound physical key to PingDanger
+PASS: Runtime resolves the rebound physical key to PingLoot
+PASS: Runtime resolves the rebound physical key to PingPickup
+PASS: Rebinding removes the old Home, Insert, Delete, End, zoom and death-marker shortcuts
+PASS: Runtime zoom matching follows physical positions across keyboard layouts
+PASS: Polling an unbound app action is safely ignored
+PASS: Applying conflicting controls preserves the active and saved configuration
+PASS: Queued app actions remain disabled in diagnostic mode
+PASS: Queued app actions cannot bypass panelOpening
+PASS: Queued app actions cannot bypass searchOpen
+PASS: Queued app actions cannot bypass inventoryInputLocked
+PASS: Queued app actions cannot bypass shortcutCaptureOpen
+PASS: Queued app actions cannot bypass adminCommandBusy
+PASS: Compact zoom uses the configured step and switches to manual zoom
+PASS: Expanded-map zoom changes the active full map while preserving compact zoom
+PASS: Expanded zoom forces full visibility without changing configured opacity
+PASS: Teleport cleanup restores configured opacity and invalidates the rendered frame without changing zoom
+PASS: Expanded zoom-in survives coordinate-copy cleanup after physical cancellation
+PASS: Expanded zoom-out survives coordinate-copy cleanup after physical cancellation
+PASS: Expanded-map reset restores one-times zoom and the map centre
+PASS: Resetting zoom restores configured opacity
+PASS: Compact-map reset restores one-times zoom without leaving a stale animation target
+PASS: Clear waypoint removes navigation and voice guidance together
+PASS: An explicitly unbound zoom action remains inactive after restart
+PASS: Loading an old profile clears stale extended control preferences
+PASS: Profile loading fails closed for SCUM collisions, duplicate physical controls and reserved chat aliases
+Passed 661 input and voice checks.
+PASS: 501 zones survive save/reload
+PASS: Independent outline and translucent fill colours survive save/load and cloning
+PASS: Existing zone files retain the default fill without migration
+PASS: Malformed custom fill colours fail closed
+PASS: Explicit category survives: Custom Bunker
+PASS: Explicit category survives: Gas Cache
+PASS: Explicit category survives: D4 Clock house
+PASS: Oversized save rejected
+PASS: Rejected save preserves disk content
+PASS: Non-finite zone rejected
+PASS: Long zone line rejected before splitting
+PASS: No-modifier survives wizard reopening
+PASS: Disposed framed dialogs unsubscribe from localization
+PASS: Bad custom image falls back without deleting user data
+PASS: Fresh installation starts with compact minimap, not full map
+PASS: Full map retains normal bounds for settings persistence
+PASS: Settings in full-map mode show compact dimensions without shrinking full map
+PASS: Editing compact dimensions does not resize active full map
+PASS: Closing full map restores chosen compact size and original position
+PASS: Existing users retain their saved minimap dimensions
+PASS: Old settings preserve active layer preferences
+PASS: Legacy interval and player colour aliases remain compatible
+PASS: Inverted saved zoom bounds are normalised
+PASS: Saved route history colour loads independently of player and guidance colours
+PASS: Route history colour survives a real settings save/load round trip
+PASS: Fully transparent tactical opacity survives settings save/load
+PASS: Raising minimum updates maximum control and state
+PASS: Lowering maximum updates minimum control and state
+PASS: Rebuilt settings reflect sidebar layer changes
+PASS: Automatic marker uses captured death position rather than later respawn position
+PASS: Automatic death marker persists in current map waypoint file
+PASS: Locked-file addition reports failure
+PASS: Failed addition preserves live collection
+PASS: Locked-file deletion reports failure
+PASS: Failed deletion preserves live collection
+PASS: Early clipboard response is not rearmed after chord completion
+PASS: Cancelled copy clears its pending request
+PASS: Superseded route completion cannot publish
+PASS: Cleared route completion cannot publish
+PASS: Truncated road header rejected
+PASS: Oversized road counts rejected before allocation
+PASS: Negative POI count rejected
+PASS: Non-finite POI coordinate rejected
+PASS: Updater rejects modified staging file
+PASS: Hash rejection retains installed executable
+PASS: Failed restart rolls back installation
+PASS: Locked installation rejects update
+PASS: Locked installation remains unchanged
+PASS: Unicode and percent paths replace successfully without shell expansion
+PASS: Owned updater fixtures contain authentic stable older/newer MiniMap metadata without interactive app code
+PASS: Owned helper roundtrip never requests UAC or opens an interactive window
+PASS: Real helper uses the verified-update entry point
+PASS: Real helper reads its binary request from the private update directory
+PASS: Secure helper handoff identifies a closed owned fixture rather than any running application
+PASS: Unicode and percent paths round-trip unchanged through the secure binary request
+PASS: Secure helper handoff pins replacement, original, helper and asset identity with no trailing request data
+PASS: Caller has not approved installation before helper readiness
+PASS: Real helper installs both verified package assets before restarting the owned fixture
+PASS: Real helper commits the exact verified replacement executable bytes
+PASS: Helper records success after starting the replacement executable
+PASS: Completed v2 helper and request files are safely removed
+PASS: Real helper starts the new owned fixture exactly once and never launches the old fixture
+PASS: POI section translated: English
+PASS: Reset-map messages resolve and format: English
+PASS: POI section translated: SpanishArgentina
+PASS: Reset-map messages resolve and format: SpanishArgentina
+PASS: POI section translated: French
+PASS: Reset-map messages resolve and format: French
+PASS: POI section translated: German
+PASS: Reset-map messages resolve and format: German
+PASS: POI section translated: Dutch
+PASS: Reset-map messages resolve and format: Dutch
+PASS: POI section translated: Russian
+PASS: Reset-map messages resolve and format: Russian
+PASS: POI section translated: Chinese
+PASS: Reset-map messages resolve and format: Chinese
+PASS: POI section translated: Turkish
+PASS: Reset-map messages resolve and format: Turkish
+PASS: POI section translated: Arabic
+PASS: Reset-map messages resolve and format: Arabic
+PASS: POI section translated: Portuguese
+PASS: Reset-map messages resolve and format: Portuguese
+PASS: POI section translated: Korean
+PASS: Reset-map messages resolve and format: Korean
+PASS: POI section translated: Polish
+PASS: Reset-map messages resolve and format: Polish
+PASS: POI section translated: PortuguesePortugal
+PASS: Reset-map messages resolve and format: PortuguesePortugal
+PASS: POI section translated: Thai
+PASS: Reset-map messages resolve and format: Thai
+PASS: POI section translated: ChineseTraditional
+PASS: Reset-map messages resolve and format: ChineseTraditional
+PASS: POI section translated: Japanese
+PASS: Reset-map messages resolve and format: Japanese
+PASS: POI section translated: Czech
+PASS: Reset-map messages resolve and format: Czech
+PASS: POI section translated: Italian
+PASS: Reset-map messages resolve and format: Italian
+PASS: POI section translated: Ukrainian
+PASS: Reset-map messages resolve and format: Ukrainian
+PASS: POI section translated: Finnish
+PASS: Reset-map messages resolve and format: Finnish
+PASS: POI section translated: Lithuanian
+PASS: Reset-map messages resolve and format: Lithuanian
+PASS: POI section translated: Swahili
+PASS: Reset-map messages resolve and format: Swahili
+Passed 106 audit regression checks.
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Twenty successive message submissions cannot inject Num /
+PASS: Escape explicitly closes chat after multiple messages
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Sending another message with Enter preserves open chat
+PASS: Twenty successive message submissions cannot inject Num /
+PASS: Escape explicitly closes chat after multiple messages
+PASS: Completing a map click cannot claim that SCUM chat closed
+PASS: Unattributed sampled Enter/Escape cannot release open chat
+PASS: Num / stays blocked after sampled close-key input
+PASS: Physical Enter preserves chat while physical Escape closes it after sampling
+PASS: Unattributed sampled Enter/Escape cannot release open chat
+PASS: Num / stays blocked after sampled close-key input
+PASS: Physical Enter preserves chat while physical Escape closes it after sampling
+PASS: A queued coordinate-copy Num / key-down is blocked after chat opens and its copy lease ends
+PASS: Current coordinate copy is allowed in gameplay
+PASS: Chat opening after enqueue blocks Num / and cancels its owned input lease
+PASS: Closing chat cannot revive the cancelled copy's pending key-down
+PASS: Cancelled copy key-ups remain available for modifier/key cleanup
+PASS: An old copy packet cannot borrow a newer request's permission or cancel it
+PASS: Focus loss after enqueue blocks copy delivery
+PASS: Current coordinate copy is allowed in gameplay
+PASS: Chat opening after enqueue blocks Num / and cancels its owned input lease
+PASS: Closing chat cannot revive the cancelled copy's pending key-down
+PASS: Cancelled copy key-ups remain available for modifier/key cleanup
+PASS: An old copy packet cannot borrow a newer request's permission or cancel it
+PASS: Focus loss after enqueue blocks copy delivery
+PASS: Admin chat sequences retain their independent input ownership
+PASS: Other applications' injected input is not swallowed
+PASS: Physical keyboard input is not swallowed by coordinate-copy ownership
+PASS: Input thread cancels copy delivery without sending cleanup keys or touching the UI-owned lease
+PASS: Owner-thread cleanup releases the cancelled copy key once
+PASS: An unavailable copy context fails closed at delivery
+PASS: Ended requests reject late key-downs while permitting late cleanup releases
+PASS: Physical chat-opening key is recognized across virtual-key layout mappings
+PASS: Physical M/ь stays owned by chat through 200 rapid presses and layout changes
+PASS: Typing cannot inject coordinate-copy characters or release the chat gate
+PASS: Closing chat cannot replay a map shortcut queued before typing
+PASS: Physical chat-opening key is recognized across virtual-key layout mappings
+PASS: Physical M/ь stays owned by chat through 200 rapid presses and layout changes
+PASS: Typing cannot inject coordinate-copy characters or release the chat gate
+PASS: Closing chat cannot replay a map shortcut queued before typing
+PASS: Hidden gameplay cursor prevents bright scenery from locking tracking and M, without screen probing
+PASS: Visible cursor and selected navigation tab protect inventory text input
+PASS: Visible cursor without a navigation highlight does not claim inventory input
+PASS: Selected game navigation tab is recognized independently of its translated label
+PASS: Unselected navigation text does not trigger the inventory input lock
+PASS: Typing T after Alt-Tab cannot open a phantom chat gate before the next timer tick
+PASS: Real in-game chat still blocks Home, Insert, and Delete
+PASS: Closing real chat releases shortcut protection
+PASS: Chat owns shortcut through typing/channel/close sequence: 84
+PASS: Chat owns shortcut through typing/channel/close sequence: 9
+PASS: Chat owns shortcut through typing/channel/close sequence: 77
+PASS: Chat owns shortcut through typing/channel/close sequence: 191
+PASS: Chat owns shortcut through typing/channel/close sequence: 9
+PASS: Chat owns shortcut through typing/channel/close sequence: 77
+PASS: Chat owns shortcut through typing/channel/close sequence: 27
+PASS: Chat close releases sampling after protected key dispatch
+PASS: Map shortcuts remain available after chat closes
+PASS: Chat owns shortcut through typing/channel/close sequence: 191
+PASS: Chat owns shortcut through typing/channel/close sequence: 9
+PASS: Chat owns shortcut through typing/channel/close sequence: 77
+PASS: Chat owns shortcut through typing/channel/close sequence: 191
+PASS: Chat owns shortcut through typing/channel/close sequence: 9
+PASS: Chat owns shortcut through typing/channel/close sequence: 77
+PASS: Chat owns shortcut through typing/channel/close sequence: 27
+PASS: Chat close releases sampling after protected key dispatch
+PASS: Map shortcuts remain available after chat closes
+PASS: Chat owns shortcut through typing/channel/close sequence: 111
+PASS: Chat owns shortcut through typing/channel/close sequence: 9
+PASS: Chat owns shortcut through typing/channel/close sequence: 77
+PASS: Chat owns shortcut through typing/channel/close sequence: 191
+PASS: Chat owns shortcut through typing/channel/close sequence: 9
+PASS: Chat owns shortcut through typing/channel/close sequence: 77
+PASS: Chat owns shortcut through typing/channel/close sequence: 27
+PASS: Chat close releases sampling after protected key dispatch
+PASS: Map shortcuts remain available after chat closes
+PASS: Polling cannot replay a close key after chat reopens: 27 / 84
+PASS: Open chat blocks 100 consecutive copy-key sampling attempts
+PASS: A new close-key press releases the pause
+PASS: Polling alone detects a missed chat-opening hook event
+PASS: Tab and typed keys preserve chat protection
+PASS: Polling cannot replay a close key after chat reopens: 27 / 89
+PASS: Open chat blocks 100 consecutive copy-key sampling attempts
+PASS: A new close-key press releases the pause
+PASS: Polling alone detects a missed chat-opening hook event
+PASS: Tab and typed keys preserve chat protection
+PASS: Configured NumPad Divide copy key does not falsely open the chat lock
+PASS: Configured chat key still opens chat while NumPad Divide is used for copying
+--- Testing Decoupled Macro Cadence & Motion Advancement ---
+MapMotion advanced smoothly across 6/30 frames (Point.X=0.5010, Yaw=90.0°)
+Infobar scroll frame advanced from 0 to 13 over 15 frames.
+Decoupled macro cadence verified: Tick remains non-blocking and UI animations advance continuously.
+Compiling standalone bridge and water avoidance test harness...
+source\src\RoadRouter.cs(54,24): warning CS0649: ��δ���ֶΡ�ScumMiniMap.RoadRoute.BridgeLayers����ֵ���ֶν�һֱ������Ĭ��ֵ null
+source\src\RoadRouter.cs(55,23): warning CS0649: ��δ���ֶΡ�ScumMiniMap.RoadRoute.BridgeBlocked����ֵ���ֶν�һֱ������Ĭ��ֵ false
+Running Test-BridgeAndWaterRouter.exe...
+PASS: Captured classified road network loads
+PASS: Runtime loads classified roads, split junctions and audited connectors
+PASS: Main drivable network connects over 94 percent of compiled road nodes
+PASS: Saved 39-segment server-test route remains connected at approximately 2.1 km
+PASS: Demo uses actual captured road endpoints
+PASS: Water coverage loads
+PASS: Northern B2 approach 1 reaches the actual Z4 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: B2-to-western-Z routing uses the Rogoznica road bridge rather than circling the island
+PASS: Northern B2 approach 1 reaches the actual Z3 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: B2-to-western-Z routing uses the Rogoznica road bridge rather than circling the island
+PASS: Northern B2 approach 1 reaches the actual Z2 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: Northern B2 approach 1 reaches the actual Z1 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: Northern B2 approach 1 reaches the actual Z0 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: Northern B2 approach 2 reaches the actual Z4 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: B2-to-western-Z routing uses the Rogoznica road bridge rather than circling the island
+PASS: Northern B2 approach 2 reaches the actual Z3 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: B2-to-western-Z routing uses the Rogoznica road bridge rather than circling the island
+PASS: Northern B2 approach 2 reaches the actual Z2 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: Northern B2 approach 2 reaches the actual Z1 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: Northern B2 approach 2 reaches the actual Z0 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: Northern B2 approach 3 reaches the actual Z4 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: B2-to-western-Z routing uses the Rogoznica road bridge rather than circling the island
+PASS: Northern B2 approach 3 reaches the actual Z3 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: B2-to-western-Z routing uses the Rogoznica road bridge rather than circling the island
+PASS: Northern B2 approach 3 reaches the actual Z2 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: Northern B2 approach 3 reaches the actual Z1 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: Northern B2 approach 3 reaches the actual Z0 island road network
+PASS: B2-to-Z routing reaches the island road itself without an off-road substitution
+PASS: B2-to-Z island journey avoids an excessive map-wide detour
+PASS: Short lake crossing is rejected
+PASS: Offshore route is rejected
+PASS: Rail-adjacent targets require classified road travel and dry approaches
+Trip distance: 17184 m (direct 9128 m)
+PASS: Normal mainland/island journey has a connected road route: {X=0.62767, Y=0.63618} -> {X=0.6727, Y=0.03878}
+PASS: Road approaches stay inside the bounded search radius
+PASS: Normal journey avoids the disconnected-junction detour regression
+PASS: Normal journey approaches do not cross mapped water
+Trip distance: 12082 m (direct 6552 m)
+PASS: Normal mainland/island journey has a connected road route: {X=0.67542, Y=0.47654} -> {X=0.27907, Y=0.30848}
+PASS: Road approaches stay inside the bounded search radius
+PASS: Normal journey avoids the disconnected-junction detour regression
+PASS: Normal journey approaches do not cross mapped water
+Trip distance: 1190 m (direct 1093 m)
+PASS: Normal mainland/island journey has a connected road route: {X=0.28624, Y=0.75685} -> {X=0.29397, Y=0.82816}
+PASS: Road approaches stay inside the bounded search radius
+PASS: Normal journey avoids the disconnected-junction detour regression
+PASS: Normal journey approaches do not cross mapped water
+Trip distance: 1142 m (direct 1139 m)
+PASS: Normal mainland/island journey has a connected road route: {X=0.64612, Y=0.72455} -> {X=0.62606, Y=0.79659}
+PASS: Road approaches stay inside the bounded search radius
+PASS: Normal journey avoids the disconnected-junction detour regression
+PASS: Normal journey approaches do not cross mapped water
+Trip distance: 8832 m (direct 5925 m)
+PASS: Normal mainland/island journey has a connected road route: {X=0.35, Y=0.45} -> {X=0.295, Y=0.835}
+PASS: Road approaches stay inside the bounded search radius
+PASS: Normal journey avoids the disconnected-junction detour regression
+PASS: Normal journey approaches do not cross mapped water
+Trip distance: 5413 m (direct 2409 m)
+PASS: Normal mainland/island journey has a connected road route: {X=0.55, Y=0.35} -> {X=0.6, Y=0.5}
+PASS: Road approaches stay inside the bounded search radius
+PASS: Normal journey avoids the disconnected-junction detour regression
+PASS: Normal journey approaches do not cross mapped water
+PASS: Distributed map route 1 across cells: {X=0.1237996, Y=0.09606165} -> {X=0.9481987, Y=0.4997772}
+PASS: Distributed map route 2 across cells: {X=0.2260352, Y=0.1170348} -> {X=0.1216679, Y=0.6019606}
+PASS: Distributed map route 3 across cells: {X=0.3726619, Y=0.1242131} -> {X=0.1911245, Y=0.6232527}
+PASS: Distributed map route 4 across cells: {X=0.4994674, Y=0.09747437} -> {X=0.2636915, Y=0.6231923}
+PASS: Distributed map route 5 across cells: {X=0.6241041, Y=0.04228088} -> {X=0.4834082, Y=0.5016646}
+PASS: Distributed map route 6 across cells: {X=0.749018, Y=0.1095937} -> {X=0.5990616, Y=0.5009133}
+PASS: Distributed map route 7 across cells: {X=0.8462033, Y=0.1230935} -> {X=0.7488617, Y=0.572543}
+PASS: Distributed map route 8 across cells: {X=0.9729827, Y=0.1246096} -> {X=0.8124487, Y=0.6242004}
+PASS: Distributed map route 9 across cells: {X=0.1243201, Y=0.2063503} -> {X=0.9236013, Y=0.6213661}
+PASS: Distributed map route 10 across cells: {X=0.2493957, Y=0.1740961} -> {X=0.124637, Y=0.7077007}
+PASS: Distributed map route 11 across cells: {X=0.3725195, Y=0.1478268} -> {X=0.2494215, Y=0.6893083}
+PASS: Distributed map route 12 across cells: {X=0.4997689, Y=0.2491234} -> {X=0.2886174, Y=0.7498063}
+PASS: Distributed map route 13 across cells: {X=0.5857276, Y=0.2497027} -> {X=0.3785417, Y=0.7318797}
+PASS: Distributed map route 14 across cells: {X=0.74352, Y=0.2496249} -> {X=0.6184346, Y=0.7061958}
+PASS: Distributed map route 15 across cells: {X=0.8248187, Y=0.249672} -> {X=0.6454997, Y=0.7274807}
+PASS: Distributed map route 16 across cells: {X=0.9561642, Y=0.2497436} -> {X=0.8704777, Y=0.7038201}
+PASS: Distributed map route 17 across cells: {X=0.1240596, Y=0.3119436} -> {X=0.9146317, Y=0.73507}
+PASS: Distributed map route 18 across cells: {X=0.2322805, Y=0.3718573} -> {X=0.09032602, Y=0.8705125}
+PASS: Distributed map route 19 across cells: {X=0.3350679, Y=0.373781} -> {X=0.3301423, Y=0.8727773}
+PASS: Distributed map route 20 across cells: {X=0.4943542, Y=0.2501245} -> {X=0.4998688, Y=0.8257871}
+PASS: Distributed map route 21 across cells: {X=0.6231635, Y=0.3734809} -> {X=0.6172361, Y=0.8470893}
+PASS: Distributed map route 22 across cells: {X=0.7484498, Y=0.2963762} -> {X=0.7404603, Y=0.8710613}
+PASS: Distributed map route 23 across cells: {X=0.8628795, Y=0.3497169} -> {X=0.8740506, Y=0.8371177}
+PASS: Distributed map route 24 across cells: {X=0.962109, Y=0.3728703} -> {X=0.9030407, Y=0.8526156}
+PASS: Distributed map route 25 across cells: {X=0.1234283, Y=0.4014673} -> {X=0.1248598, Y=0.8982743}
+PASS: Distributed map route 26 across cells: {X=0.2464874, Y=0.4997871} -> {X=0.2494426, Y=0.9184423}
+PASS: Distributed map route 27 across cells: {X=0.3723168, Y=0.4818977} -> {X=0.3685069, Y=0.9120937}
+PASS: Distributed map route 28 across cells: {X=0.4997711, Y=0.4798675} -> {X=0.4998415, Y=0.9306353}
+PASS: Distributed map route 29 across cells: {X=0.6246963, Y=0.4884213} -> {X=0.6228532, Y=0.9547066}
+PASS: Distributed map route 30 across cells: {X=0.7455081, Y=0.4888951} -> {X=0.7455433, Y=0.9335414}
+PASS: Distributed map route 31 across cells: {X=0.8371388, Y=0.4997565} -> {X=0.8691074, Y=0.8759829}
+PASS: Distributed map route 32 across cells: {X=0.9481987, Y=0.4997772} -> {X=0.89047, Y=0.8781064}
+PASS: Distributed map route 33 across cells: {X=0.1216679, Y=0.6019606} -> {X=0.1237996, Y=0.09606165}
+PASS: Distributed map route 34 across cells: {X=0.1911245, Y=0.6232527} -> {X=0.2260352, Y=0.1170348}
+PASS: Distributed map route 35 across cells: {X=0.2636915, Y=0.6231923} -> {X=0.3726619, Y=0.1242131}
+PASS: Distributed map route 36 across cells: {X=0.4834082, Y=0.5016646} -> {X=0.4994674, Y=0.09747437}
+PASS: Distributed map route 37 across cells: {X=0.5990616, Y=0.5009133} -> {X=0.6241041, Y=0.04228088}
+PASS: Distributed map route 38 across cells: {X=0.7488617, Y=0.572543} -> {X=0.749018, Y=0.1095937}
+PASS: Distributed map route 39 across cells: {X=0.8124487, Y=0.6242004} -> {X=0.8462033, Y=0.1230935}
+PASS: Distributed map route 40 across cells: {X=0.9236013, Y=0.6213661} -> {X=0.9729827, Y=0.1246096}
+PASS: Distributed map route 41 across cells: {X=0.124637, Y=0.7077007} -> {X=0.1243201, Y=0.2063503}
+PASS: Distributed map route 42 across cells: {X=0.2494215, Y=0.6893083} -> {X=0.2493957, Y=0.1740961}
+PASS: Distributed map route 43 across cells: {X=0.2886174, Y=0.7498063} -> {X=0.3725195, Y=0.1478268}
+PASS: Distributed map route 44 across cells: {X=0.3785417, Y=0.7318797} -> {X=0.4997689, Y=0.2491234}
+PASS: Distributed map route 45 across cells: {X=0.6184346, Y=0.7061958} -> {X=0.5857276, Y=0.2497027}
+PASS: Distributed map route 46 across cells: {X=0.6454997, Y=0.7274807} -> {X=0.74352, Y=0.2496249}
+PASS: Distributed map route 47 across cells: {X=0.8704777, Y=0.7038201} -> {X=0.8248187, Y=0.249672}
+PASS: Distributed map route 48 across cells: {X=0.9146317, Y=0.73507} -> {X=0.9561642, Y=0.2497436}
+PASS: Distributed map route 49 across cells: {X=0.09032602, Y=0.8705125} -> {X=0.1240596, Y=0.3119436}
+PASS: Distributed map route 50 across cells: {X=0.3301423, Y=0.8727773} -> {X=0.2322805, Y=0.3718573}
+PASS: Distributed map route 51 across cells: {X=0.4998688, Y=0.8257871} -> {X=0.3350679, Y=0.373781}
+PASS: Distributed map route 52 across cells: {X=0.6172361, Y=0.8470893} -> {X=0.4943542, Y=0.2501245}
+PASS: Distributed map route 53 across cells: {X=0.7404603, Y=0.8710613} -> {X=0.6231635, Y=0.3734809}
+PASS: Distributed map route 54 across cells: {X=0.8740506, Y=0.8371177} -> {X=0.7484498, Y=0.2963762}
+PASS: Distributed map route 55 across cells: {X=0.9030407, Y=0.8526156} -> {X=0.8628795, Y=0.3497169}
+PASS: Distributed map route 56 across cells: {X=0.1248598, Y=0.8982743} -> {X=0.962109, Y=0.3728703}
+PASS: Distributed map route 57 across cells: {X=0.2494426, Y=0.9184423} -> {X=0.1234283, Y=0.4014673}
+PASS: Distributed map route 58 across cells: {X=0.3685069, Y=0.9120937} -> {X=0.2464874, Y=0.4997871}
+PASS: Distributed map route 59 across cells: {X=0.4998415, Y=0.9306353} -> {X=0.3723168, Y=0.4818977}
+PASS: Distributed map route 60 across cells: {X=0.6228532, Y=0.9547066} -> {X=0.4997711, Y=0.4798675}
+PASS: Distributed map route 61 across cells: {X=0.7455433, Y=0.9335414} -> {X=0.6246963, Y=0.4884213}
+PASS: Distributed map route 62 across cells: {X=0.8691074, Y=0.8759829} -> {X=0.7455081, Y=0.4888951}
+PASS: Distributed map route 63 across cells: {X=0.89047, Y=0.8781064} -> {X=0.8371388, Y=0.4997565}
+PASS: Coverage sweep spans at least 40 occupied map cells
+PASS: B0 map-confirmed dirt gap avoids the former disconnected-track detour
+PASS: C3 map-confirmed dirt-to-paved junction closes its visible road gap
+Reported B2-to-Z4 Quickest: success=True distance=16482.461220553 entry=26.1818544942344 exit=12.9270688596842 dirt=1269.79280996323 seconds=1090.94713124456
+PASS: Reported Spickovina coordinates reach the Z4 yellow-road lighthouse in Quickest
+PASS: Reported journey stays on the nearby road rather than cutting across to a farther one in Quickest
+Reported B2-to-Z4 Shortest: success=True distance=16301.2530160229 entry=26.1818544942344 exit=12.9270688596842 dirt=4311.68506169203 seconds=1262.58817407648
+PASS: Reported Spickovina coordinates reach the Z4 yellow-road lighthouse in Shortest
+PASS: Reported journey stays on the nearby road rather than cutting across to a farther one in Shortest
+Reported B2-to-Z4 PavedOnly: success=True distance=20606.2223679843 entry=26.1818544942344 exit=12.9270688596842 dirt=0 seconds=1262.18523149265
+PASS: Reported Spickovina coordinates reach the Z4 yellow-road lighthouse in PavedOnly
+PASS: Reported journey stays on the nearby road rather than cutting across to a farther one in PavedOnly
+PASS: Reported paved-only journey never substitutes a dirt road
+Reported B2-to-Z4 Walking: success=True distance=16301.2530160229 entry=26.1818544942344 exit=12.9270688596842 dirt=4311.68506169203 seconds=11736.9021715365
+PASS: Reported Spickovina coordinates reach the Z4 yellow-road lighthouse in Walking
+PASS: Reported journey stays on the nearby road rather than cutting across to a farther one in Walking
+PASS: Dry fixture strip is verified against bundled water coverage
+PASS: Ten-metre disconnected road gap is not healed or bypassed by a farther snap
+PASS: Short trips do not report an unverified direct line as road routing
+PASS: Explicit captured junction works in both directions
+PASS: Bridge fixture spans mapped water between dry banks
+PASS: Explicit classified bridge geometry is preserved across water
+PASS: Navigation starts on a bridge above a mapped water pixel
+PASS: Bridge deck exemption cannot snap a distant swimmer onto a bridge
+PASS: Missing water coverage fails closed
+PASS: Surface fixture uses dry road endpoints
+PASS: Shortest uses the valid dirt shortcut
+PASS: Quickest accepts a longer paved route when its estimated time is lower
+PASS: Paved-only excludes all dirt road travel
+PASS: Walking minimizes known-road distance including dirt shortcuts
+PASS: Walking ETA uses 5 km/h rather than vehicle speeds
+PASS: Surface totals and dry approaches match route distance
+PASS: Paved-only fails when only a dirt road exists
+PASS: Unknown surfaces remain usable for shortest but cannot masquerade as paved
+PASS: Search chooses the correct destination endpoint after counting the partial destination edge
+PASS: Partial-edge optimization is symmetric in both directions
+PASS: Same-edge routes still consider a shorter path through the wider network
+PASS: Closed road splines choose the shorter direction around their shared endpoint
+Hairpin route: 15.07 m
+PASS: Nearby arms of one spline compete without taking a 600 metre detour
+PASS: Near-arm routing stays symmetric
+PASS: Folded bridge geometry does not gain alternate deck approaches
+PASS: No invented turn from bridge to underlying road in Quickest
+PASS: Bridge remains traversable along its own deck in Quickest
+PASS: Underlying road or tunnel remains traversable in Quickest
+PASS: No invented turn from bridge to underlying road in Shortest
+PASS: Bridge remains traversable along its own deck in Shortest
+PASS: Underlying road or tunnel remains traversable in Shortest
+PASS: No invented turn from bridge to underlying road in PavedOnly
+PASS: Bridge remains traversable along its own deck in PavedOnly
+PASS: Underlying road or tunnel remains traversable in PavedOnly
+PASS: No invented turn from bridge to underlying road in Walking
+PASS: Bridge remains traversable along its own deck in Walking
+PASS: Underlying road or tunnel remains traversable in Walking
+PASS: Legacy road assets fail closed for paved-only instead of guessing surfaces

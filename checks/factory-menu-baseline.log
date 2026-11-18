@@ -1,0 +1,3 @@
+FAIL MapGpsDestination: z= length=1882.05m layers=0,3858
+PASS BridgeLower: z=244 length=14.54m layers=0
+PASS BridgeUpper: z=4495.748046875 length=1882.05m layers=0,3858

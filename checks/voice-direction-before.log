@@ -1,0 +1,13 @@
+PASS B007X1 桥上直行去 following every 4 m never requests reroute
+PASS B007X1 桥上直行去 reversing 28 m speaks U-turn and requests reroute
+PASS B007X1 桥上直行去 correct direction clears warning
+PASS B007X1 桥上直行去 leaving the route requests reroute
+PASS B007X1 桥上直行去 rejoining the road clears deviation
+PASS B007X1 桥下直行去 following every 4 m never requests reroute
+PASS B007X1 桥下直行去 reversing 28 m speaks U-turn and requests reroute
+PASS B007X1 桥下直行去 correct direction clears warning
+PASS B007X1 桥下直行去 leaving the route requests reroute
+PASS B007X1 桥下直行去 rejoining the road clears deviation
+FAIL B042 全长去 following every 4 m never requests reroute
+FAIL B042 全长回 following every 4 m never requests reroute
+10 passed, 2 failed

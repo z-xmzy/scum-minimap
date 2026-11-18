@@ -217,11 +217,11 @@ namespace ScumMiniMap {
                 hasProjection=false;
                 var complete=new List<PointF>(); junctionOffset=0;
                 // Polyline contains the road section; the renderer also draws these connectors.
-                if(current.EntryDistanceMeters>15 && RoadRouter.DistanceMeters(current.PlayerPoint,current.Polyline[0])>1) {
+                if(current.BridgeLayers==null && current.EntryDistanceMeters>15 && RoadRouter.DistanceMeters(current.PlayerPoint,current.Polyline[0])>1) {
                     complete.Add(current.PlayerPoint); junctionOffset=1;
                 }
                 complete.AddRange(current.Polyline);
-                if(current.ExitDistanceMeters>15 && RoadRouter.DistanceMeters(current.TargetPoint,current.Polyline[current.Polyline.Length-1])>1)
+                if(current.BridgeLayers==null && current.ExitDistanceMeters>15 && RoadRouter.DistanceMeters(current.TargetPoint,current.Polyline[current.Polyline.Length-1])>1)
                     complete.Add(current.TargetPoint);
                 path=complete.ToArray();
                 distances=new double[path.Length];
@@ -229,7 +229,8 @@ namespace ScumMiniMap {
             }
             nearest=double.MaxValue; along=0; nearestSegment=1;
             double bestContinuity=double.MaxValue;
-            bool continuous=hasProjection && RoadRouter.DistanceMeters(projectedPlayer,player)<100;
+            double movement=hasProjection?RoadRouter.DistanceMeters(projectedPlayer,player):0;
+            bool continuous=hasProjection && movement<100;
             double closest=double.MaxValue;
             for(int i=1;i<path.Length;i++) {
                 double t,d=SegmentProjection(player,path[i-1],path[i],out t);
@@ -238,9 +239,9 @@ namespace ScumMiniMap {
             for(int i=1;i<path.Length;i++) {
                 double t,d=SegmentProjection(player,path[i-1],path[i],out t);
                 double candidateAlong=distances[i-1]+t*(distances[i]-distances[i-1]);
-                double continuity=continuous?Math.Abs(candidateAlong-previousAlong):0;
-                // At crossings and parallel roads, near-equal projections should stay on the
-                // branch already being followed instead of jumping to another route section.
+                // A planned hairpin can run back beside its incoming leg. Prefer the projection
+                // matching both the GPS fix and the distance advanced since the preceding fix.
+                double continuity=continuous?Math.Abs(candidateAlong-(previousAlong+movement))+d:0;
                 if(d<=closest+8 && (continuity<bestContinuity || (continuity==bestContinuity && d<nearest))) {
                     nearest=d; along=candidateAlong; nearestSegment=i; bestContinuity=continuity;
                 }

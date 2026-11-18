@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -1471,7 +1471,7 @@ static class InputVoiceTests {
                 using(var adminMenu=new ToolStripMenuItem("Admin commands")) {
                     window.PopulateAdminMenu(adminMenu);
                     window.PopulateFullMapAdminMenu(adminMenu);
-                    Check(adminMenu.DropDownItems[0].Text=="Teleport here" && !adminMenu.DropDownItems[0].Enabled,
+                    Check(adminMenu.DropDownItems[0].Text==Localization.Get("AdminMapTeleportHere") && !adminMenu.DropDownItems[0].Enabled,
                         "Teleport here is disabled without a full-map click target");
                     var unknownAdminItems=adminMenu.DropDownItems.OfType<ToolStripMenuItem>().Where(i=>i.Text.EndsWith(": UNKNOWN")).ToArray();
                     Check(unknownAdminItems.Length==3 && unknownAdminItems.All(i=>i.DropDownItems.OfType<ToolStripMenuItem>().Select(choice=>choice.Text).SequenceEqual(new[]{"ON","OFF"})

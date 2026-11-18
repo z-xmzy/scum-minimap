@@ -1,0 +1,9 @@
+﻿区域	层	岸	关卡	原始铁轨样条	与桥拱相接的1米格数量	相接格最大绝对高差厘米	旧版入口边数	新版入口边数	入口格轨面减地形最小厘米	入口格轨面减地形最大厘米
+B107	1383	-1	Landscape_A_3_1c	SplineMeshComponent_103	7	23.58	0	10	-16.58	3.46
+B107	1383	1	Landscape_A_3_1c	SplineMeshComponent_9	8	11.35	10	10	-13.12	5.02
+B102	1403	1	Landscape_A_3_3b	SplineMeshComponent_126	6	11.52	17	12	-9.42	4.91
+B102	1403	-1	Landscape_A_3_3d	SplineMeshComponent_48	8	28.25	13	10	-10.03	4.71
+B098	1428	1	Landscape_A_3_3d	SplineMeshComponent_59	6	30.18	19	12	-9.11	5.5
+B098	1428	-1	Landscape_A_3_3d	SplineMeshComponent_81	7	17.82	18	9	-11.64	5.24
+B097	2050	1	Landscape_A_3_3d	SplineMeshComponent_87	7	18.88	15	11	-9.68	5.96
+B097	2050	-1	Landscape_B_3_1b	SplineMeshComponent_26	8	26.9	15	10	-9.75	4.68

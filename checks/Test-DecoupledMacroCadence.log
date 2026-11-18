@@ -1,4 +1,0 @@
---- Testing Decoupled Macro Cadence & Motion Advancement ---
-MapMotion advanced smoothly across 6/30 frames (Point.X=0.5010, Yaw=90.0°)
-Infobar scroll frame advanced from 0 to 14 over 15 frames.
-Decoupled macro cadence verified: Tick remains non-blocking and UI animations advance continuously.

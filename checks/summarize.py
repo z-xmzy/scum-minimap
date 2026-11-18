@@ -9,7 +9,7 @@ for ix,g in gates:
  portals[gr[ix]].add((int(key[ix]),int(g)))
 def pixel(u,v,w):return min(w-1,max(0,int(float(u)*w)))+w*min(w-1,max(0,int(float(v)*w)))
 records=[]; trans=bad=0
-for file in ['area','extra','approach','other','stacked','levels','decks','heads','through']:
+for file in ['area','extra','approach','other','stacked','levels','decks','heads','through','via-deck']:
  f=folder/(file+'.out')
  if not f.exists():continue
  for row in f.open(encoding='utf-8-sig'):

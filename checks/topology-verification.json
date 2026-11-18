@@ -1,8 +1,9 @@
 {
-  "nodes": 210773,
-  "ground_cells": 54423,
-  "cross_layer_links": 7373,
+  "nodes": 210701,
+  "ground_cells": 53504,
+  "cross_layer_links": 7312,
   "under_road_links": 2794,
+  "lower_road_pixels": 3529,
   "handroad_target_matches": 3570,
   "invalid_edges": 0,
   "max_portal_rise_m": 1.997,
