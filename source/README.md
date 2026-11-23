@@ -1,4 +1,4 @@
-﻿# SCUM MiniMap v2.3.25
+# SCUM MiniMap v2.3.25
 
 > **Upstream:** this version is modified from [Mike-Rafone-SCUM/MiniMap](https://github.com/Mike-Rafone-SCUM/MiniMap). 本版本基于 Mike-Rafone-SCUM/MiniMap 修改，原作版权归原作者所有，详见 [ATTRIBUTION.md](ATTRIBUTION.md)。
 
