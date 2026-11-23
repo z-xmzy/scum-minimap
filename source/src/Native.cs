@@ -653,7 +653,7 @@ namespace ScumMiniMap {
 
 
 
-        [DllImport("user32.dll")] internal static extern bool GetCursorInfo(out CURSORINFO pci);
+        [DllImport("user32.dll")] internal static extern bool GetCursorInfo(ref CURSORINFO pci);
 
 
 
@@ -689,6 +689,10 @@ namespace ScumMiniMap {
 
 
 
+        internal static bool GameMenuCursorVisible(bool gameFocused) {
+            return gameFocused && IsCursorVisible();
+        }
+
         internal static bool IsCursorVisible() {
 
 
@@ -705,7 +709,7 @@ namespace ScumMiniMap {
 
 
 
-                if(GetCursorInfo(out ci)) {
+                if(GetCursorInfo(ref ci)) {
 
 
 

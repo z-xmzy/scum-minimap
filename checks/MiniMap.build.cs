@@ -74,15 +74,15 @@ using System.Drawing.Drawing2D;
 
 
 
-[assembly: AssemblyVersion("2.4.11.0")]
+[assembly: AssemblyVersion("2.4.12.0")]
 
 
 
-[assembly: AssemblyFileVersion("2.4.11.0")]
+[assembly: AssemblyFileVersion("2.4.12.0")]
 
 
 
-[assembly: AssemblyInformationalVersion("2.4.11-local-map")]
+[assembly: AssemblyInformationalVersion("2.4.12-local-map")]
 
 
 
@@ -191,7 +191,7 @@ namespace ScumMiniMap {
         int gridOpacity=7;
 
         bool locationHistory=true,locationHistoryTimestamps=false;
-        bool trailLearning=true;
+        bool trailLearning;
         readonly List<LocationHistoryPoint> locationHistoryPoints=new List<LocationHistoryPoint>();
         int locationHistoryRevision;
         int locationHistoryPathRevision=-1;
@@ -1726,7 +1726,7 @@ namespace ScumMiniMap {
 
 
 
-        public const string VersionString = "2.4.11";
+        public const string VersionString = "2.4.12";
 
 
 

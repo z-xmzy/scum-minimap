@@ -1425,7 +1425,7 @@ namespace ScumMiniMap {
             if(message==0x21) {handled=true;return new IntPtr(3);}
             return IntPtr.Zero;
         }
-        internal void CloseTactical(bool closeGameMap=false) { tactical.Hide();tacticalMap.ClearHover();engine.WpfTactical(false);if(hudEnabled)hud.Show();if(closeGameMap&&!diagnostic&&gameMapWindow!=IntPtr.Zero) { var binding=engine.WpfSnapshot(false);if(!binding.TrackingPaused)Native.ReturnMapKey(gameMapWindow,binding.MapKey,binding.MapScan); }Refresh(); }
+        internal void CloseTactical(bool closeGameMap=false) { tactical.Hide();tacticalMap.ClearHover();engine.WpfTactical(false);SyncHudVisibility();if(closeGameMap&&!diagnostic&&gameMapWindow!=IntPtr.Zero) { var binding=engine.WpfSnapshot(false);if(!binding.TrackingPaused)Native.ReturnMapKey(gameMapWindow,binding.MapKey,binding.MapScan); }Refresh(); }
         internal System.Drawing.Rectangle LastMonitorBounds;
         System.Drawing.Rectangle lastTacticalBounds;
         internal static System.Drawing.Rectangle RecoverMapBounds(System.Drawing.Rectangle desired,System.Drawing.Rectangle[] monitors) {
@@ -1464,7 +1464,7 @@ namespace ScumMiniMap {
             tactical.UpdateLayout();lastTacticalBounds=bounds;
         }
         internal void StartViews() {
-            tactical.Hide();engine.WpfTactical(false);if(hudEnabled)hud.Show();Refresh();
+            tactical.Hide();engine.WpfTactical(false);SyncHudVisibility();Refresh();
             application.Dispatcher.BeginInvoke(new Action(()=> {
                 if(disposed||tactical.IsVisible||lastTacticalBounds.Width>0)return;
                 FitTacticalToMonitor();
@@ -1491,7 +1491,7 @@ namespace ScumMiniMap {
         }
         bool TacticalVisible { get { return tactical.IsVisible&&tactical.WindowState!=WindowState.Minimized&&!IsIconic(new WindowInteropHelper(tactical).Handle); } }
         void SyncHudVisibility(bool force=false) {
-            bool show=ShouldShowHud(hudEnabled,TacticalVisible)&&!hudMoving;
+            bool show=ShouldShowHud(hudEnabled,TacticalVisible) && !hudMoving && !Native.GameMenuCursorVisible(Native.GameFocused());
             if(!show) { if(hud.IsVisible)hud.Hide();return; }
             bool restore=!hud.IsVisible||hud.WindowState==WindowState.Minimized;
             if(hud.WindowState!=WindowState.Normal)hud.WindowState=WindowState.Normal;
@@ -1510,7 +1510,8 @@ namespace ScumMiniMap {
             lastHudBounds=bounds;
         }
         internal void ToggleHud() {
-            bool recover=!hudEnabled||!hud.IsVisible||hud.WindowState==WindowState.Minimized||IsIconic(new WindowInteropHelper(hud).Handle)||TacticalVisible;
+            bool menuVisible=Native.GameMenuCursorVisible(Native.GameFocused());
+            bool recover=!hudEnabled || TacticalVisible || (!menuVisible && (!hud.IsVisible || hud.WindowState==WindowState.Minimized || IsIconic(new WindowInteropHelper(hud).Handle)));
             if(TacticalVisible) { tactical.Hide();tacticalMap.ClearHover();engine.WpfTactical(false); }
             hudEnabled=recover;SyncHudVisibility(true);
         }
@@ -1729,7 +1730,7 @@ namespace ScumMiniMap {
             sidebarToggle.Click+=(sender,e)=> {sidebarOpen=!sidebarOpen;arrange();};
             syncMapChrome(true,true);
             RefreshLocalizedChrome(grid);chromeLanguage=Localization.CurrentCode;
-            window.Closing+=(s,e)=> { if(!disposed&&!diagnostic) { e.Cancel=true;window.Hide();engine.WpfTactical(false);if(hudEnabled)hud.Show(); } };
+            window.Closing+=(s,e)=> { if(!disposed&&!diagnostic) { e.Cancel=true;window.Hide();engine.WpfTactical(false);SyncHudVisibility(); } };
             return window;
         }
         Window BuildHud() {
@@ -1915,7 +1916,7 @@ if(followButton!=null) { followButton.Background=engine.WpfFollowing?WpfFieldThe
         internal void ToggleTactical(bool gameKey=false) {
             if(tactical.IsVisible) {
                 bool forward=gameKey&&new WindowInteropHelper(tactical).Handle==Native.GetForegroundWindow();
-                tactical.Hide();tacticalMap.ClearHover();engine.WpfTactical(false);if(hudEnabled)hud.Show();
+                tactical.Hide();tacticalMap.ClearHover();engine.WpfTactical(false);SyncHudVisibility();
                 if(forward&&!diagnostic) { var binding=engine.WpfSnapshot(false);Native.ReturnMapKey(gameMapWindow,binding.MapKey,binding.MapScan); }
             } else {
                 gameMapWindow=diagnostic?IntPtr.Zero:Native.AdminGameWindow();

@@ -1,6 +1,0 @@
-PASS: Muted guidance detects reverse travel and requests rerouting
-PASS: Silent guidance does not initialize audio or install voice files
-PASS: Guidance ignores unfocused positions
-PASS: Silent guidance does not initialize audio or install voice files
-PASS: Guidance ignores stale positions
-PASS: Silent guidance does not initialize audio or install voice files

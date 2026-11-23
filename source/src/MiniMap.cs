@@ -191,7 +191,7 @@ namespace ScumMiniMap {
         int gridOpacity=7;
 
         bool locationHistory=true,locationHistoryTimestamps=false;
-        bool trailLearning=true;
+        bool trailLearning;
         readonly List<LocationHistoryPoint> locationHistoryPoints=new List<LocationHistoryPoint>();
         int locationHistoryRevision;
         int locationHistoryPathRevision=-1;
@@ -1726,7 +1726,7 @@ namespace ScumMiniMap {
 
 
 
-        public const string VersionString = "2.4.11";
+        public const string VersionString = "2.4.12";
 
 
 

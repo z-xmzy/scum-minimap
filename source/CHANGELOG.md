@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.4.12] - 2026-11-23
+
+- Hide the compact minimap while the foreground game shows its system cursor. Restore it when gameplay resumes if enabled.
+- Default trail learning to off. Honor saved preferences and retain learned routes.
+
 ## [2.4.11] - 2026-11-19
 
 - Rebuild junction cues from connected bridge and ground layers after route repair.

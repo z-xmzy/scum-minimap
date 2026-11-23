@@ -1167,6 +1167,7 @@ namespace ScumMiniMap {
         bool movingMinimap;
         Point minimapDragOffset;
         bool fullMapMode;
+        bool compactMenuHidden;
         bool fullMapClickThrough;
         bool hiddenForClickThrough;
         bool fullMapRightButtonDown;
@@ -1274,6 +1275,7 @@ namespace ScumMiniMap {
                         Location=savedLocation;
                     }
                 }
+                UpdateCompactMenuRegion(through);
                 ApplyMousePassthrough();
                 if(fullMapWaypointMenu!=null) fullMapWaypointMenu.Visible=value;
                 if(fullMapRouteColorMenu!=null) fullMapRouteColorMenu.Visible=value;
@@ -1461,7 +1463,20 @@ namespace ScumMiniMap {
             SetWindowLong(Handle,-20,style);
             SetWindowPos(Handle,IntPtr.Zero,0,0,0,0,0x37);
         }
+        void UpdateCompactMenuRegion(bool gameFocused) {
+            // Legacy tools and focus recovery own Form.Visible. Clip only the
+            // compact window so their saved visibility survives the menu.
+            bool hide=!fullMapMode && Native.GameMenuCursorVisible(gameFocused);
+            if(hide==compactMenuHidden)return;
+            if(hide) {
+                var empty=new Region();
+                empty.MakeEmpty();
+                Region=empty;
+            } else Region=null;
+            compactMenuHidden=hide;
+        }
         public void SetGameFocus(bool focused) {
+            if(WpfFieldConsoleRuntime.Active==null)UpdateCompactMenuRegion(focused);
             if(through==focused) return;
             through=focused;
             if(focused && movingMinimap) { movingMinimap=false; Capture=false; }

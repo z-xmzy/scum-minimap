@@ -1,0 +1,152 @@
+Validated 864 strings in all 22 languages, map names, format arguments, and 1114 source references.
+PASS: Automatic firewall exception permits only this executable and selected inbound TCP port on all network profiles
+PASS: Repeated hosting reuses the verified managed firewall rule without duplicates
+PASS: Firewall identity distinguishes ports while preserving Windows path case equivalence
+PASS: A deliberately disabled existing rule is not silently overridden
+PASS: Unrelated firewall rules are never overwritten or removed
+PASS: A newly created rule that fails scope verification is rolled back
+PASS: Firewall access denial is reported without claiming success
+PASS: UPnP discovery accepts a descriptor hosted by the local default gateway
+PASS: Router discovery rejects outside, credentialed or unsupported endpoints: http://8.8.8.8/root.xml
+PASS: Router discovery rejects outside, credentialed or unsupported endpoints: http://router.example/root.xml
+PASS: Router discovery rejects outside, credentialed or unsupported endpoints: http://user:pass@192.168.1.1/root.xml
+PASS: Router discovery rejects outside, credentialed or unsupported endpoints: https://192.168.1.1/root.xml
+PASS: UPnP resolves the local WAN control URL from the router descriptor
+PASS: UPnP never follows a control endpoint outside the gateway
+PASS: UPnP WAN address parsing accepts public IPv4 and rejects CGNAT addresses
+PASS: Router XML cannot load external entities or files
+PASS: UPnP fills the public address when NAT-PMP is unavailable, without an outside lookup service
+PASS: Failed local discovery never substitutes a private adapter address as the public IP
+PASS: Router cleanup deletes only the selected internal TCP port
+PASS: Local router discovery and TCP lease work without external services
+PASS: Failed lease renewal stops advertising router readiness
+PASS: Stopping host withdraws only its lease once
+PASS: Reassigned external port is withdrawn rather than advertised incorrectly
+PASS: CGNAT gateway address cannot be advertised as internet-ready
+PASS: Invalid mapping response rejected at byte 0
+PASS: Invalid mapping response rejected at byte 1
+PASS: Invalid mapping response rejected at byte 2
+PASS: Invalid mapping response rejected at byte 3
+PASS: Invalid mapping response rejected at byte 8
+PASS: Invalid mapping response rejected at byte 9
+PASS: Invalid mapping response rejected at byte 10
+PASS: Invalid mapping response rejected at byte 11
+PASS: Invalid mapping response rejected at byte 12
+PASS: Invalid mapping response rejected at byte 13
+PASS: Expired router lease rejected
+PASS: Late cleanup from an older host cannot delete the replacement host's mapping
+PASS: Public IPv4 detection accepts a canonical external address
+PASS: Public address lookup rejects private, reserved or malformed output: 172.24.0.1
+PASS: Public address lookup rejects private, reserved or malformed output: 192.168.0.14
+PASS: Public address lookup rejects private, reserved or malformed output: 10.0.0.1
+PASS: Public address lookup rejects private, reserved or malformed output: 100.64.0.1
+PASS: Public address lookup rejects private, reserved or malformed output: 127.0.0.1
+PASS: Public address lookup rejects private, reserved or malformed output: 169.254.1.1
+PASS: Public address lookup rejects private, reserved or malformed output: 0.0.0.0
+PASS: Public address lookup rejects private, reserved or malformed output: 224.0.0.1
+PASS: Public address lookup rejects private, reserved or malformed output: 255.255.255.255
+PASS: Public address lookup rejects private, reserved or malformed output: 192.0.2.1
+PASS: Public address lookup rejects private, reserved or malformed output: 198.51.100.1
+PASS: Public address lookup rejects private, reserved or malformed output: 203.0.113.1
+PASS: Public address lookup rejects private, reserved or malformed output: 198.18.0.1
+PASS: Public address lookup rejects private, reserved or malformed output: ::1
+PASS: Public address lookup rejects private, reserved or malformed output: 8.8.8.8:47831
+PASS: Public address lookup rejects private, reserved or malformed output: 0x08080808
+PASS: Public address lookup rejects private, reserved or malformed output: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+PASS: Authenticated encryption round trip
+PASS: Each packet has a fresh random IV
+PASS: Wrong group key fails closed
+PASS: Packet tampering rejected at byte 0
+PASS: Packet tampering rejected at byte 1
+PASS: Packet tampering rejected at byte 2
+PASS: Packet tampering rejected at byte 3
+PASS: Packet tampering rejected at byte 4
+PASS: Packet tampering rejected at byte 5
+PASS: Packet tampering rejected at byte 6
+PASS: Packet tampering rejected at byte 7
+PASS: Packet tampering rejected at byte 8
+PASS: Packet tampering rejected at byte 9
+PASS: Packet tampering rejected at byte 10
+PASS: Packet tampering rejected at byte 11
+PASS: Packet tampering rejected at byte 12
+PASS: Packet tampering rejected at byte 13
+PASS: Packet tampering rejected at byte 14
+PASS: Packet tampering rejected at byte 15
+PASS: Packet tampering rejected at byte 16
+PASS: Packet tampering rejected at byte 17
+PASS: Packet tampering rejected at byte 18
+PASS: Packet tampering rejected at byte 19
+PASS: Packet tampering rejected at byte 20
+PASS: Packet tampering rejected at byte 21
+PASS: Packet tampering rejected at byte 22
+PASS: Packet tampering rejected at byte 23
+PASS: Packet tampering rejected at byte 24
+PASS: Packet tampering rejected at byte 25
+PASS: Packet tampering rejected at byte 26
+PASS: Packet tampering rejected at byte 27
+PASS: Packet tampering rejected at byte 28
+PASS: Packet tampering rejected at byte 29
+PASS: Packet tampering rejected at byte 30
+PASS: Packet tampering rejected at byte 31
+PASS: Packet tampering rejected at byte 32
+PASS: Packet tampering rejected at byte 33
+PASS: Packet tampering rejected at byte 34
+PASS: Packet tampering rejected at byte 35
+PASS: Packet tampering rejected at byte 36
+PASS: Packet tampering rejected at byte 37
+PASS: Packet tampering rejected at byte 38
+PASS: Packet tampering rejected at byte 39
+PASS: Packet tampering rejected at byte 40
+PASS: Packet tampering rejected at byte 41
+PASS: Packet tampering rejected at byte 42
+PASS: Packet tampering rejected at byte 43
+PASS: Packet tampering rejected at byte 44
+PASS: Packet tampering rejected at byte 45
+PASS: Packet tampering rejected at byte 46
+PASS: Packet tampering rejected at byte 47
+PASS: Packet tampering rejected at byte 48
+PASS: Packet tampering rejected at byte 49
+PASS: Packet tampering rejected at byte 50
+PASS: Packet tampering rejected at byte 51
+PASS: Packet tampering rejected at byte 52
+PASS: Packet tampering rejected at byte 53
+PASS: Packet tampering rejected at byte 54
+PASS: Packet tampering rejected at byte 55
+PASS: Packet tampering rejected at byte 56
+PASS: Packet tampering rejected at byte 57
+PASS: Packet tampering rejected at byte 58
+PASS: Packet tampering rejected at byte 59
+PASS: Packet tampering rejected at byte 60
+PASS: Packet tampering rejected at byte 61
+PASS: Packet tampering rejected at byte 62
+PASS: Packet tampering rejected at byte 63
+PASS: Packet tampering rejected at byte 64
+PASS: Packet tampering rejected at byte 65
+PASS: Packet tampering rejected at byte 66
+PASS: Packet tampering rejected at byte 67
+PASS: Packet tampering rejected at byte 68
+PASS: Packet tampering rejected at byte 69
+PASS: Packet tampering rejected at byte 70
+PASS: Packet tampering rejected at byte 71
+PASS: Packet tampering rejected at byte 72
+PASS: Packet tampering rejected at byte 73
+PASS: Packet tampering rejected at byte 74
+PASS: Packet tampering rejected at byte 75
+PASS: Packet tampering rejected at byte 76
+PASS: Packet tampering rejected at byte 77
+PASS: Packet tampering rejected at byte 78
+PASS: Packet tampering rejected at byte 79
+PASS: Oversized and truncated packets rejected
+PASS: Stale and future positions rejected
+PASS: Two clients exchange only their own opt-in positions
+PASS: Authenticated stale, future and invalid-coordinate fixtures stay hidden
+PASS: Another group cannot read positions in the same folder
+PASS: Names are encrypted on disk
+PASS: Pausing sharing removes the local position
+PASS: Disconnect clears local peer visibility immediately
+PASS: Persistent member color prefixes preserve fresh per-connection replay identities
+PASS: Direct host relays authenticated positions between joined clients
+PASS: Both players see each other with the ten-second clock difference that previously caused one-way sharing
+PASS: Death markers and waypoints reach every member, with marker identities scoped to their owner
+PASS: A bounded full marker snapshot larger than the old 1 KB frame limit is delivered intact
+PASS: Marker rename, movement and owner deletion replace the shared snapshot without stale duplicates

@@ -95,7 +95,7 @@ namespace ScumMiniMap {
         // (including already unsealed cells) so navigation behaves exactly like
         // navA1. Existing data/nav-trails.bin is kept, so re-enabling restores
         // everything instantly without re-learning.
-        internal static volatile bool LearningEnabled = true;
+        internal static volatile bool LearningEnabled;
         // Settings > Map & zones > "Trail learning" switch.  When off the recorder
         // stops appending immediately and GridRouter ignores the learned overlay
         // (including already unsealed cells) so navigation behaves exactly like
