@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -20,11 +20,18 @@ namespace ScumMiniMap {
     // WPF owns layout, composition, text, input controls and both map views.
     // The existing native controller is a service behind this presentation engine.
     internal static class WpfFieldTheme {
-        internal static readonly Brush Ground=ColorBrush("#151917"),Panel=ColorBrush("#1B211E"),Raised=ColorBrush("#2A322D"),Line=ColorBrush("#414D44"),Ink=ColorBrush("#F3F1E9"),Muted=ColorBrush("#B3BEB4"),Amber=ColorBrush("#EBC782"),Cyan=ColorBrush("#B7DCC5");
+        internal static readonly Brush Ground=ColorBrush("#0B1013"),Panel=ColorBrush("#0F171C"),Raised=ColorBrush("#172229"),Line=ColorBrush("#26363F"),Ink=ColorBrush("#E4EFF0"),Muted=ColorBrush("#8FA4AB"),Amber=ColorBrush("#4FE3C1"),Cyan=ColorBrush("#B7DCC5");
+        // Night-vision tactical palette: Amber is the interface accent (teal); MapAmber keeps the original map-marker hue.
+        internal static readonly Brush Accent=Amber,AccentDim=ColorBrush("#264FE3C1"),AccentInk=ColorBrush("#03201A"),MapAmber=ColorBrush("#EBC782"),Warn=ColorBrush("#FF6B57"),Glass=ColorBrush("#E60F171C");
+        internal static readonly FontFamily UiFont=new FontFamily("Bahnschrift, Segoe UI, Microsoft YaHei UI"),MonoFont=new FontFamily("Cascadia Mono, Consolas, Microsoft YaHei UI");
+        // Small uppercase eyebrow used for section labels throughout the console.
+        internal static TextBlock Eyebrow(string text) { var t=Text(text,11,Muted,true);t.FontFamily=MonoFont;t.Typography.Capitals=FontCapitals.AllSmallCaps;t.Margin=new Thickness(0,0,0,6);return t; }
         internal static Brush ColorBrush(string hex) { var b=new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex));b.Freeze();return b; }
         internal static TextBlock Text(string text,double size=14,Brush ink=null,bool bold=false) { return new TextBlock { Text=text,FontSize=size,Foreground=ink??Ink,FontWeight=bold?FontWeights.SemiBold:FontWeights.Normal,VerticalAlignment=VerticalAlignment.Center,TextTrimming=TextTrimming.CharacterEllipsis }; }
-        internal static Button Button(string label,Action action,bool primary=false) { var b=new Button { Content=label,MinHeight=40,Padding=new Thickness(14,8,14,8),Margin=new Thickness(4,0,0,0),Background=primary?Amber:Raised,Foreground=primary?Ground:Ink };b.Click+=(s,e)=> { if(b.IsEnabled)action(); };return b; }
-        internal static Border Card(UIElement content,Thickness? padding=null) { return new Border { Background=Panel,BorderBrush=Line,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(10),Padding=padding??new Thickness(16),Child=content }; }
+        internal static Button Button(string label,Action action,bool primary=false) { var b=new Button { Content=label,MinHeight=36,Padding=new Thickness(12,6,12,6),Margin=new Thickness(4,0,0,0),Background=primary?Amber:Raised,Foreground=primary?AccentInk:Ink,BorderBrush=primary?Amber:Line,BorderThickness=new Thickness(1) };
+            // Transparent (text-style) buttons stay borderless; filled buttons get the hairline frame.
+            b.Loaded+=(s,e)=> { if(ReferenceEquals(b.Background,Brushes.Transparent))b.BorderThickness=new Thickness(0); };b.Click+=(s,e)=> { if(b.IsEnabled)action(); };return b; }
+        internal static Border Card(UIElement content,Thickness? padding=null) { return new Border { Background=Glass,BorderBrush=Line,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(4),Padding=padding??new Thickness(16),Child=content }; }
         // Labels stay in Button.Content so language refresh and screen readers keep the same text.
         internal static void IconLabel(Button button,string glyph,bool stacked=false) {
             var panel=new FrameworkElementFactory(typeof(StackPanel));
@@ -48,19 +55,21 @@ namespace ScumMiniMap {
             var row=new StackPanel { Orientation=Orientation.Horizontal,VerticalAlignment=VerticalAlignment.Center };
             var compass=new System.Windows.Shapes.Path { Data=Geometry.Parse("M12,1 L21,22 L12,17 L3,22 Z M12,5 L12,15"),Stroke=Amber,StrokeThickness=1.8,
                 Width=19,Height=21,Stretch=Stretch.Uniform,Margin=new Thickness(0,0,9,0),VerticalAlignment=VerticalAlignment.Center };
-            row.Children.Add(compass);row.Children.Add(Text("SCUM MiniMap",16,Ink,true));return row;
+            var name=Text("SCUM MINIMAP",13,Ink,true);name.FontFamily=UiFont;name.Margin=new Thickness(0,1,0,0);
+            row.Children.Add(compass);row.Children.Add(name);return row;
         }
         internal static ResourceDictionary Resources() { return (ResourceDictionary)XamlReader.Parse(@"<ResourceDictionary xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml'>
-<Style TargetType='{x:Type Button}'><Setter Property='Cursor' Value='Hand'/><Setter Property='HorizontalContentAlignment' Value='Center'/><Setter Property='BorderBrush' Value='#414D44'/><Setter Property='BorderThickness' Value='0'/><Setter Property='FontSize' Value='14'/><Setter Property='FontWeight' Value='SemiBold'/><Setter Property='Template'><Setter.Value><ControlTemplate TargetType='{x:Type Button}'><Border x:Name='body' CornerRadius='6' Background='{TemplateBinding Background}' BorderBrush='{TemplateBinding BorderBrush}' BorderThickness='{TemplateBinding BorderThickness}' Padding='{TemplateBinding Padding}'><ContentPresenter HorizontalAlignment='{TemplateBinding HorizontalContentAlignment}' VerticalAlignment='Center'/></Border><ControlTemplate.Triggers><Trigger Property='IsMouseOver' Value='True'><Setter TargetName='body' Property='BorderBrush' Value='#B3BEB4'/><Setter TargetName='body' Property='BorderThickness' Value='1'/></Trigger><Trigger Property='IsPressed' Value='True'><Setter TargetName='body' Property='Opacity' Value='.73'/></Trigger><Trigger Property='IsKeyboardFocused' Value='True'><Setter TargetName='body' Property='BorderBrush' Value='#B3BEB4'/><Setter TargetName='body' Property='BorderThickness' Value='2'/></Trigger><Trigger Property='IsEnabled' Value='False'><Setter TargetName='body' Property='Opacity' Value='.4'/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
-<Style TargetType='{x:Type TextBox}'><Setter Property='Foreground' Value='#F3F1E9'/><Setter Property='Background' Value='#151917'/><Setter Property='BorderBrush' Value='#414D44'/><Setter Property='BorderThickness' Value='1'/><Setter Property='CaretBrush' Value='#EBC782'/><Setter Property='Padding' Value='12,9'/><Setter Property='FontSize' Value='15'/></Style>
-<Style TargetType='{x:Type CheckBox}'><Setter Property='Foreground' Value='#F3F1E9'/><Setter Property='FontSize' Value='14'/><Setter Property='VerticalContentAlignment' Value='Center'/><Setter Property='Cursor' Value='Hand'/><Setter Property='Template'><Setter.Value><ControlTemplate TargetType='{x:Type CheckBox}'><Grid MinHeight='40'><Grid.ColumnDefinitions><ColumnDefinition Width='*'/><ColumnDefinition Width='32'/></Grid.ColumnDefinitions><ContentPresenter VerticalAlignment='Center'/><Border x:Name='pill' Grid.Column='1' Height='18' CornerRadius='9' Background='#414D44' VerticalAlignment='Center'><Ellipse x:Name='knob' Width='12' Height='12' Margin='3' Fill='#B3BEB4' HorizontalAlignment='Left'/></Border></Grid><ControlTemplate.Triggers><Trigger Property='IsChecked' Value='True'><Setter TargetName='pill' Property='Background' Value='#EBC782'/><Setter TargetName='knob' Property='Fill' Value='#151917'/><Setter TargetName='knob' Property='HorizontalAlignment' Value='Right'/></Trigger><Trigger Property='IsChecked' Value='{x:Null}'><Setter TargetName='knob' Property='HorizontalAlignment' Value='Center'/><Setter TargetName='pill' Property='Background' Value='#695D42'/></Trigger><Trigger Property='IsKeyboardFocused' Value='True'><Setter TargetName='pill' Property='BorderBrush' Value='#F3F1E9'/><Setter TargetName='pill' Property='BorderThickness' Value='2'/></Trigger><Trigger Property='IsEnabled' Value='False'><Setter Property='Opacity' Value='.4'/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
-<Style TargetType='{x:Type ListBox}'><Setter Property='Background' Value='#1B211E'/><Setter Property='Foreground' Value='#F3F1E9'/><Setter Property='BorderThickness' Value='0'/><Setter Property='ScrollViewer.HorizontalScrollBarVisibility' Value='Disabled'/><Setter Property='ScrollViewer.VerticalScrollBarVisibility' Value='Auto'/><Setter Property='HorizontalContentAlignment' Value='Stretch'/></Style>
-<Style TargetType='{x:Type ListBoxItem}'><Setter Property='Padding' Value='12,10'/><Setter Property='Margin' Value='0,2'/><Setter Property='Template'><Setter.Value><ControlTemplate TargetType='{x:Type ListBoxItem}'><Border x:Name='row' CornerRadius='6' Background='Transparent' Padding='{TemplateBinding Padding}'><ContentPresenter/></Border><ControlTemplate.Triggers><Trigger Property='IsSelected' Value='True'><Setter TargetName='row' Property='Background' Value='#2A322D'/></Trigger><Trigger Property='IsKeyboardFocused' Value='True'><Setter TargetName='row' Property='BorderBrush' Value='#B3BEB4'/><Setter TargetName='row' Property='BorderThickness' Value='1'/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
-<Style TargetType='{x:Type ComboBox}'><Setter Property='FontSize' Value='14'/><Setter Property='MinHeight' Value='36'/><Setter Property='Foreground' Value='#F3F1E9'/><Setter Property='Background' Value='#2A322D'/><Setter Property='Template'><Setter.Value><ControlTemplate TargetType='{x:Type ComboBox}'><Grid><Border x:Name='outline' Background='#2A322D' BorderBrush='#414D44' BorderThickness='1' CornerRadius='6'/><ToggleButton Focusable='False' IsChecked='{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}'><ToggleButton.Template><ControlTemplate TargetType='{x:Type ToggleButton}'><Border Background='Transparent' Padding='12,8'><TextBlock Text='⌄' Foreground='#B3BEB4' HorizontalAlignment='Right'/></Border></ControlTemplate></ToggleButton.Template></ToggleButton><ContentPresenter Content='{TemplateBinding SelectionBoxItem}' ContentTemplate='{TemplateBinding SelectionBoxItemTemplate}' Margin='12,6,32,6' VerticalAlignment='Center' IsHitTestVisible='False'/><Popup x:Name='PART_Popup' Placement='Bottom' IsOpen='{TemplateBinding IsDropDownOpen}' AllowsTransparency='True' Focusable='False' PopupAnimation='Fade'><Border Background='#2A322D' BorderBrush='#7E8F9F' BorderThickness='1' MinWidth='{Binding ActualWidth,RelativeSource={RelativeSource TemplatedParent}}' MaxHeight='260'><ScrollViewer><ItemsPresenter/></ScrollViewer></Border></Popup></Grid><ControlTemplate.Triggers><Trigger Property='IsKeyboardFocusWithin' Value='True'><Setter TargetName='outline' Property='BorderBrush' Value='#F3F1E9'/><Setter TargetName='outline' Property='BorderThickness' Value='2'/></Trigger><Trigger Property='IsEnabled' Value='False'><Setter Property='Opacity' Value='.4'/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
-<Style TargetType='{x:Type Slider}'><Setter Property='MinHeight' Value='28'/><Setter Property='Template'><Setter.Value><ControlTemplate TargetType='{x:Type Slider}'><Grid><Border x:Name='focus' BorderBrush='Transparent' BorderThickness='2' CornerRadius='4' IsHitTestVisible='False'/><Track x:Name='PART_Track' Minimum='{TemplateBinding Minimum}' Maximum='{TemplateBinding Maximum}' Value='{TemplateBinding Value}' IsDirectionReversed='{TemplateBinding IsDirectionReversed}'><Track.DecreaseRepeatButton><RepeatButton Command='Slider.DecreaseLarge'><RepeatButton.Template><ControlTemplate><Border Height='4' CornerRadius='2' Background='#EBC782'/></ControlTemplate></RepeatButton.Template></RepeatButton></Track.DecreaseRepeatButton><Track.IncreaseRepeatButton><RepeatButton Command='Slider.IncreaseLarge'><RepeatButton.Template><ControlTemplate><Border Height='4' CornerRadius='2' Background='#414D44'/></ControlTemplate></RepeatButton.Template></RepeatButton></Track.IncreaseRepeatButton><Track.Thumb><Thumb Width='12' Height='12'><Thumb.Template><ControlTemplate><Ellipse Fill='#EBC782' Stroke='#151917' StrokeThickness='1'/></ControlTemplate></Thumb.Template></Thumb></Track.Thumb></Track></Grid><ControlTemplate.Triggers><Trigger Property='IsKeyboardFocusWithin' Value='True'><Setter TargetName='focus' Property='BorderBrush' Value='#F3F1E9'/></Trigger><Trigger Property='IsEnabled' Value='False'><Setter Property='Opacity' Value='.4'/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
-<Style TargetType='{x:Type ScrollBar}'><Setter Property='Width' Value='10'/><Setter Property='Background' Value='#1B211E'/><Setter Property='Template'><Setter.Value><ControlTemplate TargetType='{x:Type ScrollBar}'><Grid Background='#1B211E'><Track x:Name='PART_Track' Orientation='{TemplateBinding Orientation}' IsDirectionReversed='True' Minimum='{TemplateBinding Minimum}' Maximum='{TemplateBinding Maximum}' Value='{TemplateBinding Value}' ViewportSize='{TemplateBinding ViewportSize}'><Track.DecreaseRepeatButton><RepeatButton Command='{x:Static ScrollBar.PageUpCommand}'><RepeatButton.Template><ControlTemplate><Border Background='Transparent'/></ControlTemplate></RepeatButton.Template></RepeatButton></Track.DecreaseRepeatButton><Track.IncreaseRepeatButton><RepeatButton Command='{x:Static ScrollBar.PageDownCommand}'><RepeatButton.Template><ControlTemplate><Border Background='Transparent'/></ControlTemplate></RepeatButton.Template></RepeatButton></Track.IncreaseRepeatButton><Track.Thumb><Thumb MinHeight='24'><Thumb.Template><ControlTemplate><Border Background='#64717C' CornerRadius='4' Margin='2'/></ControlTemplate></Thumb.Template></Thumb></Track.Thumb></Track></Grid><ControlTemplate.Triggers><Trigger Property='IsEnabled' Value='False'><Setter Property='Opacity' Value='.4'/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
-<Style TargetType='{x:Type Thumb}'><Setter Property='Template'><Setter.Value><ControlTemplate TargetType='{x:Type Thumb}'><Border Background='Transparent'><Border Width='3' Height='18' CornerRadius='1.5' Background='#607785' HorizontalAlignment='Center' VerticalAlignment='Center'/></Border></ControlTemplate></Setter.Value></Setter></Style>
-<Style TargetType='{x:Type Expander}'><Setter Property='Template'><Setter.Value><ControlTemplate TargetType='{x:Type Expander}'><Border Background='{TemplateBinding Background}' CornerRadius='8' Padding='{TemplateBinding Padding}'><StackPanel><ToggleButton x:Name='toggle' Foreground='{TemplateBinding Foreground}' IsChecked='{Binding IsExpanded,RelativeSource={RelativeSource TemplatedParent},Mode=TwoWay}' HorizontalContentAlignment='Stretch'><ToggleButton.Template><ControlTemplate TargetType='{x:Type ToggleButton}'><Border x:Name='focus' Background='Transparent' BorderBrush='Transparent' BorderThickness='1' CornerRadius='5' Padding='2,7'><Grid><Grid.ColumnDefinitions><ColumnDefinition Width='20'/><ColumnDefinition/></Grid.ColumnDefinitions><TextBlock x:Name='arrow' Text='›' Foreground='#B3BEB4' VerticalAlignment='Center'/><ContentPresenter Grid.Column='1'/></Grid></Border><ControlTemplate.Triggers><Trigger Property='IsChecked' Value='True'><Setter TargetName='arrow' Property='Text' Value='⌄'/></Trigger><Trigger Property='IsKeyboardFocused' Value='True'><Setter TargetName='focus' Property='BorderBrush' Value='#B3BEB4'/></Trigger></ControlTemplate.Triggers></ControlTemplate></ToggleButton.Template><ContentPresenter ContentSource='Header'/></ToggleButton><ContentPresenter x:Name='items' ContentSource='Content' Visibility='Collapsed'/></StackPanel></Border><ControlTemplate.Triggers><Trigger Property='IsExpanded' Value='True'><Setter TargetName='items' Property='Visibility' Value='Visible'/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
+<Style TargetType='{x:Type Button}'><Setter Property='Cursor' Value='Hand'/><Setter Property='HorizontalContentAlignment' Value='Center'/><Setter Property='BorderBrush' Value='#26363F'/><Setter Property='BorderThickness' Value='0'/><Setter Property='FontSize' Value='14'/><Setter Property='FontWeight' Value='Medium'/><Setter Property='Template'><Setter.Value><ControlTemplate TargetType='{x:Type Button}'><Border x:Name='body' CornerRadius='3' Background='{TemplateBinding Background}' BorderBrush='{TemplateBinding BorderBrush}' BorderThickness='{TemplateBinding BorderThickness}' Padding='{TemplateBinding Padding}'><ContentPresenter HorizontalAlignment='{TemplateBinding HorizontalContentAlignment}' VerticalAlignment='Center'/></Border><ControlTemplate.Triggers><Trigger Property='IsMouseOver' Value='True'><Setter TargetName='body' Property='BorderBrush' Value='#4FE3C1'/></Trigger><Trigger Property='IsPressed' Value='True'><Setter TargetName='body' Property='Opacity' Value='.73'/></Trigger><Trigger Property='IsKeyboardFocused' Value='True'><Setter TargetName='body' Property='BorderBrush' Value='#4FE3C1'/><Setter TargetName='body' Property='BorderThickness' Value='2'/></Trigger><Trigger Property='IsEnabled' Value='False'><Setter TargetName='body' Property='Opacity' Value='.4'/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
+<Style TargetType='{x:Type TextBox}'><Setter Property='Foreground' Value='#E4EFF0'/><Setter Property='Background' Value='#0B1013'/><Setter Property='BorderBrush' Value='#26363F'/><Setter Property='BorderThickness' Value='1'/><Setter Property='CaretBrush' Value='#4FE3C1'/><Setter Property='SelectionBrush' Value='#4FE3C1'/><Setter Property='Padding' Value='12,9'/><Setter Property='FontSize' Value='15'/><Setter Property='Template'><Setter.Value><ControlTemplate TargetType='{x:Type TextBox}'><Border x:Name='frame' CornerRadius='3' Background='{TemplateBinding Background}' BorderBrush='{TemplateBinding BorderBrush}' BorderThickness='{TemplateBinding BorderThickness}'><ScrollViewer x:Name='PART_ContentHost' Padding='{TemplateBinding Padding}' Focusable='False' HorizontalScrollBarVisibility='Hidden' VerticalScrollBarVisibility='Hidden'/></Border><ControlTemplate.Triggers><Trigger Property='IsKeyboardFocused' Value='True'><Setter TargetName='frame' Property='BorderBrush' Value='#4FE3C1'/></Trigger><Trigger Property='IsMouseOver' Value='True'><Setter TargetName='frame' Property='BorderBrush' Value='#3A4E58'/></Trigger><Trigger Property='IsEnabled' Value='False'><Setter Property='Opacity' Value='.4'/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
+<Style TargetType='{x:Type PasswordBox}'><Setter Property='Foreground' Value='#E4EFF0'/><Setter Property='Background' Value='#0B1013'/><Setter Property='BorderBrush' Value='#26363F'/><Setter Property='BorderThickness' Value='1'/><Setter Property='CaretBrush' Value='#4FE3C1'/><Setter Property='Padding' Value='12,9'/><Setter Property='FontSize' Value='15'/><Setter Property='Template'><Setter.Value><ControlTemplate TargetType='{x:Type PasswordBox}'><Border x:Name='frame' CornerRadius='3' Background='{TemplateBinding Background}' BorderBrush='{TemplateBinding BorderBrush}' BorderThickness='{TemplateBinding BorderThickness}'><ScrollViewer x:Name='PART_ContentHost' Padding='{TemplateBinding Padding}' Focusable='False' HorizontalScrollBarVisibility='Hidden' VerticalScrollBarVisibility='Hidden'/></Border><ControlTemplate.Triggers><Trigger Property='IsKeyboardFocused' Value='True'><Setter TargetName='frame' Property='BorderBrush' Value='#4FE3C1'/></Trigger><Trigger Property='IsEnabled' Value='False'><Setter Property='Opacity' Value='.4'/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
+<Style TargetType='{x:Type CheckBox}'><Setter Property='Foreground' Value='#E4EFF0'/><Setter Property='FontSize' Value='14'/><Setter Property='VerticalContentAlignment' Value='Center'/><Setter Property='Cursor' Value='Hand'/><Setter Property='Template'><Setter.Value><ControlTemplate TargetType='{x:Type CheckBox}'><Grid MinHeight='40'><Grid.ColumnDefinitions><ColumnDefinition Width='*'/><ColumnDefinition Width='32'/></Grid.ColumnDefinitions><ContentPresenter VerticalAlignment='Center'/><Border x:Name='pill' Grid.Column='1' Height='16' CornerRadius='2' Background='#26363F' VerticalAlignment='Center'><Rectangle x:Name='knob' Width='10' Height='10' RadiusX='1' RadiusY='1' Margin='3' Fill='#8FA4AB' HorizontalAlignment='Left'/></Border></Grid><ControlTemplate.Triggers><Trigger Property='IsChecked' Value='True'><Setter TargetName='pill' Property='Background' Value='#4FE3C1'/><Setter TargetName='knob' Property='Fill' Value='#0B1013'/><Setter TargetName='knob' Property='HorizontalAlignment' Value='Right'/></Trigger><Trigger Property='IsChecked' Value='{x:Null}'><Setter TargetName='knob' Property='HorizontalAlignment' Value='Center'/><Setter TargetName='pill' Property='Background' Value='#1F5A4E'/></Trigger><Trigger Property='IsKeyboardFocused' Value='True'><Setter TargetName='pill' Property='BorderBrush' Value='#E4EFF0'/><Setter TargetName='pill' Property='BorderThickness' Value='2'/></Trigger><Trigger Property='IsEnabled' Value='False'><Setter Property='Opacity' Value='.4'/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
+<Style TargetType='{x:Type ListBox}'><Setter Property='Background' Value='#0F171C'/><Setter Property='Foreground' Value='#E4EFF0'/><Setter Property='BorderThickness' Value='0'/><Setter Property='ScrollViewer.HorizontalScrollBarVisibility' Value='Disabled'/><Setter Property='ScrollViewer.VerticalScrollBarVisibility' Value='Auto'/><Setter Property='HorizontalContentAlignment' Value='Stretch'/></Style>
+<Style TargetType='{x:Type ListBoxItem}'><Setter Property='Padding' Value='12,10'/><Setter Property='Margin' Value='0,2'/><Setter Property='Template'><Setter.Value><ControlTemplate TargetType='{x:Type ListBoxItem}'><Border x:Name='row' CornerRadius='3' Background='Transparent' Padding='{TemplateBinding Padding}'><ContentPresenter/></Border><ControlTemplate.Triggers><Trigger Property='IsSelected' Value='True'><Setter TargetName='row' Property='Background' Value='#172229'/></Trigger><Trigger Property='IsKeyboardFocused' Value='True'><Setter TargetName='row' Property='BorderBrush' Value='#8FA4AB'/><Setter TargetName='row' Property='BorderThickness' Value='1'/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
+<Style TargetType='{x:Type ComboBox}'><Setter Property='FontSize' Value='14'/><Setter Property='MinHeight' Value='36'/><Setter Property='Foreground' Value='#E4EFF0'/><Setter Property='Background' Value='#172229'/><Setter Property='Template'><Setter.Value><ControlTemplate TargetType='{x:Type ComboBox}'><Grid><Border x:Name='outline' Background='#172229' BorderBrush='#26363F' BorderThickness='1' CornerRadius='3'/><ToggleButton Focusable='False' IsChecked='{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}'><ToggleButton.Template><ControlTemplate TargetType='{x:Type ToggleButton}'><Border Background='Transparent' Padding='12,8'><TextBlock Text='⌄' Foreground='#8FA4AB' HorizontalAlignment='Right'/></Border></ControlTemplate></ToggleButton.Template></ToggleButton><ContentPresenter Content='{TemplateBinding SelectionBoxItem}' ContentTemplate='{TemplateBinding SelectionBoxItemTemplate}' Margin='12,6,32,6' VerticalAlignment='Center' IsHitTestVisible='False'/><Popup x:Name='PART_Popup' Placement='Bottom' IsOpen='{TemplateBinding IsDropDownOpen}' AllowsTransparency='True' Focusable='False' PopupAnimation='Fade'><Border Background='#172229' BorderBrush='#3A4E58' BorderThickness='1' MinWidth='{Binding ActualWidth,RelativeSource={RelativeSource TemplatedParent}}' MaxHeight='260'><ScrollViewer><ItemsPresenter/></ScrollViewer></Border></Popup></Grid><ControlTemplate.Triggers><Trigger Property='IsKeyboardFocusWithin' Value='True'><Setter TargetName='outline' Property='BorderBrush' Value='#E4EFF0'/><Setter TargetName='outline' Property='BorderThickness' Value='2'/></Trigger><Trigger Property='IsEnabled' Value='False'><Setter Property='Opacity' Value='.4'/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
+<Style TargetType='{x:Type Slider}'><Setter Property='MinHeight' Value='28'/><Setter Property='Template'><Setter.Value><ControlTemplate TargetType='{x:Type Slider}'><Grid><Border x:Name='focus' BorderBrush='Transparent' BorderThickness='2' CornerRadius='2' IsHitTestVisible='False'/><Track x:Name='PART_Track' Minimum='{TemplateBinding Minimum}' Maximum='{TemplateBinding Maximum}' Value='{TemplateBinding Value}' IsDirectionReversed='{TemplateBinding IsDirectionReversed}'><Track.DecreaseRepeatButton><RepeatButton Command='Slider.DecreaseLarge'><RepeatButton.Template><ControlTemplate><Border Height='4' CornerRadius='2' Background='#4FE3C1'/></ControlTemplate></RepeatButton.Template></RepeatButton></Track.DecreaseRepeatButton><Track.IncreaseRepeatButton><RepeatButton Command='Slider.IncreaseLarge'><RepeatButton.Template><ControlTemplate><Border Height='4' CornerRadius='2' Background='#26363F'/></ControlTemplate></RepeatButton.Template></RepeatButton></Track.IncreaseRepeatButton><Track.Thumb><Thumb Width='8' Height='16'><Thumb.Template><ControlTemplate><Rectangle Fill='#4FE3C1' Stroke='#0B1013' StrokeThickness='1' RadiusX='1' RadiusY='1'/></ControlTemplate></Thumb.Template></Thumb></Track.Thumb></Track></Grid><ControlTemplate.Triggers><Trigger Property='IsKeyboardFocusWithin' Value='True'><Setter TargetName='focus' Property='BorderBrush' Value='#E4EFF0'/></Trigger><Trigger Property='IsEnabled' Value='False'><Setter Property='Opacity' Value='.4'/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
+<Style TargetType='{x:Type ScrollBar}'><Setter Property='Width' Value='10'/><Setter Property='Background' Value='#0F171C'/><Setter Property='Template'><Setter.Value><ControlTemplate TargetType='{x:Type ScrollBar}'><Grid Background='#0F171C'><Track x:Name='PART_Track' Orientation='{TemplateBinding Orientation}' IsDirectionReversed='True' Minimum='{TemplateBinding Minimum}' Maximum='{TemplateBinding Maximum}' Value='{TemplateBinding Value}' ViewportSize='{TemplateBinding ViewportSize}'><Track.DecreaseRepeatButton><RepeatButton Command='{x:Static ScrollBar.PageUpCommand}'><RepeatButton.Template><ControlTemplate><Border Background='Transparent'/></ControlTemplate></RepeatButton.Template></RepeatButton></Track.DecreaseRepeatButton><Track.IncreaseRepeatButton><RepeatButton Command='{x:Static ScrollBar.PageDownCommand}'><RepeatButton.Template><ControlTemplate><Border Background='Transparent'/></ControlTemplate></RepeatButton.Template></RepeatButton></Track.IncreaseRepeatButton><Track.Thumb><Thumb MinHeight='24'><Thumb.Template><ControlTemplate><Border Background='#3A4E58' CornerRadius='2' Margin='2'/></ControlTemplate></Thumb.Template></Thumb></Track.Thumb></Track></Grid><ControlTemplate.Triggers><Trigger Property='IsEnabled' Value='False'><Setter Property='Opacity' Value='.4'/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
+<Style TargetType='{x:Type Thumb}'><Setter Property='Template'><Setter.Value><ControlTemplate TargetType='{x:Type Thumb}'><Border Background='Transparent'><Border Width='3' Height='18' CornerRadius='1' Background='#3A4E58' HorizontalAlignment='Center' VerticalAlignment='Center'/></Border></ControlTemplate></Setter.Value></Setter></Style>
+<Style TargetType='{x:Type Expander}'><Setter Property='Template'><Setter.Value><ControlTemplate TargetType='{x:Type Expander}'><Border Background='{TemplateBinding Background}' CornerRadius='4' Padding='{TemplateBinding Padding}'><StackPanel><ToggleButton x:Name='toggle' Foreground='{TemplateBinding Foreground}' IsChecked='{Binding IsExpanded,RelativeSource={RelativeSource TemplatedParent},Mode=TwoWay}' HorizontalContentAlignment='Stretch'><ToggleButton.Template><ControlTemplate TargetType='{x:Type ToggleButton}'><Border x:Name='focus' Background='Transparent' BorderBrush='Transparent' BorderThickness='1' CornerRadius='3' Padding='2,7'><Grid><Grid.ColumnDefinitions><ColumnDefinition Width='20'/><ColumnDefinition/></Grid.ColumnDefinitions><TextBlock x:Name='arrow' Text='›' Foreground='#8FA4AB' VerticalAlignment='Center'/><ContentPresenter Grid.Column='1'/></Grid></Border><ControlTemplate.Triggers><Trigger Property='IsChecked' Value='True'><Setter TargetName='arrow' Property='Text' Value='⌄'/></Trigger><Trigger Property='IsKeyboardFocused' Value='True'><Setter TargetName='focus' Property='BorderBrush' Value='#8FA4AB'/></Trigger></ControlTemplate.Triggers></ControlTemplate></ToggleButton.Template><ContentPresenter ContentSource='Header'/></ToggleButton><ContentPresenter x:Name='items' ContentSource='Content' Visibility='Collapsed'/></StackPanel></Border><ControlTemplate.Triggers><Trigger Property='IsExpanded' Value='True'><Setter TargetName='items' Property='Visibility' Value='Visible'/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
 </ResourceDictionary>"); }
     }
 
@@ -537,7 +546,7 @@ namespace ScumMiniMap {
             throw new InvalidOperationException("Member palette unavailable");
         }
         internal static Brush MemberInk(string ownerId) {
-            if(string.IsNullOrEmpty(ownerId))return WpfFieldTheme.Amber;
+            if(string.IsNullOrEmpty(ownerId))return WpfFieldTheme.MapAmber;
             // Relay rosters prefix the transport identity with the group ID.
             // Hash only the member so every viewer uses the same color.
             string member=ownerId.Substring(ownerId.LastIndexOf(':')+1);
@@ -743,7 +752,7 @@ namespace ScumMiniMap {
         }
         void DrawMapPass(DrawingContext dc,MapPass pass,bool overviewOnly=false) {
             base.OnRender(dc);double w=ActualWidth,h=ActualHeight;if(w<1||h<1)return;
-            if(Compact&&State!=null&&State.Shape=="Circle")dc.PushClip(new EllipseGeometry(new Point(w/2,h/2),Math.Min(w,h)/2,Math.Min(w,h)/2));else dc.PushClip(new RectangleGeometry(new Rect(0,0,w,h),Compact?10:0,Compact?10:0));
+            if(Compact&&State!=null&&State.Shape=="Circle")dc.PushClip(new EllipseGeometry(new Point(w/2,h/2),Math.Min(w,h)/2,Math.Min(w,h)/2));else dc.PushClip(new RectangleGeometry(new Rect(0,0,w,h),Compact?6:0,Compact?6:0));
             if(pass==MapPass.All||pass==MapPass.Terrain)dc.DrawRectangle(Compact?Brushes.Transparent:tacticalHitSurface,null,new Rect(0,0,w,h));
             if(State==null) { dc.Pop();return; }
             var routeInk=new SolidColorBrush(Color.FromArgb((byte)(State.RouteColor>>24),(byte)(State.RouteColor>>16),(byte)(State.RouteColor>>8),(byte)State.RouteColor));
@@ -854,7 +863,7 @@ namespace ScumMiniMap {
             }
             foreach(var marker in State.SharedMarkers) {
                 var at=point(new DrawingPoint((float)marker.X,(float)marker.Y));if(!VisibleMarker(at,w,h,rotation))continue;var ink=marker.Death?WpfFieldTheme.ColorBrush("#FF654F"):OwnerInk(marker.OwnerId);
-                if(SquadState.IsPing(marker))ink=marker.Id.Substring(8,2)=="00"?WpfFieldTheme.ColorBrush("#FF654F"):marker.Id.Substring(8,2)=="01"?WpfFieldTheme.Amber:WpfFieldTheme.Cyan;
+                if(SquadState.IsPing(marker))ink=marker.Id.Substring(8,2)=="00"?WpfFieldTheme.ColorBrush("#FF654F"):marker.Id.Substring(8,2)=="01"?WpfFieldTheme.MapAmber:WpfFieldTheme.Cyan;
                 if(marker.Death) { dc.DrawRoundedRectangle(WpfFieldTheme.Ground,new Pen(ink,2),new Rect(at.X-7,at.Y-10,14,19),3,3);dc.DrawLine(new Pen(ink,2),at+new Vector(0,-5),at+new Vector(0,4));dc.DrawLine(new Pen(ink,2),at+new Vector(-4,-1),at+new Vector(4,-1)); }
                 else { var diamond=new StreamGeometry();using(var shape=diamond.Open()) { shape.BeginFigure(at+new Vector(0,-8),true,true);shape.LineTo(at+new Vector(7,0),true,false);shape.LineTo(at+new Vector(0,8),true,false);shape.LineTo(at+new Vector(-7,0),true,false); }dc.DrawGeometry(WpfFieldTheme.Ground,new Pen(ink,2),diamond); }
                 // Route names belong on the tactical map; the HUD keeps their symbols and guidance.
@@ -1046,7 +1055,7 @@ namespace ScumMiniMap {
             if(cluster.Outline==null||cluster.IconColor!=color) {
             string penKey=color+"|"+cluster.Mixed;Pen outline;
             if(!poiOutlinePens.TryGetValue(penKey,out outline)) {
-                var ink=cluster.Mixed?WpfFieldTheme.Amber:new SolidColorBrush(Color.FromRgb((byte)(color>>16),(byte)(color>>8),(byte)color));
+                var ink=cluster.Mixed?WpfFieldTheme.MapAmber:new SolidColorBrush(Color.FromRgb((byte)(color>>16),(byte)(color>>8),(byte)color));
                 outline=new Pen(ink,2);outline.Freeze();if(poiOutlinePens.Count>=256)poiOutlinePens.Clear();poiOutlinePens.Add(penKey,outline);
             }
             cluster.Outline=outline;cluster.IconColor=color;
@@ -1183,10 +1192,10 @@ namespace ScumMiniMap {
                 string[] labels={"PlayerLiveLocation","PlayerGps","PlayerSaved","PlayerDeaths","RouteList"};
                 for(int index=0;index<labels.Length;index++) {
                     int bit=1<<index;bool selected=(PlayerVisibility(ownerId)&bit)!=0;
-                    var pill=new ToggleButton { Content=Localization.Get(labels[index]),IsChecked=selected,Tag="player:"+ownerId+":"+bit,Margin=new Thickness(0,0,5,5),Padding=new Thickness(9,4,9,4),FontSize=12,Foreground=WpfFieldTheme.Ink,Background=selected?WpfFieldTheme.Amber:WpfFieldTheme.Panel,BorderBrush=WpfFieldTheme.Line,BorderThickness=new Thickness(1),Cursor=Cursors.Hand };
-                    var template=new ControlTemplate(typeof(ToggleButton));var border=new FrameworkElementFactory(typeof(Border));border.SetValue(Border.CornerRadiusProperty,new CornerRadius(12));border.SetValue(Border.BackgroundProperty,new TemplateBindingExtension(Control.BackgroundProperty));border.SetValue(Border.BorderBrushProperty,new TemplateBindingExtension(Control.BorderBrushProperty));border.SetValue(Border.BorderThicknessProperty,new TemplateBindingExtension(Control.BorderThicknessProperty));border.SetValue(Border.PaddingProperty,new TemplateBindingExtension(Control.PaddingProperty));var content=new FrameworkElementFactory(typeof(ContentPresenter));border.AppendChild(content);template.VisualTree=border;pill.Template=template;
+                    var pill=new ToggleButton { Content=Localization.Get(labels[index]),IsChecked=selected,Tag="player:"+ownerId+":"+bit,Margin=new Thickness(0,0,5,5),Padding=new Thickness(9,4,9,4),FontSize=12,Foreground=selected?WpfFieldTheme.Accent:WpfFieldTheme.Muted,Background=selected?WpfFieldTheme.AccentDim:WpfFieldTheme.Panel,BorderBrush=WpfFieldTheme.Line,BorderThickness=new Thickness(1),Cursor=Cursors.Hand };
+                    var template=new ControlTemplate(typeof(ToggleButton));var border=new FrameworkElementFactory(typeof(Border));border.SetValue(Border.CornerRadiusProperty,new CornerRadius(2));border.SetValue(Border.BackgroundProperty,new TemplateBindingExtension(Control.BackgroundProperty));border.SetValue(Border.BorderBrushProperty,new TemplateBindingExtension(Control.BorderBrushProperty));border.SetValue(Border.BorderThicknessProperty,new TemplateBindingExtension(Control.BorderThicknessProperty));border.SetValue(Border.PaddingProperty,new TemplateBindingExtension(Control.PaddingProperty));var content=new FrameworkElementFactory(typeof(ContentPresenter));border.AppendChild(content);template.VisualTree=border;pill.Template=template;
                     System.Windows.Automation.AutomationProperties.SetName(pill,player.Name+": "+Localization.Get(labels[index]));
-                    pill.Click+=(s,e)=> { int mask=PlayerVisibility(ownerId);playerVisibility[ownerId]=pill.IsChecked==true?mask|bit:mask&~bit;pill.Background=pill.IsChecked==true?WpfFieldTheme.Amber:WpfFieldTheme.Panel;lastRefresh=-1000;Refresh(); };pills.Children.Add(pill);
+                    pill.Click+=(s,e)=> { int mask=PlayerVisibility(ownerId);playerVisibility[ownerId]=pill.IsChecked==true?mask|bit:mask&~bit;pill.Background=pill.IsChecked==true?WpfFieldTheme.AccentDim:WpfFieldTheme.Panel;pill.Foreground=pill.IsChecked==true?WpfFieldTheme.Accent:WpfFieldTheme.Muted;lastRefresh=-1000;Refresh(); };pills.Children.Add(pill);
                 }
                 body.Children.Add(pills);var card=WpfFieldTheme.Card(body,new Thickness(10));card.Margin=new Thickness(0,8,0,10);container.Children.Add(card);
             }
@@ -1210,7 +1219,15 @@ namespace ScumMiniMap {
         volatile bool settingsToggleOpen;
         WpfMapSurface tacticalMap,hudMap;
         Action<bool,bool> syncMapChrome;
-        StackPanel sidebar;
+        StackPanel sidebar,mapPage,squadPage;
+        string sidebarPage="map";Action syncRail;
+        readonly Dictionary<string,Button> sidebarPageButtons=new Dictionary<string,Button>();
+        void ShowSidebarPage(string page) {
+            sidebarPage=page;
+            if(mapPage!=null)mapPage.Visibility=page=="map"?Visibility.Visible:Visibility.Collapsed;
+            if(squadPage!=null)squadPage.Visibility=page=="squad"?Visibility.Visible:Visibility.Collapsed;
+            if(syncRail!=null)syncRail();
+        }
         Grid hudLayout;
         Border hudStatus;
         Border nativeLocationCard;
@@ -1286,7 +1303,7 @@ namespace ScumMiniMap {
         void SyncCameraControls(WpfMapState state) {
             if(bunkerViewsControl!=null) {bool old=rebuilding;rebuilding=true;try {bunkerViewsControl.SelectedItem=bunkerViewsControl.Items.Cast<ComboBoxItem>().FirstOrDefault(i=>(string)i.Tag==engine.WpfBunkerViewSelection);}finally {rebuilding=old;}}
             syncingOpacity=true;try { tacticalOpacity.Value=state.Opacity;tacticalOpacity.IsEnabled=false;tacticalOpacityValue.Text=state.Opacity.ToString("0",CultureInfo.CurrentCulture)+"%"; }finally { syncingOpacity=false; }
-            if(followButton!=null) { followButton.Background=engine.WpfFollowing?WpfFieldTheme.Amber:WpfFieldTheme.Raised;followButton.Foreground=engine.WpfFollowing?WpfFieldTheme.Ground:WpfFieldTheme.Ink; }
+            if(followButton!=null) { followButton.Background=engine.WpfFollowing?WpfFieldTheme.AccentDim:WpfFieldTheme.Raised;followButton.Foreground=engine.WpfFollowing?WpfFieldTheme.Accent:WpfFieldTheme.Ink;followButton.BorderBrush=engine.WpfFollowing?WpfFieldTheme.Accent:WpfFieldTheme.Line; }
             if(zoomResetButton!=null)zoomResetButton.Content=state.Zoom.ToString("0.0",CultureInfo.CurrentCulture)+"×";
         }
         void SyncPoiControls(ScumMapStore store) {
@@ -1363,7 +1380,7 @@ namespace ScumMiniMap {
             NavigationRouter.Initialize();terrain=new WpfTerrainTiles();geography=terrain.Overview();
             string fonts=Path.Combine(folder,"field-console-fonts");Directory.CreateDirectory(fonts);
             foreach(string font in new[]{"BarlowSemiCondensed-Regular.ttf","BarlowSemiCondensed-SemiBold.ttf"})using(var stream=typeof(MapWindow).Assembly.GetManifestResourceStream(font))if(stream!=null)using(var file=File.Create(Path.Combine(fonts,font)))stream.CopyTo(file);
-            application.Resources[typeof(Window)]=new Style(typeof(Window)) { Setters={new Setter(Control.FontFamilyProperty,new FontFamily("Segoe UI, Microsoft YaHei UI")),new Setter(Control.ForegroundProperty,WpfFieldTheme.Ink),new Setter(Control.BackgroundProperty,WpfFieldTheme.Ground),new Setter(Control.FontSizeProperty,14.0)} };
+            application.Resources[typeof(Window)]=new Style(typeof(Window)) { Setters={new Setter(Control.FontFamilyProperty,WpfFieldTheme.UiFont),new Setter(Control.ForegroundProperty,WpfFieldTheme.Ink),new Setter(Control.BackgroundProperty,WpfFieldTheme.Ground),new Setter(Control.FontSizeProperty,14.0)} };
             tactical=BuildTactical();hud=BuildHud();
             terrain.Changed+=()=> { if(!disposed) { tacticalMap.TerrainRevision++;if(tactical.IsVisible&&tacticalMap.State!=null&&tacticalMap.State.Opacity>0)tacticalMap.RequestRedraw();if(hud.IsVisible)hudMap.InvalidateVisual(); } };
             tactical.IsVisibleChanged+=(s,e)=> { tacticalMouseShieldActive=tactical.IsVisible&&tactical.WindowState!=WindowState.Minimized;if(!tactical.IsVisible)tacticalMap.CloseContextMenu(); };
@@ -1569,9 +1586,9 @@ namespace ScumMiniMap {
             var contextLayer=new Canvas();tacticalMap.ContextHost=contextLayer;Grid.SetColumnSpan(contextLayer,2);Panel.SetZIndex(contextLayer,200);grid.Children.Add(contextLayer);
             window.PreviewMouseDown+=(s,e)=> { if(tacticalMap.DismissContextOutside(e.GetPosition(contextLayer))&&e.ChangedButton==MouseButton.Left)e.Handled=true; };
             var target=new Grid();target.ColumnDefinitions.Add(new ColumnDefinition());target.ColumnDefinitions.Add(new ColumnDefinition { Width=GridLength.Auto });
-            var text=new StackPanel();text.Children.Add(WpfFieldTheme.Text(Localization.Get("FieldTarget"),11,WpfFieldTheme.Muted,true));targetTitle=WpfFieldTheme.Text("",21,null,true);targetDetail=WpfFieldTheme.Text("",14,WpfFieldTheme.Muted);targetDetail.TextWrapping=TextWrapping.Wrap;targetDetail.TextTrimming=TextTrimming.None;text.Children.Add(targetTitle);text.Children.Add(targetDetail);target.Children.Add(text);
+            var text=new StackPanel();var targetEyebrow=WpfFieldTheme.Text(Localization.Get("FieldTarget"),11,WpfFieldTheme.Accent,true);targetEyebrow.FontFamily=WpfFieldTheme.MonoFont;targetEyebrow.Margin=new Thickness(0,0,0,2);text.Children.Add(targetEyebrow);targetTitle=WpfFieldTheme.Text("",21,null,true);targetDetail=WpfFieldTheme.Text("",14,WpfFieldTheme.Muted);targetDetail.TextWrapping=TextWrapping.Wrap;targetDetail.TextTrimming=TextTrimming.None;text.Children.Add(targetTitle);text.Children.Add(targetDetail);target.Children.Add(text);
             ((FrameworkElement)text.Children[0]).Tag="text:FieldTarget";
-            var clear=WpfFieldTheme.Button(Localization.Get("WpfClearRoute"),ClearMapRoute);clear.MaxWidth=112;clear.FontSize=13;Grid.SetColumn(clear,1);target.Children.Add(clear);
+            var clear=WpfFieldTheme.Button(Localization.Get("WpfClearRoute"),ClearMapRoute);clear.MaxWidth=112;clear.FontSize=13;clear.Foreground=WpfFieldTheme.Warn;Grid.SetColumn(clear,1);target.Children.Add(clear);
             clear.Tag="text:WpfClearRoute";
             var topCards=new StackPanel { Width=408,HorizontalAlignment=HorizontalAlignment.Left,VerticalAlignment=VerticalAlignment.Top,Margin=new Thickness(24) };
             var idleLocation=WpfFieldTheme.Text("",14,WpfFieldTheme.Ink,true);
@@ -1580,7 +1597,7 @@ namespace ScumMiniMap {
             nativeLocationCard.Visibility=Visibility.Collapsed;topCards.Children.Add(nativeLocationCard);
             var targetBody=new StackPanel();targetBody.Children.Add(target);var targetActions=new WrapPanel();
             addTargetStop=WpfFieldTheme.Button(S("SquadAddStop"),()=>AddSquadDestination(engine.WpfSnapshot(true).Target));addTargetStop.Tag="text:SquadAddStop";addTargetStop.ToolTip=S("MapGpsSavedHelp");targetActions.Children.Add(addTargetStop);
-            var stopTarget=WpfFieldTheme.Button(S("SquadStopNav"),()=> { StopSquadNavigation();filterIdentity=null;Refresh(); });stopTarget.Tag="text:SquadStopNav";targetActions.Children.Add(stopTarget);
+            var stopTarget=WpfFieldTheme.Button(S("SquadStopNav"),()=> { StopSquadNavigation();filterIdentity=null;Refresh(); });stopTarget.Tag="text:SquadStopNav";stopTarget.Foreground=WpfFieldTheme.Warn;targetActions.Children.Add(stopTarget);
             var manageTarget=WpfFieldTheme.Button(S("RouteList"),ShowRoutes);manageTarget.Tag="text:RouteList";targetActions.Children.Add(manageTarget);targetBody.Children.Add(targetActions);
             targetCard=WpfFieldTheme.Card(targetBody);topCards.Children.Add(targetCard);
             targetCard.PreviewMouseRightButtonDown+=(s,e)=> { if(tacticalMap.BeginContextPointer(e.GetPosition(tacticalMap)))e.Handled=true; };
@@ -1620,18 +1637,23 @@ namespace ScumMiniMap {
             chrome.SizeChanged+=(s,e)=>clampControls();scene.SizeChanged+=(s,e)=>clampControls();
             var toolbarMenu=new ContextMenu();var resetControls=new MenuItem { Header=Localization.Get("WpfResetControls") };toolbarMenu.Opened+=(s,e)=>resetControls.Header=Localization.Get("WpfResetControls");resetControls.Click+=(s,e)=> { controlScale=1;chrome.LayoutTransform=Transform.Identity;chrome.Margin=new Thickness(24);clampControls(); };toolbarMenu.Items.Add(resetControls);chrome.ContextMenu=toolbarMenu;
             sidebar=new StackPanel { Margin=new Thickness(22,18,22,24) };var scroller=new ScrollViewer { Content=sidebar,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled,Background=WpfFieldTheme.Panel,Margin=new Thickness(0,64,0,36) };Grid.SetColumn(scroller,1);grid.Children.Add(scroller);window.Content=grid;
-            var sidebarToggle=new Button {Content="›",Background=WpfFieldTheme.Panel,Foreground=WpfFieldTheme.Ink};sidebarToggle.Width=36;sidebarToggle.Height=36;sidebarToggle.MinHeight=36;sidebarToggle.Padding=new Thickness(0);sidebarToggle.HorizontalAlignment=HorizontalAlignment.Right;sidebarToggle.VerticalAlignment=VerticalAlignment.Top;sidebarToggle.Margin=new Thickness(0,12,0,0);sidebarToggle.ToolTip=Localization.Get("SidebarTitle");System.Windows.Automation.AutomationProperties.SetName(sidebarToggle,Localization.Get("SidebarTitle"));Grid.SetColumnSpan(sidebarToggle,2);grid.Children.Add(sidebarToggle);
-            // At 1x the game supplies the map beneath this transparent overlay. Keep chrome inside the sidebar.
-            var headerActions=new StackPanel { Orientation=Orientation.Horizontal,VerticalAlignment=VerticalAlignment.Center };
-            var settings=WpfFieldTheme.Button("\uE713",ShowSettings);settings.FontFamily=new FontFamily("Segoe MDL2 Assets");settings.FontSize=17;settings.Tag="tooltip:Settings";headerActions.Children.Add(settings);
-            var help=WpfFieldTheme.Button("?",ShowOnboarding);help.Tag="tooltip:OpenStartupGuide";help.Width=40;headerActions.Children.Add(help);
-            var grave=new System.Windows.Shapes.Path { Data=Geometry.Parse("M 3,19 L 3,7 C 3,0 17,0 17,7 L 17,19 Z M 10,6 L 10,15 M 6,10 L 14,10"),Stroke=WpfFieldTheme.Ink,StrokeThickness=1.8,Width=20,Height=22,Stretch=Stretch.Uniform };
-            deathRemovalButton=WpfFieldTheme.Button("",()=> { engine.ClearDeathMarkers();Refresh(); });deathRemovalButton.Content=grave;deathRemovalButton.Tag="tooltip:ClearDeathMarkers";deathRemovalButton.Width=40;deathRemovalButton.Padding=new Thickness(9);headerActions.Children.Add(deathRemovalButton);
-            var closeOverlay=WpfFieldTheme.Button("×",()=>CloseTactical(true));closeOverlay.Width=40;closeOverlay.Tag="tooltip:Close";headerActions.Children.Add(closeOverlay);
-            foreach(Button action in headerActions.Children) {
-                action.Width=34;action.Height=34;action.MinHeight=34;action.Padding=new Thickness(0);action.Margin=new Thickness(2,0,0,0);action.Background=Brushes.Transparent;
-            }
-            var mast=new DockPanel();DockPanel.SetDock(headerActions,Dock.Right);mast.Children.Add(headerActions);var brand=WpfFieldTheme.Brand();mast.Children.Add(brand);
+            // Icon rail: page switches, dialogs and window actions. Labels live in tooltips so all 22 languages fit.
+            Func<string,string,Button> railButton=(glyph,tag)=>new Button { Content=glyph,FontFamily=new FontFamily("Segoe MDL2 Assets"),FontSize=16,Width=40,Height=40,MinHeight=40,Padding=new Thickness(0),Margin=new Thickness(0,2,0,2),Background=Brushes.Transparent,Foreground=WpfFieldTheme.Muted,BorderThickness=new Thickness(0),Tag=tag };
+            var sidebarToggle=railButton("\uE76C",null);System.Windows.Automation.AutomationProperties.SetName(sidebarToggle,Localization.Get("SidebarTitle"));
+            var closeOverlay=railButton("\uE8BB","tooltip:Close");closeOverlay.FontSize=12;closeOverlay.Click+=(s,e)=>CloseTactical(true);
+            var mapPageButton=railButton("\uE81E","tooltip:SidebarTitle");var squadPageButton=railButton("\uE716","tooltip:SquadTools");
+            sidebarPageButtons["map"]=mapPageButton;sidebarPageButtons["squad"]=squadPageButton;
+            var markersRail=railButton("\uE707","tooltip:MarkerList");markersRail.Click+=(s,e)=>Modal(BuildSavedMarkers());
+            var routesRail=railButton("\uE81B","tooltip:RouteList");routesRail.Click+=(s,e)=>ShowRoutes();
+            var help=railButton("\uE897","tooltip:OpenStartupGuide");help.Click+=(s,e)=>ShowOnboarding();
+            var grave=new System.Windows.Shapes.Path { Data=Geometry.Parse("M 3,19 L 3,7 C 3,0 17,0 17,7 L 17,19 Z M 10,6 L 10,15 M 6,10 L 14,10"),Stroke=WpfFieldTheme.Muted,StrokeThickness=1.6,Width=15,Height=17,Stretch=Stretch.Uniform };
+            deathRemovalButton=railButton("","tooltip:ClearDeathMarkers");deathRemovalButton.Content=grave;deathRemovalButton.Click+=(s,e)=> { engine.ClearDeathMarkers();Refresh(); };
+            var settings=railButton("\uE713","tooltip:Settings");settings.Click+=(s,e)=>ShowSettings();
+            var railTop=new StackPanel();foreach(var item in new UIElement[]{closeOverlay,sidebarToggle,new Border { Height=1,Width=28,Margin=new Thickness(0,6,0,6),Background=WpfFieldTheme.Line },mapPageButton,squadPageButton,markersRail,routesRail})railTop.Children.Add(item);
+            var railBottom=new StackPanel();foreach(var item in new UIElement[]{help,deathRemovalButton,settings})railBottom.Children.Add(item);
+            var rail=new DockPanel { LastChildFill=false };DockPanel.SetDock(railTop,Dock.Top);DockPanel.SetDock(railBottom,Dock.Bottom);rail.Children.Add(railTop);rail.Children.Add(railBottom);
+            var railFrame=new Border { Background=WpfFieldTheme.Ground,BorderBrush=WpfFieldTheme.Line,BorderThickness=new Thickness(1,0,0,0),Padding=new Thickness(6,8,6,8),Child=rail };
+            var mast=new DockPanel();var brand=WpfFieldTheme.Brand();mast.Children.Add(brand);
             var headerBar=new Border { Height=64,Padding=new Thickness(18,0,12,0),BorderBrush=WpfFieldTheme.Line,BorderThickness=new Thickness(0,0,0,1),
                 Background=WpfFieldTheme.Ground,VerticalAlignment=VerticalAlignment.Top,Child=mast };Grid.SetColumn(headerBar,1);grid.Children.Add(headerBar);
             tacticalLocation=WpfFieldTheme.Text("",12,WpfFieldTheme.Muted);var footer=new Border { Height=36,Padding=new Thickness(22,0,22,0),BorderThickness=new Thickness(0,1,0,0),BorderBrush=WpfFieldTheme.Line,Background=WpfFieldTheme.Ground,VerticalAlignment=VerticalAlignment.Bottom,Child=tacticalLocation };Grid.SetColumn(footer,1);grid.Children.Add(footer);
@@ -1647,10 +1669,15 @@ namespace ScumMiniMap {
             var toolScroll=new ScrollViewer {VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Auto,
                 VerticalAlignment=VerticalAlignment.Bottom};
             Grid.SetRow(toolScroll,1);nativeLeft.Children.Add(toolScroll);
+            // Shelf = page pane + icon rail. The rail stays visible when the pane is collapsed.
+            const double RailWidth=53;
             var shelf=new Grid { Background=WpfFieldTheme.Panel,ClipToBounds=true };
+            shelf.ColumnDefinitions.Add(new ColumnDefinition());shelf.ColumnDefinitions.Add(new ColumnDefinition { Width=GridLength.Auto });
+            shelf.RowDefinitions.Add(new RowDefinition { Height=GridLength.Auto });shelf.RowDefinitions.Add(new RowDefinition());
             Grid.SetColumn(shelf,1);grid.Children.Add(shelf);
-            foreach(var item in new FrameworkElement[]{scroller,headerBar,footer,sidebarToggle}) {
-                grid.Children.Remove(item);Grid.SetColumn(item,0);Grid.SetColumnSpan(item,1);shelf.Children.Add(item);
+            var pane=new Grid();shelf.Children.Add(pane);shelf.Children.Add(railFrame);
+            foreach(var item in new FrameworkElement[]{scroller,headerBar,footer}) {
+                grid.Children.Remove(item);Grid.SetColumn(item,0);Grid.SetColumnSpan(item,1);pane.Children.Add(item);
             }
             scroller.Content=null;var scrollContent=new Grid();scrollContent.Children.Add(sidebar);
             scroller.Content=scrollContent;
@@ -1663,7 +1690,14 @@ namespace ScumMiniMap {
                 double lowerGutter=Math.Floor(Math.Max(0,(grid.ActualHeight-grid.ActualWidth)/2));
                 bool bottom=native&&gutter<1&&lowerGutter>0;
                 double available=native&&!bottom?Math.Min(340,Math.Floor(gutter)):340;
-                double width=sidebarOpen?available:Math.Min(24,available);
+                double width=sidebarOpen?available:Math.Min(RailWidth,available);
+                double paneWidth=Math.Max(0,bottom?width:width-RailWidth);
+                Grid.SetColumn(railFrame,bottom?0:1);Grid.SetColumnSpan(railFrame,bottom?2:1);Grid.SetRow(railFrame,0);Grid.SetRowSpan(railFrame,bottom?1:2);
+                Grid.SetColumn(pane,0);Grid.SetRow(pane,bottom?1:0);Grid.SetRowSpan(pane,bottom?1:2);Grid.SetColumnSpan(pane,bottom?2:1);
+                var railOrientation=bottom?Orientation.Horizontal:Orientation.Vertical;railTop.Orientation=railBottom.Orientation=railOrientation;
+                DockPanel.SetDock(railTop,bottom?Dock.Left:Dock.Top);DockPanel.SetDock(railBottom,bottom?Dock.Right:Dock.Bottom);
+                railFrame.BorderThickness=bottom?new Thickness(0,0,0,1):new Thickness(1,0,0,0);railFrame.Padding=bottom?new Thickness(6,2,6,2):new Thickness(6,8,6,8);
+                ((FrameworkElement)railTop.Children[2]).Width=bottom?1:28;((FrameworkElement)railTop.Children[2]).Height=bottom?28:1;
                 grid.ColumnDefinitions[1].Width=new GridLength(bottom?0:width);
                 Grid.SetColumn(shelf,bottom?0:1);Grid.SetColumnSpan(shelf,bottom?2:1);
                 shelf.VerticalAlignment=bottom?VerticalAlignment.Bottom:VerticalAlignment.Stretch;
@@ -1673,7 +1707,7 @@ namespace ScumMiniMap {
                 shelf.Visibility=width>0?Visibility.Visible:Visibility.Collapsed;
                 shelf.Background=sidebarOpen?WpfFieldTheme.Panel:Brushes.Transparent;
                 var visible=sidebarOpen?Visibility.Visible:Visibility.Collapsed;
-                scroller.Visibility=headerBar.Visibility=footer.Visibility=visible;
+                pane.Visibility=scroller.Visibility=headerBar.Visibility=footer.Visibility=visible;
                 double leftWidth=bottom?Math.Min(408,Math.Max(0,grid.ActualWidth-width)):Math.Min(424,Math.Floor(gutter));
                 nativeLeft.Visibility=native&&leftWidth>0?Visibility.Visible:Visibility.Collapsed;
                 nativeLeft.Width=leftWidth;
@@ -1705,21 +1739,20 @@ namespace ScumMiniMap {
                 }
                 // Keep labels and controls usable in a narrow gutter. All items can be
                 // reached by either scrollbar; the viewport itself never spills over the map.
-                bool narrow=width<270;
+                bool narrow=paneWidth<230;
                 scroller.HorizontalScrollBarVisibility=narrow?ScrollBarVisibility.Auto:ScrollBarVisibility.Disabled;
                 sidebar.Margin=new Thickness(narrow?6:18,12,narrow?6:18,16);
                 scrollContent.MinWidth=narrow?220:0;
-                brand.Visibility=width>=315?Visibility.Visible:Visibility.Collapsed;
-                headerBar.Padding=new Thickness(26,0,4,0);
+                brand.Visibility=paneWidth>=170?Visibility.Visible:Visibility.Collapsed;
+                headerBar.Padding=new Thickness(narrow?6:18,0,4,0);
                 headerBar.Height=bottom?Math.Min(40,lowerGutter*.32):48;
-                headerScroll.HorizontalScrollBarVisibility=width<174?ScrollBarVisibility.Auto:ScrollBarVisibility.Disabled;
+                headerScroll.HorizontalScrollBarVisibility=paneWidth<120?ScrollBarVisibility.Auto:ScrollBarVisibility.Disabled;
                 footer.Visibility=native&&nativeLeft.Visibility==Visibility.Visible?Visibility.Collapsed:bottom?Visibility.Collapsed:visible;
                 scroller.Margin=new Thickness(0,headerBar.Height,0,footer.Visibility==Visibility.Visible?36:0);
-                sidebarToggle.Content=sidebarOpen?"›":"‹";
+                sidebarToggle.Content=sidebarOpen?"":"";
                 sidebarToggle.Tag=sidebarOpen?"tooltip:WpfCollapseSidebar":"tooltip:WpfExpandSidebar";
-                sidebarToggle.Width=Math.Min(24,width);sidebarToggle.Height=32;sidebarToggle.MinHeight=0;
-                sidebarToggle.HorizontalAlignment=HorizontalAlignment.Left;sidebarToggle.Margin=new Thickness(0,8,0,0);
                 RefreshLocalizedChrome(sidebarToggle);
+                syncRail=()=> { foreach(var pair in sidebarPageButtons) { bool on=sidebarOpen&&pair.Key==sidebarPage;pair.Value.Background=on?WpfFieldTheme.AccentDim:Brushes.Transparent;pair.Value.Foreground=on?WpfFieldTheme.Accent:WpfFieldTheme.Muted; } };syncRail();
                 if(!native)clampControls();
             };
             grid.SizeChanged+=(sender,e)=>arrange();
@@ -1728,6 +1761,8 @@ namespace ScumMiniMap {
                 gameMap=native;arrange();
             };
             sidebarToggle.Click+=(sender,e)=> {sidebarOpen=!sidebarOpen;arrange();};
+            // Clicking the active page folds the pane; any other page opens it on that page.
+            foreach(var pair in sidebarPageButtons) { string page=pair.Key;pair.Value.Click+=(sender,e)=> { if(sidebarOpen&&sidebarPage==page)sidebarOpen=false;else { sidebarOpen=true;ShowSidebarPage(page); }arrange(); }; }
             syncMapChrome(true,true);
             RefreshLocalizedChrome(grid);chromeLanguage=Localization.CurrentCode;
             window.Closing+=(s,e)=> { if(!disposed&&!diagnostic) { e.Cancel=true;window.Hide();engine.WpfTactical(false);SyncHudVisibility(); } };
@@ -1736,46 +1771,70 @@ namespace ScumMiniMap {
         Window BuildHud() {
             var window=new Window { Title="SCUM MiniMap HUD",Width=240,Height=300,WindowStyle=WindowStyle.None,ResizeMode=ResizeMode.NoResize,AllowsTransparency=true,Background=Brushes.Transparent,Topmost=true,ShowInTaskbar=false,ShowActivated=false,Left=48,Top=48 };
             var layout=new Grid();layout.RowDefinitions.Add(new RowDefinition { Height=new GridLength(240) });layout.RowDefinitions.Add(new RowDefinition { Height=new GridLength(60) });
-            hudMap=new WpfMapSurface { Compact=true,BaseMap=geography,Terrain=terrain };layout.Children.Add(hudMap);var text=new StackPanel();var locationRow=new DockPanel { Margin=new Thickness(0,0,0,3) };hudSector=WpfFieldTheme.Text("",13,WpfFieldTheme.Amber,true);var sectorBadge=new Border { Background=WpfFieldTheme.Ground,BorderBrush=WpfFieldTheme.Line,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(3),Padding=new Thickness(5,0,5,0),Margin=new Thickness(0,0,8,0),Child=hudSector };DockPanel.SetDock(sectorBadge,Dock.Left);locationRow.Children.Add(sectorBadge);hudLocation=WpfFieldTheme.Text("",14,null,true);locationRow.Children.Add(hudLocation);hudRoute=new WpfSatnavTicker();text.Children.Add(locationRow);text.Children.Add(hudRoute);
+            hudMap=new WpfMapSurface { Compact=true,BaseMap=geography,Terrain=terrain };layout.Children.Add(hudMap);layout.Children.Add(BuildHudFrame());var text=new StackPanel();var locationRow=new DockPanel { Margin=new Thickness(0,0,0,3) };hudSector=WpfFieldTheme.Text("",13,WpfFieldTheme.Amber,true);var sectorBadge=new Border { Background=WpfFieldTheme.Ground,BorderBrush=WpfFieldTheme.Line,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(3),Padding=new Thickness(5,0,5,0),Margin=new Thickness(0,0,8,0),Child=hudSector };DockPanel.SetDock(sectorBadge,Dock.Left);locationRow.Children.Add(sectorBadge);hudLocation=WpfFieldTheme.Text("",14,null,true);locationRow.Children.Add(hudLocation);hudRoute=new WpfSatnavTicker();text.Children.Add(locationRow);text.Children.Add(hudRoute);
             var status=WpfFieldTheme.Card(text,new Thickness(12,5,12,5));status.Margin=new Thickness(0,6,0,0);Grid.SetRow(status,1);layout.Children.Add(status);hudLayout=layout;hudStatus=status;window.Content=layout;
             window.SourceInitialized+=(s,e)=> { IntPtr handle=new WindowInteropHelper(window).Handle;SetWindowLong(handle,-20,GetWindowLong(handle,-20)|0x08000000|0x20); };
             window.Closing+=(s,e)=> { if(!disposed) { e.Cancel=true;window.Hide(); } };return window;
         }
+        // Thin accent frame around the in-game minimap: a ring with compass ticks for the circle, a hairline for the square.
+        Grid hudFrame;System.Windows.Shapes.Shape[] hudCircleParts;Border hudSquareFrame;
+        FrameworkElement BuildHudFrame() {
+            var ink=WpfFieldTheme.ColorBrush("#994FE3C1");
+            hudFrame=new Grid { IsHitTestVisible=false };
+            var halo=new System.Windows.Shapes.Ellipse { Stroke=WpfFieldTheme.ColorBrush("#A60B1013"),StrokeThickness=3 };
+            var ring=new System.Windows.Shapes.Ellipse { Stroke=ink,StrokeThickness=1.4 };
+            var ticks=new System.Windows.Shapes.Path { Stroke=ink,StrokeThickness=1,HorizontalAlignment=HorizontalAlignment.Center,VerticalAlignment=VerticalAlignment.Center };
+            hudSquareFrame=new Border { BorderBrush=ink,BorderThickness=new Thickness(1.4),CornerRadius=new CornerRadius(6) };
+            hudCircleParts=new System.Windows.Shapes.Shape[]{halo,ring,ticks};
+            hudFrame.SizeChanged+=(s,e)=> {
+                double d=Math.Max(0,Math.Min(hudFrame.ActualWidth,hudFrame.ActualHeight)),r=d/2;
+                halo.Width=halo.Height=ring.Width=ring.Height=d;
+                var geometry=new StreamGeometry();
+                using(var context=geometry.Open()) for(int i=0;i<36;i++) { double a=i*Math.PI/18,len=i%9==0?0:i%3==0?6:3;if(len==0)continue;var outer=new Point(r+(r-2)*Math.Sin(a),r-(r-2)*Math.Cos(a));var inner=new Point(r+(r-2-len)*Math.Sin(a),r-(r-2-len)*Math.Cos(a));context.BeginFigure(outer,false,false);context.LineTo(inner,true,false); }
+                geometry.Freeze();ticks.Data=geometry;ticks.Width=ticks.Height=d;
+            };
+            foreach(var part in hudCircleParts)hudFrame.Children.Add(part);hudFrame.Children.Add(hudSquareFrame);
+            return hudFrame;
+        }
+        void SyncHudFrame(bool circle,int opacity) {
+            if(hudFrame==null)return;
+            foreach(var part in hudCircleParts)part.Visibility=circle?Visibility.Visible:Visibility.Collapsed;
+            hudSquareFrame.Visibility=circle?Visibility.Collapsed:Visibility.Visible;
+            hudFrame.Opacity=Math.Max(.3,Math.Min(1,opacity/100.0));
+        }
         void RebuildSidebar(WpfMapState state) {
             poiCategoryControls.Clear();poiSectionControls.Clear();poiSectionCounts.Clear();presentedPoiFilter=null;
-            playerStatusLabels.Clear();sidebar.Children.Clear();var heading=new Grid();heading.ColumnDefinitions.Add(new ColumnDefinition());heading.ColumnDefinitions.Add(new ColumnDefinition { Width=GridLength.Auto });heading.Children.Add(WpfFieldTheme.Text(Localization.Get("SidebarTitle"),23,null,true));var key=WpfFieldTheme.Card(WpfFieldTheme.Text(PhysicalKeyCapture.KeyName(state.MapKey),12,WpfFieldTheme.Muted,true),new Thickness(8,2,8,2));Grid.SetColumn(key,1);heading.Children.Add(key);sidebar.Children.Add(heading);
-            var search=WpfFieldTheme.Button(Localization.Get("SearchTitle"),ShowSearch,true);
+            playerStatusLabels.Clear();sidebar.Children.Clear();mapPage=new StackPanel();squadPage=new StackPanel();sidebar.Children.Add(mapPage);sidebar.Children.Add(squadPage);var heading=new Grid();heading.ColumnDefinitions.Add(new ColumnDefinition());heading.ColumnDefinitions.Add(new ColumnDefinition { Width=GridLength.Auto });heading.Children.Add(WpfFieldTheme.Text(Localization.Get("SidebarTitle"),23,null,true));var key=WpfFieldTheme.Card(WpfFieldTheme.Text(PhysicalKeyCapture.KeyName(state.MapKey),12,WpfFieldTheme.Muted,true),new Thickness(8,2,8,2));Grid.SetColumn(key,1);heading.Children.Add(key);mapPage.Children.Add(heading);
+            var search=new Button { Content=Localization.Get("SearchTitle"),Background=WpfFieldTheme.AccentDim,Foreground=WpfFieldTheme.Accent,BorderBrush=WpfFieldTheme.Accent,BorderThickness=new Thickness(1),Padding=new Thickness(12,6,12,6) };search.Click+=(s,e)=>ShowSearch();
             search.ToolTip=PhysicalKeyCapture.KeyName(state.Bindings.Key(AppControlAction.Search));
             search.HorizontalContentAlignment=HorizontalAlignment.Left;search.Margin=new Thickness(0,14,0,9);search.MinHeight=44;
-            WpfFieldTheme.IconLabel(search,"\uE721");sidebar.Children.Add(search);
-            var shortcuts=new UniformGrid { Columns=3,Margin=new Thickness(-3,0,-3,14) };sidebar.Children.Add(shortcuts);
-            var markersButton=WpfFieldTheme.Button(S("MarkerList"),()=>Modal(BuildSavedMarkers()));markersButton.Tag="sidebar-markers";
-            var routesButton=WpfFieldTheme.Button(S("RouteList"),ShowRoutes);routesButton.Tag="sidebar-routes";
+            WpfFieldTheme.IconLabel(search,"\uE721");mapPage.Children.Add(search);
+            // Squad page: group tools first, then each shared player with their layer pills.
+            var squadHeading=WpfFieldTheme.Text(S("SquadTools"),23,null,true);squadPage.Children.Add(squadHeading);
+            var squadActions=new UniformGrid { Columns=2,Margin=new Thickness(-3,14,-3,16) };squadPage.Children.Add(squadActions);
             var squadButton=WpfFieldTheme.Button(S("SquadTools"),ShowSquadTools);squadButton.Tag="sidebar-squad";
-            WpfFieldTheme.IconLabel(markersButton,"\uE707",true);WpfFieldTheme.IconLabel(routesButton,"\uE81B",true);WpfFieldTheme.IconLabel(squadButton,"\uE716",true);
-            foreach(var shortcut in new[]{markersButton,routesButton,squadButton}) {
-                shortcut.ToolTip=shortcut.Content;shortcut.Padding=new Thickness(3,6,3,6);shortcut.Margin=new Thickness(3,0,3,0);
-                shortcut.FontSize=13;shortcut.MinHeight=59;shortcuts.Children.Add(shortcut);
-            }
+            var privateButton=WpfFieldTheme.Button(Localization.Get("PrivatePositions"),ShowPrivatePositions);privateButton.Tag="sidebar-private";
+            WpfFieldTheme.IconLabel(squadButton,"\uE716");WpfFieldTheme.IconLabel(privateButton,"\uE72E");
+            foreach(var action in new[]{squadButton,privateButton}) { action.ToolTip=action.Content;action.Margin=new Thickness(3,0,3,0);action.FontSize=13;squadActions.Children.Add(action); }
             bunkerViewsControl=null;
             if(state.Bunker!=null) {
                 var views=engine.WpfBunkerViews();
                 if(views.Length>0) {
-                    sidebar.Children.Add(WpfFieldTheme.Text(S("BunkerView"),12,WpfFieldTheme.Muted));
+                    mapPage.Children.Add(WpfFieldTheme.Text(S("BunkerView"),12,WpfFieldTheme.Muted));
                     bunkerViewsControl=new ComboBox {Tag="bunker-view",Margin=new Thickness(0,8,0,16)};
                     bunkerViewsControl.Items.Add(new ComboBoxItem {Content=S("BunkerFollowFloor"),Tag=null});
                     foreach(var view in views)bunkerViewsControl.Items.Add(new ComboBoxItem {Content=view.DisplayName??view.Id,Tag=view.Id});
                     bunkerViewsControl.SelectedItem=bunkerViewsControl.Items.Cast<ComboBoxItem>().FirstOrDefault(i=>(string)i.Tag==engine.WpfBunkerViewSelection);
                     System.Windows.Automation.AutomationProperties.SetName(bunkerViewsControl,S("BunkerView"));
-                    bunkerViewsControl.SelectionChanged+=(s,e)=> {if(rebuilding)return;var selected=bunkerViewsControl.SelectedItem as ComboBoxItem;if(selected==null)return;engine.WpfSelectBunkerView((string)selected.Tag);RefreshInteraction();};sidebar.Children.Add(bunkerViewsControl);
+                    bunkerViewsControl.SelectionChanged+=(s,e)=> {if(rebuilding)return;var selected=bunkerViewsControl.SelectedItem as ComboBoxItem;if(selected==null)return;engine.WpfSelectBunkerView((string)selected.Tag);RefreshInteraction();};mapPage.Children.Add(bunkerViewsControl);
                 }
             }
             var tools=new StackPanel();var more=new Expander { Header=S("SettingsTools"),Content=tools,Foreground=WpfFieldTheme.Muted,FontSize=12,Margin=new Thickness(0,0,0,20) };
             var placement=WpfFieldTheme.Button(Localization.Get("MapPlacement"),()=>Modal(BuildMapPlacement()));placement.Tag="map-placement";placement.Margin=new Thickness(0,8,0,6);tools.Children.Add(placement);
             var presetsButton=WpfFieldTheme.Button(S("SquadPresets"),ShowMapPresets);presetsButton.Tag="sidebar-presets";presetsButton.Margin=new Thickness(0,0,0,6);tools.Children.Add(presetsButton);
-            AddPlayers(sidebar);
-            var layersHeading=WpfFieldTheme.Text(Localization.Get("SidebarLayers"),15,WpfFieldTheme.Ink,true);layersHeading.Margin=new Thickness(0,0,0,10);sidebar.Children.Add(layersHeading);
-            var layerBody=new StackPanel();sidebar.Children.Add(new Border { Background=WpfFieldTheme.Ground,BorderBrush=WpfFieldTheme.Line,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(8),Padding=new Thickness(12,3,12,3),Child=layerBody });
+            AddPlayers(squadPage);if(squadPage.Children.Count==2)squadPage.Children.Add(WpfFieldTheme.Text(Localization.Get("PlayerWaiting"),12,WpfFieldTheme.Muted));
+            var layersHeading=WpfFieldTheme.Text(Localization.Get("SidebarLayers"),15,WpfFieldTheme.Ink,true);layersHeading.Margin=new Thickness(0,0,0,10);mapPage.Children.Add(layersHeading);
+            var layerBody=new StackPanel();mapPage.Children.Add(new Border { Background=WpfFieldTheme.Ground,BorderBrush=WpfFieldTheme.Line,BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(8),Padding=new Thickness(12,3,12,3),Child=layerBody });
             var customRow=new DockPanel();var customMaster=new CheckBox { IsChecked=state.Zones,Width=42,Tag="custom-zones:master",ToolTip=Localization.Get("ShowSavedZones") };customMaster.Checked+=(s,e)=> { if(!rebuilding) { engine.WpfLayer("zones",true);Refresh(); } };customMaster.Unchecked+=(s,e)=> { if(!rebuilding) { engine.WpfLayer("zones",false);Refresh(); } };DockPanel.SetDock(customMaster,Dock.Right);customRow.Children.Add(customMaster);
             var customExpand=WpfFieldTheme.Button((state.CustomZonesExpanded?"⌄  ":"›  ")+Localization.Get("ShowSavedZones"),()=> { engine.WpfExpandZones();filterIdentity=null;Refresh(); });customExpand.Tag="custom-zones:expand";customExpand.HorizontalContentAlignment=HorizontalAlignment.Left;customExpand.Padding=new Thickness(0,8,0,8);customExpand.Margin=new Thickness(0);customExpand.Background=Brushes.Transparent;customRow.Children.Add(customExpand);layerBody.Children.Add(customRow);
             if(state.CustomZonesExpanded&&state.CustomZones!=null)foreach(var group in state.CustomZones.GroupBy(z=>z.Layer).OrderBy(g=>g.Key,StringComparer.CurrentCultureIgnoreCase)) {
@@ -1786,7 +1845,7 @@ namespace ScumMiniMap {
                 }
             }
             AddLayer(layerBody,"waypoints",Localization.Get("ShowCustomWaypoints"),state.Waypoints);AddLayer(layerBody,"grid",Localization.Get("GridBorders"),state.Grid);AddLayer(layerBody,"history",Localization.Get("HistoryEnabled"),state.History);AddLayer(layerBody,"labels",Localization.Get("ShowZoneLabels"),state.Labels);
-            var header=new DockPanel { Margin=new Thickness(0,22,0,12) };var off=WpfFieldTheme.Button(Localization.Get("DeselectAll"),()=>FilterAll(false));var all=WpfFieldTheme.Button(Localization.Get("SelectAll"),()=>FilterAll(true));off.Padding=all.Padding=new Thickness(10,4,10,4);off.MinHeight=all.MinHeight=30;DockPanel.SetDock(off,Dock.Right);DockPanel.SetDock(all,Dock.Right);header.Children.Add(off);header.Children.Add(all);header.Children.Add(WpfFieldTheme.Text(Localization.Get("SidebarCategories"),15,WpfFieldTheme.Ink,true));sidebar.Children.Add(header);
+            var header=new DockPanel { Margin=new Thickness(0,22,0,12) };var off=WpfFieldTheme.Button(Localization.Get("DeselectAll"),()=>FilterAll(false));var all=WpfFieldTheme.Button(Localization.Get("SelectAll"),()=>FilterAll(true));off.Padding=all.Padding=new Thickness(10,4,10,4);off.MinHeight=all.MinHeight=30;DockPanel.SetDock(off,Dock.Right);DockPanel.SetDock(all,Dock.Right);header.Children.Add(off);header.Children.Add(all);header.Children.Add(WpfFieldTheme.Text(Localization.Get("SidebarCategories"),15,WpfFieldTheme.Ink,true));mapPage.Children.Add(header);
             header.LastChildFill=false;var categoryTitle=header.Children[2];header.Children.Remove(categoryTitle);DockPanel.SetDock(categoryTitle,Dock.Top);header.Children.Insert(0,categoryTitle);((FrameworkElement)categoryTitle).Margin=new Thickness(0,0,0,8);
             if(state.Store!=null)foreach(string section in state.Store.Sections) {
                 var categories=state.Store.CategoriesBySection[section];bool open=expanded.Contains(section);int enabled=categories.Count(c=>state.Store.IsCategoryEnabled(c.Id));
@@ -1805,11 +1864,11 @@ namespace ScumMiniMap {
                 var groupRow=new DockPanel();var groupToggle=new CheckBox { IsThreeState=true,IsChecked=enabled==0?(bool?)false:enabled==categories.Count?(bool?)true:null,Width=42,Margin=new Thickness(8,0,0,0),ToolTip=Localization.GetSectionName(section),Tag="poi-section:"+section };
                 poiSectionControls[section]=groupToggle;poiSectionCounts[section]=count;
                 System.Windows.Automation.AutomationProperties.SetName(groupToggle,Localization.GetSectionName(section));groupToggle.Click+=(s,e)=>FilterSection(captured,!categories.All(c=>state.Store.IsCategoryEnabled(c.Id)));DockPanel.SetDock(groupToggle,Dock.Right);groupRow.Children.Add(groupToggle);groupRow.Children.Add(button);
-                if(open)populate();var groupBody=new StackPanel();groupBody.Children.Add(groupRow);groupBody.Children.Add(rows);groupCard.Child=groupBody;sidebar.Children.Add(groupCard);
+                if(open)populate();var groupBody=new StackPanel();groupBody.Children.Add(groupRow);groupBody.Children.Add(rows);groupCard.Child=groupBody;mapPage.Children.Add(groupCard);
             }
-            more.Margin=new Thickness(0,10,0,0);sidebar.Children.Add(more);
+            more.Margin=new Thickness(0,10,0,0);mapPage.Children.Add(more);ShowSidebarPage(sidebarPage);
         }
-        void AddLayer(Panel container,string key,string label,bool value) { var box=new CheckBox { Content=label,IsChecked=value,Margin=new Thickness(0,3,0,3) };box.Checked+=(s,e)=> { engine.WpfLayer(key,true);Refresh(); };box.Unchecked+=(s,e)=> { engine.WpfLayer(key,false);Refresh(); };container.Children.Add(box); }
+        void AddLayer(Panel container,string key,string label,bool value) { var box=new CheckBox { Content=label,IsChecked=value,Margin=new Thickness(0,3,0,3),Tag="layer:"+key };box.Checked+=(s,e)=> { engine.WpfLayer(key,true);Refresh(); };box.Unchecked+=(s,e)=> { engine.WpfLayer(key,false);Refresh(); };container.Children.Add(box); }
         void Category(int id,bool enabled) { if(rebuilding||engine.WpfPoiStore==null)return;engine.WpfPoiStore.SetCategoryEnabled(id,enabled);engine.WpfScheduleSave();RefreshInteraction(); }
         void FilterAll(bool enabled) { var store=engine.WpfPoiStore;if(store==null)return;store.SetAllEnabled(enabled);engine.WpfScheduleSave();RefreshInteraction(); }
         void FilterSection(string section,bool enabled) { var store=engine.WpfPoiStore;if(store==null||!store.CategoriesBySection.ContainsKey(section))return;foreach(var category in store.CategoriesBySection[section])store.SetCategoryEnabled(category.Id,enabled);engine.WpfScheduleSave();RefreshInteraction(); }
@@ -1866,8 +1925,8 @@ namespace ScumMiniMap {
             hud.Width=compact.HudWidth;hud.Height=compact.HudHeight+(compact.Status?60:0);
             hudLayout.RowDefinitions[0].Height=new GridLength(compact.StatusAbove&&compact.Status?60:compact.HudHeight);
             hudLayout.RowDefinitions[1].Height=new GridLength(compact.StatusAbove&&compact.Status?compact.HudHeight:compact.Status?60:0);
-            Grid.SetRow(hudMap,compact.StatusAbove&&compact.Status?1:0);Grid.SetRow(hudStatus,compact.StatusAbove&&compact.Status?0:1);hudStatus.Visibility=compact.Status?Visibility.Visible:Visibility.Collapsed;
-if(followButton!=null) { followButton.Background=engine.WpfFollowing?WpfFieldTheme.Amber:WpfFieldTheme.Raised;followButton.Foreground=engine.WpfFollowing?WpfFieldTheme.Ground:WpfFieldTheme.Ink; }
+            Grid.SetRow(hudMap,compact.StatusAbove&&compact.Status?1:0);Grid.SetRow(hudFrame,Grid.GetRow(hudMap));SyncHudFrame(compact.Shape=="Circle",compact.Opacity);Grid.SetRow(hudStatus,compact.StatusAbove&&compact.Status?0:1);hudStatus.Visibility=compact.Status?Visibility.Visible:Visibility.Collapsed;
+if(followButton!=null) { followButton.Background=engine.WpfFollowing?WpfFieldTheme.AccentDim:WpfFieldTheme.Raised;followButton.Foreground=engine.WpfFollowing?WpfFieldTheme.Accent:WpfFieldTheme.Ink;followButton.BorderBrush=engine.WpfFollowing?WpfFieldTheme.Accent:WpfFieldTheme.Line; }
             if(zoomResetButton!=null)zoomResetButton.Content=state.Zoom.ToString("0.0",CultureInfo.CurrentCulture)+"×";
             targetCard.Visibility=state.Target==null?Visibility.Collapsed:Visibility.Visible;
             if(hudRoute.Foreground==null||((SolidColorBrush)hudRoute.Foreground).Color!=Color.FromArgb((byte)(state.RouteColor>>24),(byte)(state.RouteColor>>16),(byte)(state.RouteColor>>8),(byte)state.RouteColor))hudRoute.Foreground=new SolidColorBrush(Color.FromArgb((byte)(state.RouteColor>>24),(byte)(state.RouteColor>>16),(byte)(state.RouteColor>>8),(byte)state.RouteColor));
@@ -2436,10 +2495,10 @@ if(followButton!=null) { followButton.Background=engine.WpfFollowing?WpfFieldThe
             return (Style)XamlReader.Parse(@"<Style xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml' TargetType='{x:Type INPUT}'>
 <Setter Property='HorizontalContentAlignment' Value='Stretch'/><Setter Property='Template'><Setter.Value><ControlTemplate TargetType='{x:Type INPUT}'>
 <Border x:Name='outer' Background='Transparent' Padding='{TemplateBinding Padding}'><Grid><Grid.ColumnDefinitions><ColumnDefinition Width='44'/><ColumnDefinition Width='*'/></Grid.ColumnDefinitions>
-<Border x:Name='box' Width='28' Height='28' HorizontalAlignment='Left' VerticalAlignment='Top' Margin='0,2,12,0' CornerRadius='RADIUS' BorderThickness='2' BorderBrush='#8D9BA6' Background='#101417'><TextBlock x:Name='tick' Text='✓' FontFamily='Segoe UI Symbol' FontSize='22' FontWeight='Bold' Foreground='#101417' TextAlignment='Center' Visibility='Collapsed'/></Border>
+<Border x:Name='box' Width='28' Height='28' HorizontalAlignment='Left' VerticalAlignment='Top' Margin='0,2,12,0' CornerRadius='RADIUS' BorderThickness='2' BorderBrush='#5B707A' Background='#0B1013'><TextBlock x:Name='tick' Text='✓' FontFamily='Segoe UI Symbol' FontSize='22' FontWeight='Bold' Foreground='#0B1013' TextAlignment='Center' Visibility='Collapsed'/></Border>
 <ContentPresenter Grid.Column='1' Content='{TemplateBinding Content}' ContentTemplate='{TemplateBinding ContentTemplate}' RecognizesAccessKey='True'/></Grid></Border>
-<ControlTemplate.Triggers><Trigger Property='IsChecked' Value='True'><Setter TargetName='tick' Property='Visibility' Value='Visible'/><Setter TargetName='box' Property='Background' Value='#FFB642'/><Setter TargetName='box' Property='BorderBrush' Value='#FFB642'/></Trigger>
-<Trigger Property='IsKeyboardFocused' Value='True'><Setter TargetName='box' Property='BorderBrush' Value='#38DDD2'/></Trigger><Trigger Property='IsEnabled' Value='False'><Setter TargetName='outer' Property='Opacity' Value='0.55'/></Trigger></ControlTemplate.Triggers>
+<ControlTemplate.Triggers><Trigger Property='IsChecked' Value='True'><Setter TargetName='tick' Property='Visibility' Value='Visible'/><Setter TargetName='box' Property='Background' Value='#4FE3C1'/><Setter TargetName='box' Property='BorderBrush' Value='#4FE3C1'/></Trigger>
+<Trigger Property='IsKeyboardFocused' Value='True'><Setter TargetName='box' Property='BorderBrush' Value='#4FE3C1'/></Trigger><Trigger Property='IsEnabled' Value='False'><Setter TargetName='outer' Property='Opacity' Value='0.55'/></Trigger></ControlTemplate.Triggers>
 </ControlTemplate></Setter.Value></Setter></Style>".Replace("INPUT",type).Replace("RADIUS",choice?"14":"4"));
         }
         FrameworkElement BuildGuideChecklist(GuideChecklistState state,Action<bool> readyChanged,bool showPreference=true) {
