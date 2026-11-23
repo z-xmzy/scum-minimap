@@ -1,0 +1,37 @@
+﻿SCUM 小地图 — 许可与出处 / License and attribution
+====================================================
+
+【上游出处】
+本软件基于 Mike-Rafone-SCUM/MiniMap（SCUM MiniMap，为 Skynett Gaming 社区制作）改编：
+https://github.com/Mike-Rafone-SCUM/MiniMap
+原作的设计、代码和资源版权归原作者所有。上游仓库未声明开源许可，原作一切权利由其作者保留。
+自 v2.4.0 起的改动（本地全岛导航、桥面分层、保存路线、新界面、地堡地图等）见 CHANGELOG.md。
+
+本改编版的发布地址：https://github.com/z-xmzy/scum-minimap
+
+【游戏版权声明】
+SCUM 及游戏内的地图、模型、物品名称、区域名称、音频等内容的版权和商标归 Gamepires d.o.o. 和 Jagex Limited 所有。
+本软件是非商业的第三方社区工具，不是 Gamepires 或 Jagex 的官方产品，与其无隶属、维护或认可关系。
+
+【第三方组件】
+- 地图点位与生物群落数据：Scum-Map.com（Jazi 及社区）、Davo's SCUM Interactive Map 等，详见程序目录 app\ATTRIBUTION.md。
+- 图标：Lucide（ISC 许可），见 app\Lucide-LICENSE.txt。
+- 字体：Barlow Semi Condensed，SIL Open Font License 1.1。
+- 内置 Python 运行环境：Python Software Foundation License。
+
+【使用条件】
+本软件按“原样”免费提供，不附带任何明示或暗示的担保。作者不对使用本软件造成的任何损失负责。
+使用本软件即表示你已了解上述出处与版权声明。
+
+----------------------------------------------------
+
+Upstream: this software is a modified version of Mike-Rafone-SCUM/MiniMap
+(https://github.com/Mike-Rafone-SCUM/MiniMap). The original design, code and assets remain the
+copyright of the original author; the upstream repository declares no open-source license.
+Fork releases: https://github.com/z-xmzy/scum-minimap
+
+SCUM and all in-game content are copyright and trademarks of Gamepires d.o.o. and Jagex Limited.
+This is a non-commercial community tool, not affiliated with or endorsed by Gamepires or Jagex.
+Full third-party attributions are in app\ATTRIBUTION.md.
+
+The software is provided "as is", free of charge, without warranty of any kind.
