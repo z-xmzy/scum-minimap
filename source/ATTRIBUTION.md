@@ -85,7 +85,12 @@ We gratefully acknowledge the creators and community contributors whose publicly
 ### Steam profile icon
 * Steam logo PNG supplied by the project owner, displayed at 22 × 22 pixels for Steam Community profile links. Steam and the Steam logo are trademarks of Valve Corporation.
 
-* **Official Repository:** [Mike-Rafone-SCUM/MiniMap](https://github.com/Mike-Rafone-SCUM/MiniMap)
+### Upstream project
+* **This version is a modified fork of [Mike-Rafone-SCUM/MiniMap](https://github.com/Mike-Rafone-SCUM/MiniMap)** (SCUM MiniMap, made for the Skynett Gaming community). The original design, code and assets remain the copyright of the original author.
+* The upstream repository declares no open-source license; all rights to the original work are reserved by its author. Changes from v2.4.0 onward (local world navigation, bridge layers, saved routes, new interface, bunker maps) are listed in `CHANGELOG.md`.
+* 本版本基于 Mike-Rafone-SCUM/MiniMap 修改，原作版权归原作者所有。
+
+* **Upstream Repository:** [Mike-Rafone-SCUM/MiniMap](https://github.com/Mike-Rafone-SCUM/MiniMap)
 * **Skynett Gaming Community:** [Discord: discord.gg/MYzcGaFDMn](https://discord.gg/MYzcGaFDMn) | Dedicated server hosting, bot development, and player community.
 
 ## Field console typography

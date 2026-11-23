@@ -1,4 +1,6 @@
-# SCUM MiniMap v2.3.25
+﻿# SCUM MiniMap v2.3.25
+
+> **Upstream:** this version is modified from [Mike-Rafone-SCUM/MiniMap](https://github.com/Mike-Rafone-SCUM/MiniMap). 本版本基于 Mike-Rafone-SCUM/MiniMap 修改，原作版权归原作者所有，详见 [ATTRIBUTION.md](ATTRIBUTION.md)。
 
 SCUM MiniMap is an external map overlay and road-navigation utility for SCUM, made for the Skynett community. Version 2 uses WPF for the tactical map, compact minimap, Settings, setup guide and Zone Creator. The existing tracking and routing engine remains behind the new interface.
 
