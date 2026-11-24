@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.1] - 2026-11-24
+
+- Add a customizable screen-centre crosshair: 7 styles, colour, length, thickness, gap, dot size, opacity, offset and outline. It hides with the minimap while the game shows its cursor (inventory, pause, map), when the game is not in front, behind the full map, and optionally while aiming with the right mouse button.
+- Edit it from the new crosshair page in the full map's icon rail (live, saved automatically) or Settings → Appearance. Bind "Show/hide crosshair" under Shortcuts.
+- The crosshair is a click-through overlay window drawn by MiniMap only; it never reads or writes game memory and is not injected into the game.
+- Remove the Discord community links from the interface.
+
 ## [2.5.0] - 2026-11-23
 
 - Ship a Windows installer (Inno Setup, per-user, Simplified Chinese and English). Upgrades keep settings, saved routes and logs in app\data; uninstall asks before removing them.
