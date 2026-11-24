@@ -189,6 +189,7 @@ namespace ScumMiniMap {
                 Environment.SetEnvironmentVariable("TEMP",localTemp);Environment.SetEnvironmentVariable("TMP",localTemp);
             }
             if(args!=null && args.Length==2 && args[0]=="-ApplyVerifiedUpdate") { UpdateInstaller.Run(args[1]); return; }
+            if(args!=null && args.Length==3 && args[0]=="-ScreenFilterWatchdog") { ScreenFilterController.RunWatchdog(args[1],args[2]); return; }
             if(args!=null && args.Length==2 && args[0]=="-ApplyFileUpdate") { FileUpdate.RunApply(args[1]); return; }
 
 

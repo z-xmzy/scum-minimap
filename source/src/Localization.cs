@@ -198,6 +198,7 @@ namespace ScumMiniMap {
             AddB2TravelText();
             AddSavedRouteText();
             AddCrosshairText();
+            AddScreenFilterText();
         }
         // Crosshair overlay. Every catalogue gets the keys (parity); languages other
         // than English/Chinese reuse the English copy until translated.
@@ -229,6 +230,41 @@ namespace ScumMiniMap {
                 new[]{"CrosshairHideAiming","Hide while aiming (right mouse button held)","瞄准时隐藏（按住鼠标右键）","瞄準時隱藏（按住滑鼠右鍵）"},
                 new[]{"CrosshairReset","Reset to default","恢复默认","恢復預設"},
                 new[]{"CrosshairPreviewHint","Preview at actual size","实际大小预览","實際大小預覽"},
+            };
+            foreach(var entry in entries)for(int i=0;i<catalogues.Length;i++)catalogues[i].Add(entry[0],i==6?entry[2]:i==14?entry[3]:entry[1]);
+        }
+        static void AddScreenFilterText() {
+            var catalogues=new[]{StringsEn,StringsEsAr,StringsFr,StringsDe,StringsNl,StringsRu,StringsZh,StringsTr,StringsAr,StringsPt,StringsKo,StringsPl,StringsPtPt,StringsTh,StringsZhTw,StringsJa,StringsCs,StringsIt,StringsUk,StringsFi,StringsLt,StringsSw};
+            string[][] entries={
+                new[]{"ScreenFilter","Screen filter","画面滤镜","畫面濾鏡"},
+                new[]{"ScreenFilterEnable","Turn on screen filter","开启画面滤镜","開啟畫面濾鏡"},
+                new[]{"ScreenFilterToggle","Screen filter on/off","画面滤镜 开/关","畫面濾鏡 開/關"},
+                new[]{"ScreenFilterCycle","Next screen filter preset","切换滤镜预设","切換濾鏡預設"},
+                new[]{"ScreenFilterHelp","Brightens dark nights and bunkers by changing your monitor's colour curve, like a graphics-driver setting. It never reads or changes the game. Run SCUM borderless or windowed; exclusive full screen can ignore it. Your original display settings come back when you turn it off or quit, and even if the app crashes.","通过调整显示器的颜色曲线（类似显卡驱动里的设置）让夜晚和地堡更亮。不读取也不修改游戏。SCUM 请使用无边框或窗口模式，独占全屏可能不生效。关闭滤镜或退出软件时恢复原来的显示设置，软件崩溃也会自动恢复。","透過調整顯示器的色彩曲線（類似顯示卡驅動程式中的設定）讓夜晚和地堡更亮。不讀取也不修改遊戲。SCUM 請使用無邊框或視窗模式，獨佔全螢幕可能無效。關閉濾鏡或結束軟體時會恢復原本的顯示設定，軟體當機也會自動恢復。"},
+                new[]{"ScreenFilterPreset","Preset","预设","預設"},
+                new[]{"ScreenFilterPresetNight","Night","夜晚","夜晚"},
+                new[]{"ScreenFilterPresetBunker","Bunker","地堡","地堡"},
+                new[]{"ScreenFilterPresetFog","Fog","雾天","霧天"},
+                new[]{"ScreenFilterPresetCustom","Custom","自定义","自訂"},
+                new[]{"ScreenFilterGamma","Gamma (shadow lift)","伽马（提亮暗部）","伽瑪（提亮暗部）"},
+                new[]{"ScreenFilterBrightness","Brightness","亮度","亮度"},
+                new[]{"ScreenFilterContrast","Contrast","对比度","對比度"},
+                new[]{"ScreenFilterSaturation","Saturation","饱和度","飽和度"},
+                new[]{"ScreenFilterSaturationNote","Saturation uses the Windows colour filter and may cost a little frame rate. Leave it at 100% if you do not need it.","饱和度使用 Windows 颜色滤镜，可能略微影响帧数；不需要时保持 100%。","飽和度使用 Windows 色彩濾鏡，可能略微影響影格率；不需要時保持 100%。"},
+                new[]{"ScreenFilterCurve","Curve: input brightness (left to right) to output (bottom to top). Dashed line = unchanged.","曲线：横轴为原始亮度，纵轴为调整后亮度；虚线表示不变。","曲線：橫軸為原始亮度，縱軸為調整後亮度；虛線表示不變。"},
+                new[]{"ScreenFilterOnlyGame","Only while SCUM is in front (switches off on the desktop)","仅在 SCUM 处于前台时生效（切到桌面自动关闭）","僅在 SCUM 位於前景時生效（切到桌面自動關閉）"},
+                new[]{"ScreenFilterReset","Reset this preset","恢复此预设默认值","恢復此預設的預設值"},
+                new[]{"ScreenFilterHotkeys","Hotkeys: on/off {0}, next preset {1}. Change them in Settings > Shortcuts.","快捷键：开/关 {0}，切换预设 {1}。可在 设置 > 快捷键 中修改。","快速鍵：開/關 {0}，切換預設 {1}。可在 設定 > 快速鍵 中修改。"},
+                new[]{"ScreenFilterUnbound","not set","未设置","未設定"},
+                new[]{"ScreenFilterStateOff","Off","已关闭","已關閉"},
+                new[]{"ScreenFilterStateActive","Active","已生效","已生效"},
+                new[]{"ScreenFilterStateWaiting","On, waiting for SCUM to be in front","已开启，等待 SCUM 切到前台","已開啟，等待 SCUM 切到前景"},
+                new[]{"ScreenFilterStateLimited","Windows limits the adjustment: only {0}% of the effect is applied.","Windows 限制了调整幅度：当前只生效 {0}%。","Windows 限制了調整幅度：目前只生效 {0}%。"},
+                new[]{"ScreenFilterStateFailed","This display does not accept colour-curve changes (some remote desktops and drivers block them).","此显示器不接受颜色曲线调整（部分远程桌面或显卡驱动会禁止）。","此顯示器不接受色彩曲線調整（部分遠端桌面或顯示卡驅動程式會禁止）。"},
+                new[]{"ScreenFilterUnlock","Remove the Windows limit","解除 Windows 限制","解除 Windows 限制"},
+                new[]{"ScreenFilterUnlockConfirm","Windows only allows small colour-curve changes by default. This sets GdiIcmGammaRange=256 under HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ICM, the same setting other gamma tools use. You may need to restart the computer for it to take effect. Continue?","Windows 默认只允许小幅度调整颜色曲线。此操作会在注册表 HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ICM 写入 GdiIcmGammaRange=256（其他伽马调节工具也使用这个设置），可能需要重启电脑才生效。继续吗？","Windows 預設只允許小幅度調整色彩曲線。此操作會在登錄檔 HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ICM 寫入 GdiIcmGammaRange=256（其他伽瑪調整工具也使用此設定），可能需要重新開機才生效。繼續嗎？"},
+                new[]{"ScreenFilterUnlockDone","Done. If the effect is still limited, restart the computer.","已完成。如果效果仍受限制，请重启电脑。","已完成。若效果仍受限制，請重新開機。"},
+                new[]{"ScreenFilterUnlockFailed","Could not change the setting. Details are in the log.","无法修改该设置，详情见日志。","無法修改此設定，詳情見日誌。"},
             };
             foreach(var entry in entries)for(int i=0;i<catalogues.Length;i++)catalogues[i].Add(entry[0],i==6?entry[2]:i==14?entry[3]:entry[1]);
         }

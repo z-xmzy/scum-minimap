@@ -663,10 +663,41 @@ static class InputVoiceTests {
         var place=CrosshairOverlay.Placement(new Rectangle(100,50,1920,1080),new CrosshairSettings { OffsetX=5,OffsetY=-7 });
         Check(place.Left+place.Width/2==100+960+5 && place.Top+place.Height/2==50+540-7,"Crosshair centres on the game client area plus the offset");
     }
+    static void TestScreenFilter() {
+        var defaults=new ScreenFilterSettings();
+        Check(!defaults.Enabled && defaults.OnlyWhileGame && defaults.Preset==ScreenFilterPreset.Night,"Screen filter starts off, game-only, on the night preset");
+        Check(defaults.For(ScreenFilterPreset.Bunker).Gamma>defaults.For(ScreenFilterPreset.Night).Gamma,"Bunker preset lifts shadows more than night");
+        var custom=defaults.Clone();custom.Enabled=true;custom.OnlyWhileGame=false;custom.Preset=ScreenFilterPreset.Custom;custom.For(ScreenFilterPreset.Custom).Gamma=250;custom.For(ScreenFilterPreset.Fog).Saturation=40;
+        Check(ScreenFilterSettings.Parse(custom.Serialize()).Serialize()==custom.Serialize(),"Screen filter settings survive a save and load");
+        var damaged=ScreenFilterSettings.Parse("Enabled=maybe\nPreset=Sunny\nNight=999,-5,1,7\nBunker=1,2\nFog=a,b,c,d");
+        Check(!damaged.Enabled && damaged.Preset==ScreenFilterPreset.Night && damaged.For(ScreenFilterPreset.Night).Brightness==50 && damaged.For(ScreenFilterPreset.Night).Contrast==50
+            && damaged.For(ScreenFilterPreset.Night).Gamma==50 && damaged.For(ScreenFilterPreset.Bunker).SameAs(ScreenFilterSettings.Default(ScreenFilterPreset.Bunker)),"Damaged screen filter settings fall back to safe values");
+        var cycle=defaults.Clone();var seen=new List<ScreenFilterPreset>();for(int i=0;i<4;i++) { cycle.Preset=cycle.NextPreset();seen.Add(cycle.Preset); }
+        Check(seen.SequenceEqual(new[]{ScreenFilterPreset.Bunker,ScreenFilterPreset.Fog,ScreenFilterPreset.Custom,ScreenFilterPreset.Night}),"The preset hotkey cycles through every preset");
+        var neutral=new ScreenFilterValues();var identity=ScreenFilterMath.Identity();
+        Check(ScreenFilterMath.MaxDifference(ScreenFilterMath.Compose(neutral,identity,1),identity)<=1,"Neutral values leave the display unchanged");
+        var night=ScreenFilterSettings.Default(ScreenFilterPreset.Bunker);var ramp=ScreenFilterMath.Compose(night,identity,1);
+        bool rising=true;for(int c=0;c<3;c++)for(int i=1;i<256;i++)rising&=ramp[c*256+i]>=ramp[c*256+i-1];
+        Check(rising && ramp[40]>identity[40]*1.5,"The bunker curve lifts dark tones and never inverts");
+        Check(ScreenFilterMath.MaxDifference(ScreenFilterMath.Compose(night,identity,0),identity)==0,"Zero strength returns the original ramp");
+        var calibrated=ScreenFilterMath.Identity();for(int i=0;i<256;i++)calibrated[512+i]=(ushort)(i*200);
+        Check(ScreenFilterMath.Compose(neutral,calibrated,1)[512+255]==calibrated[512+255],"The filter sits on top of an existing calibration ramp");
+        var grey=ScreenFilterMath.SaturationMatrix(0);var same=ScreenFilterMath.SaturationMatrix(100);
+        Check(Math.Abs(grey[0]+grey[5]+grey[10]-1)<0.001f && Math.Abs(grey[0]-grey[1])<0.001f && same[0]==1 && same[1]==0 && same[6]==1 && same[24]==1,"Saturation matrix keeps luminance and is identity at 100%");
+        Check(ScreenFilterController.ShouldApply(true,true,true,false) && ScreenFilterController.ShouldApply(true,true,false,true) && !ScreenFilterController.ShouldApply(true,true,false,false)
+            && ScreenFilterController.ShouldApply(true,false,false,false) && !ScreenFilterController.ShouldApply(false,false,true,true),"Screen filter follows SCUM (or the map over it) unless told otherwise");
+        string folder=Path.Combine(Path.GetTempPath(),"scum-filter-test-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(folder);
+        try {
+            string file=Path.Combine(folder,ScreenFilterRestore.FileName);
+            ScreenFilterRestore.Write(file,new Dictionary<string,ushort[]>{{@"\\.\DISPLAY9",calibrated}});
+            var back=ScreenFilterRestore.Read(file);
+            Check(back.Count==1 && ScreenFilterMath.MaxDifference(back[@"\\.\DISPLAY9"],calibrated)==0,"Original display ramps are stored exactly for crash recovery");
+        } finally { try { Directory.Delete(folder,true); }catch(IOException) { } }
+    }
     static void TestAppControlModel() {
         Check(AppControlBindings.AllActions.SequenceEqual(new[]{AppControlAction.Settings,AppControlAction.AddWaypoint,AppControlAction.Search,
             AppControlAction.ToggleOverlay,AppControlAction.ZoomIn,AppControlAction.ZoomOut,AppControlAction.DeathMarker,
-            AppControlAction.ResetZoom,AppControlAction.ClearWaypoint,AppControlAction.ZoneEditor,AppControlAction.StartupGuide,AppControlAction.AdminCommands,AppControlAction.AdminPlayers,AppControlAction.PingDanger,AppControlAction.PingLoot,AppControlAction.PingPickup,AppControlAction.ToggleCrosshair}),
+            AppControlAction.ResetZoom,AppControlAction.ClearWaypoint,AppControlAction.ZoneEditor,AppControlAction.StartupGuide,AppControlAction.AdminCommands,AppControlAction.AdminPlayers,AppControlAction.PingDanger,AppControlAction.PingLoot,AppControlAction.PingPickup,AppControlAction.ToggleCrosshair,AppControlAction.ToggleScreenFilter,AppControlAction.CycleScreenFilter}),
             "Every map and tool button has a configurable app action");
         var defaults=new AppControlBindings();
         Check(new[]{AppControlAction.PingDanger,AppControlAction.PingLoot,AppControlAction.PingPickup}.All(a=>defaults.Key(a)==0&&defaults.ScanCode(a)==0),"Squad pings require explicit key assignment and preserve existing game controls");
@@ -793,7 +824,7 @@ static class InputVoiceTests {
         string profile=Path.Combine(testRoot,"controls");Directory.CreateDirectory(profile);
         string settings=Path.Combine(profile,"settings.ini");File.WriteAllText(settings,"Welcomed=True");
         using(var bitmap=new Bitmap(32,32)) bitmap.Save(Path.Combine(profile,"map.png"));
-        var configured=new AppControlBindings();int[] scans={0x3B,0x3C,0x3D,0x3E,0x3F,0x40,0x41,0x42,0x43,0x44,0x57,0x58,0x64,0x65,0x66,0x67,0x68};
+        var configured=new AppControlBindings();int[] scans={0x3B,0x3C,0x3D,0x3E,0x3F,0x40,0x41,0x42,0x43,0x44,0x57,0x58,0x64,0x65,0x66,0x67,0x68,0x69,0x6A,0x6B};
         for(int i=0;i<AppControlBindings.AllActions.Length;i++) configured.Set(AppControlBindings.AllActions[i],0x70+i,scans[i]);
         using(var window=new MapWindow(profile)) {
             foreach(var action in AppControlBindings.AllActions) {
@@ -1283,6 +1314,7 @@ static class InputVoiceTests {
             Check(physicalMapKeys.ConsumesBinding(0x4D,0x31),"A different physical key is not mistaken for the shared map binding");
         }
         TestCrosshair();
+        TestScreenFilter();
         TestAppControlModel();
         TestAppControlWizard();
         var navigator=new VoiceNavigator();

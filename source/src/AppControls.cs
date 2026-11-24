@@ -3,7 +3,7 @@
 namespace ScumMiniMap {
     public enum AppControlAction {
         Settings, AddWaypoint, Search, ToggleOverlay, ZoomIn, ZoomOut, DeathMarker,
-        ResetZoom, ClearWaypoint, ZoneEditor, StartupGuide, AdminCommands, AdminPlayers, PingDanger, PingLoot, PingPickup, ToggleCrosshair
+        ResetZoom, ClearWaypoint, ZoneEditor, StartupGuide, AdminCommands, AdminPlayers, PingDanger, PingLoot, PingPickup, ToggleCrosshair, ToggleScreenFilter, CycleScreenFilter
     }
 
     // One binding catalogue is shared by settings, setup guides and input dispatch.
@@ -14,7 +14,7 @@ namespace ScumMiniMap {
             AppControlAction.DeathMarker, AppControlAction.ResetZoom, AppControlAction.ClearWaypoint,
             AppControlAction.ZoneEditor, AppControlAction.StartupGuide, AppControlAction.AdminCommands,
             AppControlAction.AdminPlayers, AppControlAction.PingDanger, AppControlAction.PingLoot, AppControlAction.PingPickup,
-            AppControlAction.ToggleCrosshair
+            AppControlAction.ToggleCrosshair, AppControlAction.ToggleScreenFilter, AppControlAction.CycleScreenFilter
         };
         readonly int[] keys = new int[AllActions.Length];
         readonly int[] scans = new int[AllActions.Length];
@@ -57,6 +57,8 @@ namespace ScumMiniMap {
                 case AppControlAction.PingLoot: return "PingLoot";
                 case AppControlAction.PingPickup: return "PingPickup";
                 case AppControlAction.ToggleCrosshair: return "CrosshairToggle";
+                case AppControlAction.ToggleScreenFilter: return "ScreenFilterToggle";
+                case AppControlAction.CycleScreenFilter: return "ScreenFilterCycle";
                 case AppControlAction.Settings: return "Settings";
                 case AppControlAction.AddWaypoint: return "ShortcutWaypoint";
                 case AppControlAction.Search: return "ShortcutSearch";

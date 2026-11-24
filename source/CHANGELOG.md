@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.6.1] - 2026-11-24
+
+- Add a screen filter for dark nights and bunkers: gamma (shadow lift), brightness, contrast and saturation, with Night, Bunker, Fog and Custom presets that can each be tuned and reset, and a curve preview. Edit it from the new page in the full map's icon rail. Bind "Screen filter on/off" and "Next screen filter preset" under Shortcuts.
+- The filter changes the monitor's colour curve (gamma ramp) on the display showing SCUM, and uses the Windows colour filter for saturation. It never reads or writes game memory and is not injected into the game. Run SCUM borderless or windowed. By default it only applies while SCUM or MiniMap is in front.
+- The original display curve is saved before any change and restored when the filter is turned off or MiniMap exits; a watchdog restores it if MiniMap crashes or is killed, and the next start checks again. When Windows limits the adjustment, the page shows how much is applied and offers to raise the limit.
+
 ## [2.6.0] - 2026-11-24
 
 - Incremental updates: each release also publishes files.txt (SHA256, size and byte range of every installed file) and files.pack. When a newer version is found, MiniMap compares its installation with the list and downloads only the changed files with range requests, shows the size in the prompt, and can be cancelled. A private updater copy swaps the verified files in after MiniMap exits, rolls back on any failure, and restarts MiniMap. The full installer is still used for first installs, for 2.5.x, and when most files changed or the pack is unavailable.
