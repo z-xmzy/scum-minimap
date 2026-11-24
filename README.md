@@ -4,8 +4,7 @@ SCUM 游戏的外置地图覆盖层和道路导航工具：全屏战术地图、
 
 ## 上游项目与出处
 
-**本项目基于 [Mike-Rafone-SCUM/MiniMap](https://github.com/Mike-Rafone-SCUM/MiniMap) 修改而来。** 原项目（SCUM MiniMap，为 Skynett 社区制作）的设计、代码与资源版权归原作者所有。
-
+**本项目基于 [Mike-Rafone-SCUM/MiniMap](https://github.com/Mike-Rafone-SCUM/MiniMap) 修改而来。** 
 ## 本版本在上游基础上的主要改动
 
 从 v2.4.0 起（详见 [source/CHANGELOG.md](source/CHANGELOG.md)）：
