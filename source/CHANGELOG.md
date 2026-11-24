@@ -1,7 +1,8 @@
 # Changelog
 
-## [2.5.2] - 2026-11-24
+## [2.6.0] - 2026-11-24
 
+- Incremental updates: each release also publishes files.txt (SHA256, size and byte range of every installed file) and files.pack. When a newer version is found, MiniMap compares its installation with the list and downloads only the changed files with range requests, shows the size in the prompt, and can be cancelled. A private updater copy swaps the verified files in after MiniMap exits, rolls back on any failure, and restarts MiniMap. The full installer is still used for first installs, for 2.5.x, and when most files changed or the pack is unavailable.
 - Fix automatic updates hanging after "Download verified": MiniMap now exits fully before the installer runs, instead of only removing its tray icon while the process kept running.
 - The installer ends a MiniMap left running from its own folder after waiting 20 seconds, so updates started from 2.5.0 or 2.5.1 also complete.
 

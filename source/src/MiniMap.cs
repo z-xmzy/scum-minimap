@@ -1717,7 +1717,7 @@ namespace ScumMiniMap {
 
 
 
-        public const string VersionString = "2.5.2";
+        public const string VersionString = "2.6.0";
 
 
 
@@ -1786,6 +1786,32 @@ namespace ScumMiniMap {
 
 
 
+        }
+
+
+
+        // Downloads only the changed files with a cancellable progress window, then starts the private
+        // updater, which swaps them in once MiniMap has exited and starts the new version.
+        async Task<bool> DownloadAndApplyFiles(UpdateService service,FileUpdatePlan plan) {
+            string staging=Path.Combine(plan.Root,FileUpdate.StagingFolder,Guid.NewGuid().ToString("N"));
+            note=Localization.Get("UpdateDownloading");
+            using(var dialog=new UpdateProgressDialog(Localization.Get("UpdateAvailableDialogTitle"),Localization.Get("UpdateDownloading")+"  v"+plan.Manifest.VersionText)) {
+                Task work=null;
+                dialog.Shown+=(s,e)=> {
+                    work=Task.Run(()=>FileUpdate.Download(plan,staging,(offset,length,output,received,cancel)=>service.FetchRange(plan.Manifest.VersionText,offset,length,output,received,cancel),dialog.Report,dialog.Token));
+                    work.ContinueWith(t=> { try { dialog.BeginInvoke(new Action(()=>dialog.Close())); } catch(InvalidOperationException) {} });
+                };
+                RunUiModal(()=>dialog.ShowDialog(UiDialogOwner));
+                bool ok=false;
+                try {
+                    if(work==null)return false;
+                    try { await work;ok=true; }
+                    catch(Exception) { if(dialog.Token.IsCancellationRequested) { note="";return false; } throw; }
+                } finally { if(!ok)try { Directory.Delete(staging,true); } catch {} }
+            }
+            if(closing || IsDisposed)return false;
+            FileUpdate.StartApply(plan,staging,Path.Combine(Program.UserDataDirectory,"update-result.txt"));
+            return true;
         }
 
 
@@ -1998,10 +2024,21 @@ namespace ScumMiniMap {
                         return;
                     }
                     notifiedUpdateVersion=release.VersionText;
-
-
-
-                    if(RunUiModal(() => MessageBox.Show(UiDialogOwner, Localization.T("UpdateAvailableDialogMsg", VersionString, release.VersionText, release.Filename),
+                    // Prefer the incremental update; fall back to the full installer when this release has no
+                    // file pack, the layout is not an installation, or most of the files would change anyway.
+                    FileUpdatePlan filePlan=null;
+                    if(release.IsInstaller) {
+                        try {
+                            filePlan=await Task.Run(()=> {
+                                var files=service.CheckFiles(release.VersionText);
+                                return FileUpdate.Plan(files,FileUpdate.InstallRoot(Application.ExecutablePath),System.Threading.CancellationToken.None);
+                            });
+                            if(filePlan.Needed.Count==0 || filePlan.DownloadBytes>release.InstallerSize*6/10)filePlan=null;
+                        } catch(Exception ex) { Program.LogException("FileUpdatePlan",ex);filePlan=null; }
+                        if(closing || IsDisposed) return;
+                    }
+                    string downloadSummary=filePlan!=null?"v"+release.VersionText+" ("+filePlan.Summary+")":release.Filename;
+                    if(RunUiModal(() => MessageBox.Show(UiDialogOwner, Localization.T("UpdateAvailableDialogMsg", VersionString, release.VersionText, downloadSummary),
 
 
 
@@ -2009,6 +2046,13 @@ namespace ScumMiniMap {
 
 
 
+                    if(filePlan!=null) {
+                        if(!await DownloadAndApplyFiles(service,filePlan)) return;
+                        if(closing || IsDisposed) return;
+                        note=Localization.Get("UpdateReadyRestarting");
+                        ExitApp();
+                        return;
+                    }
                     if(release.IsInstaller) {
                         if(!await DownloadAndRunInstaller(service,release)) return;
                         if(closing || IsDisposed) return;

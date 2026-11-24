@@ -407,6 +407,75 @@ static class UpdateTests {
         Check(Directory.GetFiles(root,"*.partial").Length==0,"Partial installer retained");
         Check(UpdateService.Repository=="z-xmzy/scum-minimap","Updates come from this fork, not upstream");
     }
+    static byte[] Deflate(byte[] data) {
+        using(var output=new MemoryStream()) {
+            using(var deflate=new System.IO.Compression.DeflateStream(output,System.IO.Compression.CompressionMode.Compress,true))deflate.Write(data,0,data.Length);
+            return output.ToArray();
+        }
+    }
+    static string Sha(byte[] data) { using(var sha=SHA256.Create())return BitConverter.ToString(sha.ComputeHash(data)).Replace("-","").ToLowerInvariant(); }
+    static void CheckFileUpdates(string root) {
+        var files=new System.Collections.Generic.SortedDictionary<string,byte[]>(StringComparer.Ordinal) {
+            { "app/SkynettMiniMap.exe",Encoding.UTF8.GetBytes("MZ new executable") },
+            { "app/assets/map.bin",Encoding.UTF8.GetBytes(new string('m',5000)) },
+            { "app/fine/world/models.bin",Encoding.UTF8.GetBytes("models unchanged") },
+            { "dist/RoadMarker.exe",Encoding.UTF8.GetBytes("MZ marker") },
+            { "使用说明.md",Encoding.UTF8.GetBytes("# 说明") }
+        };
+        var pack=new MemoryStream();var text=new StringBuilder("schema=1\nversion=2.6.0\n");var lines=new StringBuilder();
+        foreach(var pair in files) {
+            byte[] packed=Deflate(pair.Value);
+            lines.Append("file="+Sha(pair.Value)+"|"+pair.Value.Length+"|"+pack.Length+"|"+packed.Length+"|"+pair.Key+"\n");
+            pack.Write(packed,0,packed.Length);
+        }
+        text.Append("pack-size="+pack.Length+"\n").Append(lines);
+        byte[] packBytes=pack.ToArray();
+        var manifest=FileManifest.Parse(text.ToString());
+        Check(manifest.VersionText=="2.6.0" && manifest.Files.Count==5,"File manifest parsed");
+        foreach(string bad in new [] { "../evil.exe","app/data/settings.ini","app/DATA/x","C:/x.exe","/abs","unins000.exe","app\\x.exe","app//x","app/./x","app/x. " })
+            Reject(()=>FileManifest.Parse("schema=1\nversion=2.6.0\npack-size=10\nfile="+new string('a',64)+"|1|0|1|"+bad+"\n"),"Unsafe manifest path accepted: "+bad);
+        Reject(()=>FileManifest.Parse("schema=1\nversion=2.6.0\npack-size=10\nfile="+new string('a',64)+"|1|5|9|app/x\n"),"Range past pack accepted");
+        Reject(()=>FileManifest.Parse(text.ToString()+"file="+new string('a',64)+"|1|0|1|APP/SkynettMiniMap.exe\n"),"Duplicate path accepted");
+        // A fake installation: one file current, one outdated, one missing; dist present.
+        string install=Path.Combine(root,"file-update-install");
+        Directory.CreateDirectory(Path.Combine(install,"app","fine","world"));Directory.CreateDirectory(Path.Combine(install,"app","assets"));Directory.CreateDirectory(Path.Combine(install,"dist"));
+        File.WriteAllBytes(Path.Combine(install,"app","fine","world","models.bin"),files["app/fine/world/models.bin"]);
+        File.WriteAllBytes(Path.Combine(install,"app","SkynettMiniMap.exe"),Encoding.UTF8.GetBytes("MZ old executable"));
+        File.WriteAllBytes(Path.Combine(install,"app","assets","map.bin"),files["app/assets/map.bin"]);
+        File.WriteAllBytes(Path.Combine(install,"dist","RoadMarker.exe"),files["dist/RoadMarker.exe"]);
+        Check(FileUpdate.InstallRoot(Path.Combine(install,"app","SkynettMiniMap.exe"))==install,"Install root from app folder");
+        Reject(()=>FileUpdate.InstallRoot(Path.Combine(install,"SkynettMiniMap.exe")),"Non-installed layout accepted");
+        var plan=FileUpdate.Plan(manifest,install,System.Threading.CancellationToken.None);
+        Check(plan.Needed.Count==2 && plan.Needed.Exists(e=>e.Path.EndsWith("SkynettMiniMap.exe")) && plan.Needed.Exists(e=>e.Path=="使用说明.md"),"Plan selects only changed and missing files");
+        Directory.Delete(Path.Combine(install,"dist"),true);
+        Check(!FileUpdate.Plan(manifest,install,System.Threading.CancellationToken.None).Needed.Exists(e=>e.Path.StartsWith("dist")),"Uninstalled RoadMarker component is not added");
+        var ranges=FileUpdate.Ranges(manifest.Files,0,1L<<30);
+        Check(ranges.Count==1 && ranges[0].Count==5,"Adjacent files share one range request");
+        Check(FileUpdate.Ranges(plan.Needed,0,1).Count==2,"Range size cap splits requests");
+        int requests=0;
+        Action<long,long,Stream,Action<long>,System.Threading.CancellationToken> serve=(offset,length,output,received,cancel)=> {
+            requests++;output.Write(packBytes,(int)offset,(int)length);received(length);
+        };
+        string staging=Path.Combine(install,".update-staging","t1");long progress=0;
+        FileUpdate.Download(plan,staging,serve,(d,t)=>progress=d,System.Threading.CancellationToken.None);
+        Check(File.ReadAllText(Path.Combine(staging,"files","app","SkynettMiniMap.exe"))=="MZ new executable","Changed file staged and verified");
+        Check(File.Exists(Path.Combine(staging,"files","使用说明.md")) && !File.Exists(Path.Combine(staging,"files","app","assets","map.bin")),"Only needed files staged");
+        Check(progress>0 && requests>=1,"Range download progress reported");
+        byte[] tampered=(byte[])packBytes.Clone();
+        var exeEntry=manifest.Files.Find(e=>e.Path.EndsWith("SkynettMiniMap.exe"));
+        tampered[exeEntry.Offset+1]^=0x55;
+        Reject(()=>FileUpdate.Download(plan,Path.Combine(install,".update-staging","t2"),(offset,length,output,received,cancel)=>output.Write(tampered,(int)offset,(int)length),null,System.Threading.CancellationToken.None),"Tampered pack accepted");
+        Reject(()=>FileUpdate.Download(plan,Path.Combine(install,".update-staging","t3"),(offset,length,output,received,cancel)=>output.Write(packBytes,(int)offset,(int)length-1),null,System.Threading.CancellationToken.None),"Short range accepted");
+        var request=new FileUpdate.Request { ProcessId=42,StartTicks=7,Root=install,Staging=staging,Version="2.6.0",ResultPath=Path.Combine(root,"r.txt") };
+        request.Files.Add("app/SkynettMiniMap.exe");request.Files.Add("使用说明.md");
+        var decoded=FileUpdate.Request.Decode(request.Encode());
+        Check(decoded.ProcessId==42 && decoded.Root==install && decoded.Files.Count==2 && decoded.Files[1]=="使用说明.md","Updater request round trip");
+        Reject(()=>FileUpdate.Request.Decode(request.Encode()+"../../evil.exe\n"),"Updater request path escape accepted");
+        var service=new UpdateService("owner/releases",root,(url,limit)=>Encoding.UTF8.GetBytes(url.AbsolutePath.EndsWith("files.txt")?text.ToString():""));
+        Check(service.CheckFiles("2.6.0").Files.Count==5,"File manifest fetched from pinned tag");
+        Reject(()=>service.CheckFiles("2.6.1"),"File manifest for another version accepted");
+        Check(service.PackUri("2.6.0").AbsoluteUri=="https://github.com/owner/releases/releases/download/v2.6.0/files.pack","Pack endpoint pinned to tag");
+    }
     static int Main() {
         CheckSchedule();
         string root=Path.Combine(Path.GetTempPath(),"MiniMap-UpdateTests-"+Guid.NewGuid().ToString("N"));
@@ -469,6 +538,7 @@ static class UpdateTests {
             CheckBundleAndInstallationSelection(root);
             CheckCancelledHelperStartup(root);
             CheckInstallerUpdates(root);
+            CheckFileUpdates(root);
             Console.WriteLine("Passed "+count+" GitHub updater regression checks.");
             return 0;
         } catch(Exception ex) { Console.Error.WriteLine(ex); return 1; }

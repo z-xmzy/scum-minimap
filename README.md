@@ -62,8 +62,8 @@ SCUM 游戏的外置地图覆盖层和道路导航工具：全屏战术地图、
 
 1. 在 `source/CHANGELOG.md` 写新版本条目，并改 `source/src/MiniMap.cs` 的 `VersionString`。
 2. 把完整软件资源放到 `package/SCUM-MiniMap/`（含 `app/assets`、`app/fine`、`dist`，不进 git）。
-3. 安装 [Inno Setup 6](https://jrsoftware.org/isinfo.php)，运行 `installer\Build-Installer.ps1`，在 `release/` 得到安装包和 `update.txt`。
-4. 建 GitHub Release（标签 `vX.Y.Z`，设为 Latest），上传这两个文件。已安装的软件启动时读 `releases/latest/download/update.txt`，按其中的 SHA256 和大小校验安装包。
+3. 安装 [Inno Setup 6](https://jrsoftware.org/isinfo.php)，运行 `installer\Build-Installer.ps1`，在 `release/` 得到安装包、`update.txt`、`files.txt` 和 `files.pack`（需要 Python 3）。测试安装请加 `-TestInstall`，它用独立的 AppId，不会覆盖本机正式安装的卸载项和快捷方式。
+4. 建 GitHub Release（标签 `vX.Y.Z`），先存为草稿，四个文件都上传完再发布并设为 Latest。已安装的软件启动时读 `releases/latest/download/update.txt`：2.6.0 起会再读该标签下的 `files.txt`，比对本机文件，只用 HTTP 分段下载从 `files.pack` 取变化的文件；没有文件包或变化太多时才下载安装包。2.5.x 只认识安装包。
 
 ## Git LFS
 

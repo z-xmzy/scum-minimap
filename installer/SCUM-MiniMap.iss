@@ -122,6 +122,11 @@ Filename: "{app}\app\{#AppExe}"; WorkingDir: "{app}\app"; Description: "{cm:Laun
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}\app\temp"
+; Incremental updates may add files the uninstaller did not install; none of these hold user data.
+Type: filesandordirs; Name: "{app}\.update-staging"
+Type: filesandordirs; Name: "{app}\app\fine"
+Type: filesandordirs; Name: "{app}\app\assets"
+Type: filesandordirs; Name: "{app}\dist"
 
 [Code]
 const

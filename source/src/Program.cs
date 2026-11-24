@@ -189,6 +189,7 @@ namespace ScumMiniMap {
                 Environment.SetEnvironmentVariable("TEMP",localTemp);Environment.SetEnvironmentVariable("TMP",localTemp);
             }
             if(args!=null && args.Length==2 && args[0]=="-ApplyVerifiedUpdate") { UpdateInstaller.Run(args[1]); return; }
+            if(args!=null && args.Length==2 && args[0]=="-ApplyFileUpdate") { FileUpdate.RunApply(args[1]); return; }
 
 
 
@@ -470,6 +471,7 @@ namespace ScumMiniMap {
 
 
                 try {
+                    FileUpdate.CleanupStaging(Application.ExecutablePath);
                     if(!IsTestBuild)try { ZoneFileOpen.Register(Application.ExecutablePath); }catch(Exception error) { LogException("ZoneFileAssociation",error); }
 
 

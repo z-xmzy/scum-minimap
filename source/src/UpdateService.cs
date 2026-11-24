@@ -165,6 +165,54 @@ namespace ScumMiniMap {
                 File.Move(staging,destination);
             } finally { if(File.Exists(staging)) File.Delete(staging); }
         }
+        // files.txt is read from the pinned tag, never from "latest", so it always matches the checked version.
+        public FileManifest CheckFiles(string version) {
+            var uri=new Uri("https://github.com/"+repository+"/releases/download/v"+version+"/files.txt");
+            var manifest=FileManifest.Parse(Encoding.UTF8.GetString(fetch(uri,FileManifest.MaxManifestBytes)));
+            if(manifest.VersionText!=version)throw new InvalidDataException("The file manifest describes a different version.");
+            return manifest;
+        }
+        public Uri PackUri(string version) { return new Uri("https://github.com/"+repository+"/releases/download/v"+version+"/files.pack"); }
+        // Test seam for range downloads.
+        internal Action<Uri,long,long,Stream,Action<long>,System.Threading.CancellationToken> RangeTransport=null;
+        public void FetchRange(string version,long offset,long length,Stream output,Action<long> received,System.Threading.CancellationToken cancel) {
+            (RangeTransport!=null?RangeTransport:RangeBounded)(PackUri(version),offset,length,output,received,cancel);
+        }
+        internal static void RangeBounded(Uri uri,long offset,long length,Stream output,Action<long> received,System.Threading.CancellationToken cancel) {
+            ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
+            for(int redirect=0;redirect<=5;redirect++) {
+                cancel.ThrowIfCancellationRequested();
+                if(!AllowedDownloadUri(uri,false))throw new InvalidDataException("Unapproved download endpoint.");
+                var request=(HttpWebRequest)WebRequest.Create(uri);
+                request.UserAgent="SCUM-MiniMap/"+MapWindow.VersionString;
+                request.Timeout=30000;request.ReadWriteTimeout=60000;request.AllowAutoRedirect=false;
+                request.AddRange(offset,offset+length-1);
+                using(cancel.Register(()=>{ try { request.Abort(); } catch {} }))
+                using(var response=(HttpWebResponse)request.GetResponse()) {
+                    int status=(int)response.StatusCode;
+                    if(status==301 || status==302 || status==303 || status==307 || status==308) {
+                        string location=response.Headers["Location"];
+                        if(redirect==5 || string.IsNullOrWhiteSpace(location))throw new InvalidDataException("Invalid download redirect.");
+                        uri=new Uri(uri,location);continue;
+                    }
+                    // A 200 would mean the whole pack; only accept the exact partial content.
+                    if(status!=206 || response.ContentLength!=length)throw new InvalidDataException("The update server does not support partial downloads.");
+                    using(var input=response.GetResponseStream()) {
+                        byte[] buffer=new byte[81920];long total=0;int count;
+                        while((count=input.Read(buffer,0,buffer.Length))>0) {
+                            cancel.ThrowIfCancellationRequested();
+                            total+=count;
+                            if(total>length)throw new InvalidDataException("Update response exceeds the requested range.");
+                            output.Write(buffer,0,count);
+                            if(received!=null)received(total);
+                        }
+                        if(total!=length)throw new InvalidDataException("The update download ended early.");
+                        return;
+                    }
+                }
+            }
+            throw new InvalidDataException("Too many download redirects.");
+        }
         // Streams the installer to a new file with progress; the multi-hundred-MB asset is never held in memory.
         public void DownloadInstaller(UpdateRelease release,string destination,Action<long,long> progress,System.Threading.CancellationToken cancel) {
             if(!release.IsInstaller)throw new InvalidOperationException("The release does not publish an installer.");

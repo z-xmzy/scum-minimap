@@ -44,6 +44,9 @@ $size=(Get-Item -LiteralPath $setup).Length
 # releases/latest/download/update.txt and verifies the installer against this hash and size.
 $manifest="schema=3`nversion=$version`ninstaller-sha256=$hash`ninstaller-size=$size`n"
 [IO.File]::WriteAllText((Join-Path $release 'update.txt'),$manifest,[Text.UTF8Encoding]::new($false))
+# files.txt + files.pack let 2.6.0+ download only the files that changed.
+& python -I (Join-Path $PSScriptRoot 'build_update_pack.py') $package (Join-Path $PSScriptRoot 'LICENSE-installer.txt') $version $release
+if($LASTEXITCODE -ne 0){throw 'Update pack build failed.'}
 Write-Output "Installer: $setup"
 Write-Output ("Size: {0:N0} bytes ({1:N0} MB)" -f $size,($size/1MB))
 Write-Output "SHA256: $hash"
