@@ -543,7 +543,6 @@ namespace ScumMiniMap {
             { "OpenDataFolder", "Abrir Pasta de Dados" },
             { "ResetDefaultMap", "Restaurar Mapa Padrão" },
             { "ResetDefaults", "Padrões" },
-            { "JoinDiscord", "Junte-se à comunidade Discord..." },
             { "CheckUpdatesGitHub", "Verificar atualizações no GitHub..." },
             { "Done", "Concluído" },
             { "Close", "Fechar" },

@@ -519,7 +519,6 @@ HeaderSettings|SKYNETT / USTAWIENIA v{0}
 HeaderWaypoint|SKYNETT / PUNKT TRASY
 Horse|Koń
 HuntingLegendNote|* Zmutowane bestie rzadko pojawiają się w tych biomach
-JoinDiscord|Dołącz do społeczności Discord…
 KeyRebindingWizard|Kreator klawiszy SCUM i MiniMap…
 KeyWizardCancel|Anuluj
 KeyWizardCaptureCancelled|Anulowano przechwytywanie klawisza.

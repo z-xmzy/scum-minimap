@@ -1436,7 +1436,6 @@ namespace ScumMiniMap {
             trayMenu.Items.Add(Localization.Get("FullMap"),null,(s,e)=>TriggerFullMap());
             trayMenu.Items.Add(Localization.Get("SearchPlaceOrGrid"),null,(s,e)=>ShowZoneSearch());
             trayMenu.Items.Add(Localization.Get("TrayCheckUpdates"),null,(s,e)=>CheckForUpdates(true)).Enabled=!Program.IsTestBuild;
-            trayMenu.Items.Add(Localization.Get("JoinDiscord"),null,(s,e)=>{ try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo { FileName="https://discord.gg/MYzcGaFDMn", UseShellExecute=true }); } catch {} });
             trayMenu.Items.Add(Localization.Get("TrayShowHide"),null,(s,e)=>ToggleOverlay());
             trayMenu.Items.Add(Localization.Get("TrayExit"),null,(s,e)=>ExitApp());
 
@@ -1703,14 +1702,6 @@ namespace ScumMiniMap {
             Button updateBtn = new Button { Text = Localization.Get("CheckUpdatesGitHub"), Width = 280, Enabled = !Program.IsTestBuild };
             updateBtn.Click += (s, e) => CheckForUpdates(true);
             bar.Controls.Add(updateBtn);
-
-            Button discordBtn = new Button { Text = Localization.Get("JoinDiscord"), Width = 280 };
-            discordBtn.Click += (s, e) => {
-                try {
-                    Process.Start(new ProcessStartInfo("https://discord.gg/MYzcGaFDMn") { UseShellExecute = true });
-                } catch {}
-            };
-            bar.Controls.Add(discordBtn);
 
             BuildFieldConsoleSettingsTabs();
             OverlayTheme.Style(bar);
