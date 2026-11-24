@@ -3,7 +3,7 @@
 namespace ScumMiniMap {
     public enum AppControlAction {
         Settings, AddWaypoint, Search, ToggleOverlay, ZoomIn, ZoomOut, DeathMarker,
-        ResetZoom, ClearWaypoint, ZoneEditor, StartupGuide, AdminCommands, AdminPlayers, PingDanger, PingLoot, PingPickup
+        ResetZoom, ClearWaypoint, ZoneEditor, StartupGuide, AdminCommands, AdminPlayers, PingDanger, PingLoot, PingPickup, ToggleCrosshair
     }
 
     // One binding catalogue is shared by settings, setup guides and input dispatch.
@@ -13,7 +13,8 @@ namespace ScumMiniMap {
             AppControlAction.ToggleOverlay, AppControlAction.ZoomIn, AppControlAction.ZoomOut,
             AppControlAction.DeathMarker, AppControlAction.ResetZoom, AppControlAction.ClearWaypoint,
             AppControlAction.ZoneEditor, AppControlAction.StartupGuide, AppControlAction.AdminCommands,
-            AppControlAction.AdminPlayers, AppControlAction.PingDanger, AppControlAction.PingLoot, AppControlAction.PingPickup
+            AppControlAction.AdminPlayers, AppControlAction.PingDanger, AppControlAction.PingLoot, AppControlAction.PingPickup,
+            AppControlAction.ToggleCrosshair
         };
         readonly int[] keys = new int[AllActions.Length];
         readonly int[] scans = new int[AllActions.Length];
@@ -55,6 +56,7 @@ namespace ScumMiniMap {
                 case AppControlAction.PingDanger: return "PingDanger";
                 case AppControlAction.PingLoot: return "PingLoot";
                 case AppControlAction.PingPickup: return "PingPickup";
+                case AppControlAction.ToggleCrosshair: return "CrosshairToggle";
                 case AppControlAction.Settings: return "Settings";
                 case AppControlAction.AddWaypoint: return "ShortcutWaypoint";
                 case AppControlAction.Search: return "ShortcutSearch";

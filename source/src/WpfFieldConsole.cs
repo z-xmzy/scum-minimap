@@ -1226,6 +1226,8 @@ namespace ScumMiniMap {
             sidebarPage=page;
             if(mapPage!=null)mapPage.Visibility=page=="map"?Visibility.Visible:Visibility.Collapsed;
             if(squadPage!=null)squadPage.Visibility=page=="squad"?Visibility.Visible:Visibility.Collapsed;
+            if(crosshairPage!=null)crosshairPage.Visibility=page=="crosshair"?Visibility.Visible:Visibility.Collapsed;
+            if(page=="crosshair")SyncCrosshairPage();
             if(syncRail!=null)syncRail();
         }
         Grid hudLayout;
@@ -1381,7 +1383,7 @@ namespace ScumMiniMap {
             string fonts=Path.Combine(folder,"field-console-fonts");Directory.CreateDirectory(fonts);
             foreach(string font in new[]{"BarlowSemiCondensed-Regular.ttf","BarlowSemiCondensed-SemiBold.ttf"})using(var stream=typeof(MapWindow).Assembly.GetManifestResourceStream(font))if(stream!=null)using(var file=File.Create(Path.Combine(fonts,font)))stream.CopyTo(file);
             application.Resources[typeof(Window)]=new Style(typeof(Window)) { Setters={new Setter(Control.FontFamilyProperty,WpfFieldTheme.UiFont),new Setter(Control.ForegroundProperty,WpfFieldTheme.Ink),new Setter(Control.BackgroundProperty,WpfFieldTheme.Ground),new Setter(Control.FontSizeProperty,14.0)} };
-            tactical=BuildTactical();hud=BuildHud();
+            tactical=BuildTactical();hud=BuildHud();StartCrosshair();
             terrain.Changed+=()=> { if(!disposed) { tacticalMap.TerrainRevision++;if(tactical.IsVisible&&tacticalMap.State!=null&&tacticalMap.State.Opacity>0)tacticalMap.RequestRedraw();if(hud.IsVisible)hudMap.InvalidateVisual(); } };
             tactical.IsVisibleChanged+=(s,e)=> { tacticalMouseShieldActive=tactical.IsVisible&&tactical.WindowState!=WindowState.Minimized;if(!tactical.IsVisible)tacticalMap.CloseContextMenu(); };
             tactical.StateChanged+=(s,e)=>tacticalMouseShieldActive=tactical.IsVisible&&tactical.WindowState!=WindowState.Minimized;
@@ -1642,14 +1644,15 @@ namespace ScumMiniMap {
             var sidebarToggle=railButton("\uE76C",null);System.Windows.Automation.AutomationProperties.SetName(sidebarToggle,Localization.Get("SidebarTitle"));
             var closeOverlay=railButton("\uE8BB","tooltip:Close");closeOverlay.FontSize=12;closeOverlay.Click+=(s,e)=>CloseTactical(true);
             var mapPageButton=railButton("\uE81E","tooltip:SidebarTitle");var squadPageButton=railButton("\uE716","tooltip:SquadTools");
-            sidebarPageButtons["map"]=mapPageButton;sidebarPageButtons["squad"]=squadPageButton;
+            var crosshairPageButton=railButton("","tooltip:Crosshair");crosshairPageButton.Content=CrosshairRailIcon();
+            sidebarPageButtons["map"]=mapPageButton;sidebarPageButtons["squad"]=squadPageButton;sidebarPageButtons["crosshair"]=crosshairPageButton;
             var markersRail=railButton("\uE707","tooltip:MarkerList");markersRail.Click+=(s,e)=>Modal(BuildSavedMarkers());
             var routesRail=railButton("\uE81B","tooltip:RouteList");routesRail.Click+=(s,e)=>ShowRoutes();
             var help=railButton("\uE897","tooltip:OpenStartupGuide");help.Click+=(s,e)=>ShowOnboarding();
             var grave=new System.Windows.Shapes.Path { Data=Geometry.Parse("M 3,19 L 3,7 C 3,0 17,0 17,7 L 17,19 Z M 10,6 L 10,15 M 6,10 L 14,10"),Stroke=WpfFieldTheme.Muted,StrokeThickness=1.6,Width=15,Height=17,Stretch=Stretch.Uniform };
             deathRemovalButton=railButton("","tooltip:ClearDeathMarkers");deathRemovalButton.Content=grave;deathRemovalButton.Click+=(s,e)=> { engine.ClearDeathMarkers();Refresh(); };
             var settings=railButton("\uE713","tooltip:Settings");settings.Click+=(s,e)=>ShowSettings();
-            var railTop=new StackPanel();foreach(var item in new UIElement[]{closeOverlay,sidebarToggle,new Border { Height=1,Width=28,Margin=new Thickness(0,6,0,6),Background=WpfFieldTheme.Line },mapPageButton,squadPageButton,markersRail,routesRail})railTop.Children.Add(item);
+            var railTop=new StackPanel();foreach(var item in new UIElement[]{closeOverlay,sidebarToggle,new Border { Height=1,Width=28,Margin=new Thickness(0,6,0,6),Background=WpfFieldTheme.Line },mapPageButton,squadPageButton,crosshairPageButton,markersRail,routesRail})railTop.Children.Add(item);
             var railBottom=new StackPanel();foreach(var item in new UIElement[]{help,deathRemovalButton,settings})railBottom.Children.Add(item);
             var rail=new DockPanel { LastChildFill=false };DockPanel.SetDock(railTop,Dock.Top);DockPanel.SetDock(railBottom,Dock.Bottom);rail.Children.Add(railTop);rail.Children.Add(railBottom);
             var railFrame=new Border { Background=WpfFieldTheme.Ground,BorderBrush=WpfFieldTheme.Line,BorderThickness=new Thickness(1,0,0,0),Padding=new Thickness(6,8,6,8),Child=rail };
@@ -1804,7 +1807,7 @@ namespace ScumMiniMap {
         }
         void RebuildSidebar(WpfMapState state) {
             poiCategoryControls.Clear();poiSectionControls.Clear();poiSectionCounts.Clear();presentedPoiFilter=null;
-            playerStatusLabels.Clear();sidebar.Children.Clear();mapPage=new StackPanel();squadPage=new StackPanel();sidebar.Children.Add(mapPage);sidebar.Children.Add(squadPage);var heading=new Grid();heading.ColumnDefinitions.Add(new ColumnDefinition());heading.ColumnDefinitions.Add(new ColumnDefinition { Width=GridLength.Auto });heading.Children.Add(WpfFieldTheme.Text(Localization.Get("SidebarTitle"),23,null,true));var key=WpfFieldTheme.Card(WpfFieldTheme.Text(PhysicalKeyCapture.KeyName(state.MapKey),12,WpfFieldTheme.Muted,true),new Thickness(8,2,8,2));Grid.SetColumn(key,1);heading.Children.Add(key);mapPage.Children.Add(heading);
+            playerStatusLabels.Clear();sidebar.Children.Clear();mapPage=new StackPanel();squadPage=new StackPanel();sidebar.Children.Add(mapPage);sidebar.Children.Add(squadPage);sidebar.Children.Add(CrosshairSidebarPage());var heading=new Grid();heading.ColumnDefinitions.Add(new ColumnDefinition());heading.ColumnDefinitions.Add(new ColumnDefinition { Width=GridLength.Auto });heading.Children.Add(WpfFieldTheme.Text(Localization.Get("SidebarTitle"),23,null,true));var key=WpfFieldTheme.Card(WpfFieldTheme.Text(PhysicalKeyCapture.KeyName(state.MapKey),12,WpfFieldTheme.Muted,true),new Thickness(8,2,8,2));Grid.SetColumn(key,1);heading.Children.Add(key);mapPage.Children.Add(heading);
             var search=new Button { Content=Localization.Get("SearchTitle"),Background=WpfFieldTheme.AccentDim,Foreground=WpfFieldTheme.Accent,BorderBrush=WpfFieldTheme.Accent,BorderThickness=new Thickness(1),Padding=new Thickness(12,6,12,6) };search.Click+=(s,e)=>ShowSearch();
             search.ToolTip=PhysicalKeyCapture.KeyName(state.Bindings.Key(AppControlAction.Search));
             search.HorizontalContentAlignment=HorizontalAlignment.Left;search.Margin=new Thickness(0,14,0,9);search.MinHeight=44;
@@ -1954,7 +1957,7 @@ if(followButton!=null) { followButton.Background=engine.WpfFollowing?WpfFieldThe
             switch(action) {
                 case AppControlAction.PingDanger:SendPing(0);break;case AppControlAction.PingLoot:SendPing(1);break;case AppControlAction.PingPickup:SendPing(2);break;
                 case AppControlAction.Settings:ShowSettings();break;case AppControlAction.Search:ShowSearch();break;
-                case AppControlAction.ToggleOverlay:ToggleHud();break;
+                case AppControlAction.ToggleOverlay:ToggleHud();break;case AppControlAction.ToggleCrosshair:ToggleCrosshair();break;
                 case AppControlAction.AddWaypoint:ShowAddWaypoint();break;case AppControlAction.ClearWaypoint:ClearMapRoute();break;
                 case AppControlAction.ZoomIn:QueueZoom(1,TacticalVisible);break;case AppControlAction.ZoomOut:QueueZoom(-1,TacticalVisible);break;
                 case AppControlAction.StartupGuide:ShowOnboarding();break;case AppControlAction.ZoneEditor:ShowZoneWizard();break;default:engine.WpfNativeTool(action);break;
@@ -2376,7 +2379,7 @@ if(followButton!=null) { followButton.Background=engine.WpfFollowing?WpfFieldThe
                     string[] zoneKeys={"MapZonesScreenshot","EnableZoneTsv","ClearAllCustomZones"};
                     foreach(var setting in settings.Where(item=>item.GroupKey=="SecMapZones"))addNative(markerKeys.Any(key=>SettingHasKey(setting,key))?markers:zoneKeys.Any(key=>SettingHasKey(setting,key))?zones:layers,setting);
                     section("SecMapZones",layers,false);section("SettingsMarkers",markers,false);section("SettingsZoneTools",zones,false);
-                    var presets=new StackPanel();presets.Children.Add(WpfFieldTheme.Button(Localization.Get("SquadPresets"),ShowMapPresets));section("SquadPresets",presets,false);RefreshSetupPreview();
+                    var crosshairPanel=new StackPanel();AddCrosshairSettings(crosshairPanel);section("Crosshair",crosshairPanel,true);var presets=new StackPanel();presets.Children.Add(WpfFieldTheme.Button(Localization.Get("SquadPresets"),ShowMapPresets));section("SquadPresets",presets,false);RefreshSetupPreview();
                 } else if(index==3) {
                     foreach(string group in new[]{"SecTrackingZoom","VoiceHeading"}) {var panel=new StackPanel();foreach(var setting in settings.Where(item=>item.GroupKey==group||group=="VoiceHeading"&&SettingHasKey(item,"ZoneChime")))addNative(panel,setting);section(group,panel,true);}
                 } else if(index==4) {
@@ -2754,7 +2757,7 @@ if(followButton!=null) { followButton.Background=engine.WpfFollowing?WpfFieldThe
             application.Dispatcher.VerifyAccess();if(disposed)return;disposed=true;
             if(autoLaunch!=null)autoLaunch.Dispose();
             if(zoneOpenRead!=null)zoneOpenRead.ContinueWith(task=>Program.LogException("ZoneOpenQueue",task.Exception),System.Threading.Tasks.TaskContinuationOptions.OnlyOnFaulted);
-            DisposeRoutePreviews();if(privatePositions!=null)privatePositions.Dispose();if(relayGroups!=null)relayGroups.Dispose();refresh.Stop();if(cameraSettle!=null)cameraSettle.Stop();if(setupWindow!=null)setupWindow.Close();hudMap.ResetPoiStream();tacticalMap.ResetPoiStream();hud.Close();tactical.Close();engine.WpfSave();engine.Dispose();terrain.Dispose();
+            DisposeRoutePreviews();if(privatePositions!=null)privatePositions.Dispose();if(relayGroups!=null)relayGroups.Dispose();refresh.Stop();if(cameraSettle!=null)cameraSettle.Stop();if(setupWindow!=null)setupWindow.Close();hudMap.ResetPoiStream();tacticalMap.ResetPoiStream();if(crosshair!=null)crosshair.Dispose();hud.Close();tactical.Close();engine.WpfSave();engine.Dispose();terrain.Dispose();
         }
     }
 }

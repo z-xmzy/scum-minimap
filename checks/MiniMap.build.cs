@@ -74,15 +74,15 @@ using System.Drawing.Drawing2D;
 
 
 
-[assembly: AssemblyVersion("2.4.12.0")]
+[assembly: AssemblyVersion("2.5.0.0")]
 
 
 
-[assembly: AssemblyFileVersion("2.4.12.0")]
+[assembly: AssemblyFileVersion("2.5.0.0")]
 
 
 
-[assembly: AssemblyInformationalVersion("2.4.12-local-map")]
+[assembly: AssemblyInformationalVersion("2.5.0-local-map")]
 
 
 
@@ -1726,7 +1726,7 @@ namespace ScumMiniMap {
 
 
 
-        public const string VersionString = "2.4.12";
+        public const string VersionString = "2.5.0";
 
 
 
@@ -1795,6 +1795,39 @@ namespace ScumMiniMap {
 
 
 
+        }
+
+
+
+        // Downloads the verified installer with a cancellable progress window, then hands over to it.
+        // Returns false when the user cancelled; the running MiniMap is left untouched in that case.
+        async Task<bool> DownloadAndRunInstaller(UpdateService service,UpdateRelease release) {
+            string folder=Path.Combine(Path.GetTempPath(),"ScumMiniMap-installer");
+            Directory.CreateDirectory(folder);
+            string target=Path.Combine(folder,release.InstallerName);
+            if(File.Exists(target)) try { File.Delete(target); } catch(IOException) { target=Path.Combine(folder,Guid.NewGuid().ToString("N")+"-"+release.InstallerName); }
+            note=Localization.Get("UpdateDownloading");
+            using(var dialog=new UpdateProgressDialog(Localization.Get("UpdateAvailableDialogTitle"),Localization.Get("UpdateDownloading")+"  v"+release.VersionText)) {
+                Task work=null;
+                dialog.Shown+=(s,e)=> {
+                    work=Task.Run(()=>service.DownloadInstaller(release,target,dialog.Report,dialog.Token));
+                    work.ContinueWith(t=> { try { dialog.BeginInvoke(new Action(()=>dialog.Close())); } catch(InvalidOperationException) {} });
+                };
+                RunUiModal(()=>dialog.ShowDialog(UiDialogOwner));
+                if(work==null)return false;
+                try { await work; }
+                catch(Exception) { if(dialog.Token.IsCancellationRequested) { note="";return false; } throw; }
+            }
+            if(closing || IsDisposed)return false;
+            // The installer waits for this process to exit (single-instance mutex), upgrades in place
+            // and restarts MiniMap. Silent mode still shows Inno Setup's progress window.
+            var process=System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo {
+                FileName=target,Arguments="/SILENT /SUPPRESSMSGBOXES /NORESTART",UseShellExecute=true,
+                WorkingDirectory=folder
+            });
+            if(process==null)throw new IOException("Unable to start the update installer.");
+            process.Dispose();
+            return true;
         }
 
 
@@ -1985,7 +2018,9 @@ namespace ScumMiniMap {
 
 
 
-                    await DownloadAndInstallUpdate(service,release);
+                    if(release.IsInstaller) {
+                        if(!await DownloadAndRunInstaller(service,release)) return;
+                    } else await DownloadAndInstallUpdate(service,release);
 
 
 

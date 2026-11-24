@@ -645,10 +645,28 @@ static class InputVoiceTests {
         }
     }
 
+    static void TestCrosshair() {
+        var defaults=new CrosshairSettings();
+        Check(!defaults.Enabled && defaults.HideWhileAiming,"Crosshair starts off and hides while aiming by default");
+        var custom=new CrosshairSettings { Enabled=true,Style=CrosshairStyle.CircleDot,Colour=System.Windows.Media.Color.FromRgb(0x12,0xAB,0xEF),Length=20,Thickness=3,Gap=6,DotSize=4,Opacity=55,OffsetX=-12,OffsetY=30,Outline=false,HideWhileAiming=false };
+        var restored=CrosshairSettings.Parse(custom.Serialize());
+        Check(restored.Serialize()==custom.Serialize(),"Crosshair settings survive a save and load");
+        var clamped=CrosshairSettings.Parse("Length=999\nThickness=-4\nOpacity=0\nOffsetX=9000\nStyle=Nope\nColour=#12\nEnabled=yes");
+        Check(clamped.Length==60 && clamped.Thickness==1 && clamped.Opacity==10 && clamped.OffsetX==400 && clamped.Style==CrosshairStyle.CrossDot && clamped.Colour==defaults.Colour && !clamped.Enabled,
+            "Damaged crosshair settings fall back to safe values");
+        Check(CrosshairOverlay.ShouldShow(true,true,false,false,false,true),"Crosshair shows during normal gameplay");
+        Check(!CrosshairOverlay.ShouldShow(true,true,true,false,false,true),"Crosshair hides when SCUM shows a cursor (inventory, pause, map)");
+        Check(!CrosshairOverlay.ShouldShow(true,false,false,false,false,true),"Crosshair hides when SCUM is not in front");
+        Check(!CrosshairOverlay.ShouldShow(true,true,false,true,false,true),"Crosshair hides behind the full map");
+        Check(!CrosshairOverlay.ShouldShow(true,true,false,false,true,true) && CrosshairOverlay.ShouldShow(true,true,false,false,true,false),"Hide-while-aiming is optional");
+        Check(!CrosshairOverlay.ShouldShow(false,true,false,false,false,true),"Disabled crosshair never shows");
+        var place=CrosshairOverlay.Placement(new Rectangle(100,50,1920,1080),new CrosshairSettings { OffsetX=5,OffsetY=-7 });
+        Check(place.Left+place.Width/2==100+960+5 && place.Top+place.Height/2==50+540-7,"Crosshair centres on the game client area plus the offset");
+    }
     static void TestAppControlModel() {
         Check(AppControlBindings.AllActions.SequenceEqual(new[]{AppControlAction.Settings,AppControlAction.AddWaypoint,AppControlAction.Search,
             AppControlAction.ToggleOverlay,AppControlAction.ZoomIn,AppControlAction.ZoomOut,AppControlAction.DeathMarker,
-            AppControlAction.ResetZoom,AppControlAction.ClearWaypoint,AppControlAction.ZoneEditor,AppControlAction.StartupGuide,AppControlAction.AdminCommands,AppControlAction.AdminPlayers,AppControlAction.PingDanger,AppControlAction.PingLoot,AppControlAction.PingPickup}),
+            AppControlAction.ResetZoom,AppControlAction.ClearWaypoint,AppControlAction.ZoneEditor,AppControlAction.StartupGuide,AppControlAction.AdminCommands,AppControlAction.AdminPlayers,AppControlAction.PingDanger,AppControlAction.PingLoot,AppControlAction.PingPickup,AppControlAction.ToggleCrosshair}),
             "Every map and tool button has a configurable app action");
         var defaults=new AppControlBindings();
         Check(new[]{AppControlAction.PingDanger,AppControlAction.PingLoot,AppControlAction.PingPickup}.All(a=>defaults.Key(a)==0&&defaults.ScanCode(a)==0),"Squad pings require explicit key assignment and preserve existing game controls");
@@ -775,7 +793,7 @@ static class InputVoiceTests {
         string profile=Path.Combine(testRoot,"controls");Directory.CreateDirectory(profile);
         string settings=Path.Combine(profile,"settings.ini");File.WriteAllText(settings,"Welcomed=True");
         using(var bitmap=new Bitmap(32,32)) bitmap.Save(Path.Combine(profile,"map.png"));
-        var configured=new AppControlBindings();int[] scans={0x3B,0x3C,0x3D,0x3E,0x3F,0x40,0x41,0x42,0x43,0x44,0x57,0x58,0x64,0x65,0x66,0x67};
+        var configured=new AppControlBindings();int[] scans={0x3B,0x3C,0x3D,0x3E,0x3F,0x40,0x41,0x42,0x43,0x44,0x57,0x58,0x64,0x65,0x66,0x67,0x68};
         for(int i=0;i<AppControlBindings.AllActions.Length;i++) configured.Set(AppControlBindings.AllActions[i],0x70+i,scans[i]);
         using(var window=new MapWindow(profile)) {
             foreach(var action in AppControlBindings.AllActions) {
@@ -1264,6 +1282,7 @@ static class InputVoiceTests {
             Check(!physicalMapKeys.ConsumesBinding(0xBA,0x32),"Captured map key reaches SCUM across keyboard layouts");
             Check(physicalMapKeys.ConsumesBinding(0x4D,0x31),"A different physical key is not mistaken for the shared map binding");
         }
+        TestCrosshair();
         TestAppControlModel();
         TestAppControlWizard();
         var navigator=new VoiceNavigator();

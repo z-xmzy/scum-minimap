@@ -197,6 +197,40 @@ namespace ScumMiniMap {
             AddBunkerViewText();
             AddB2TravelText();
             AddSavedRouteText();
+            AddCrosshairText();
+        }
+        // Crosshair overlay. Every catalogue gets the keys (parity); languages other
+        // than English/Chinese reuse the English copy until translated.
+        static void AddCrosshairText() {
+            var catalogues=new[]{StringsEn,StringsEsAr,StringsFr,StringsDe,StringsNl,StringsRu,StringsZh,StringsTr,StringsAr,StringsPt,StringsKo,StringsPl,StringsPtPt,StringsTh,StringsZhTw,StringsJa,StringsCs,StringsIt,StringsUk,StringsFi,StringsLt,StringsSw};
+            string[][] entries={
+                new[]{"Crosshair","Crosshair","准星","準星"},
+                new[]{"CrosshairCustomize","Customize crosshair","自定义准星","自訂準星"},
+                new[]{"CrosshairEnable","Show crosshair","显示准星","顯示準星"},
+                new[]{"CrosshairToggle","Show/hide crosshair","显示/隐藏准星","顯示/隱藏準星"},
+                new[]{"CrosshairHelp","Draws a crosshair at the centre of the game window. It hides automatically while the inventory, pause menu, map or any other screen with a mouse cursor is open. It is only an on-screen overlay: it never reads or changes the game.","在游戏窗口正中画一个准星。打开背包、暂停菜单、地图等带鼠标指针的界面时会自动隐藏。它只是屏幕上的覆盖层，不读取也不修改游戏。","在遊戲視窗正中畫一個準星。開啟背包、暫停選單、地圖等帶滑鼠指標的介面時會自動隱藏。它只是螢幕上的覆蓋層，不讀取也不修改遊戲。"},
+                new[]{"CrosshairStyle","Style","样式","樣式"},
+                new[]{"CrosshairStyleCross","Cross","十字","十字"},
+                new[]{"CrosshairStyleCrossDot","Cross + dot","十字 + 中心点","十字 + 中心點"},
+                new[]{"CrosshairStyleTShape","T shape","T 形","T 形"},
+                new[]{"CrosshairStyleDiagonal","Diagonal cross","斜十字","斜十字"},
+                new[]{"CrosshairStyleDot","Dot","圆点","圓點"},
+                new[]{"CrosshairStyleCircle","Circle","圆环","圓環"},
+                new[]{"CrosshairStyleCircleDot","Circle + dot","圆环 + 中心点","圓環 + 中心點"},
+                new[]{"CrosshairColour","Colour","颜色","顏色"},
+                new[]{"CrosshairLength","Line length","线长","線長"},
+                new[]{"CrosshairThickness","Thickness","粗细","粗細"},
+                new[]{"CrosshairGap","Centre gap / circle size","中心间隙 / 圆环大小","中心間隙 / 圓環大小"},
+                new[]{"CrosshairDotSize","Dot size","中心点大小","中心點大小"},
+                new[]{"CrosshairOpacity","Opacity","不透明度","不透明度"},
+                new[]{"CrosshairOffsetX","Horizontal offset (px)","水平偏移（像素）","水平偏移（像素）"},
+                new[]{"CrosshairOffsetY","Vertical offset (px)","垂直偏移（像素）","垂直偏移（像素）"},
+                new[]{"CrosshairOutline","Black outline","黑色描边","黑色描邊"},
+                new[]{"CrosshairHideAiming","Hide while aiming (right mouse button held)","瞄准时隐藏（按住鼠标右键）","瞄準時隱藏（按住滑鼠右鍵）"},
+                new[]{"CrosshairReset","Reset to default","恢复默认","恢復預設"},
+                new[]{"CrosshairPreviewHint","Preview at actual size","实际大小预览","實際大小預覽"},
+            };
+            foreach(var entry in entries)for(int i=0;i<catalogues.Length;i++)catalogues[i].Add(entry[0],i==6?entry[2]:i==14?entry[3]:entry[1]);
         }
         // navA27 P2 (B2): multi-stop estimated / no-route labels. Indexed rows keep
         // every catalogue at the same key count (Localization.SelfTest checks parity);
