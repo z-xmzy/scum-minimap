@@ -1717,7 +1717,7 @@ namespace ScumMiniMap {
 
 
 
-        public const string VersionString = "2.5.1";
+        public const string VersionString = "2.5.2";
 
 
 
@@ -2011,6 +2011,12 @@ namespace ScumMiniMap {
 
                     if(release.IsInstaller) {
                         if(!await DownloadAndRunInstaller(service,release)) return;
+                        if(closing || IsDisposed) return;
+                        note=Localization.Get("UpdateReadyRestarting");
+                        // The WPF console owns the message loop; closing this form alone leaves the
+                        // process (and its single-instance mutex) alive, so the installer would wait forever.
+                        ExitApp();
+                        return;
                     } else await DownloadAndInstallUpdate(service,release);
 
 

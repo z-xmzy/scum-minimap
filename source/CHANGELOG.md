@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.5.2] - 2026-11-24
+
+- Fix automatic updates hanging after "Download verified": MiniMap now exits fully before the installer runs, instead of only removing its tray icon while the process kept running.
+- The installer ends a MiniMap left running from its own folder after waiting 20 seconds, so updates started from 2.5.0 or 2.5.1 also complete.
+
 ## [2.5.1] - 2026-11-24
 
 - Add a customizable screen-centre crosshair: 7 styles, colour, length, thickness, gap, dot size, opacity, offset and outline. It hides with the minimap while the game shows its cursor (inventory, pause, map), when the game is not in front, behind the full map, and optionally while aiming with the right mouse button.

@@ -1,6 +1,8 @@
 ﻿param(
     # Reuse an already built package\SCUM-MiniMap\app instead of compiling again.
-    [switch]$SkipAppBuild
+    [switch]$SkipAppBuild,
+    # Build a test installer with its own AppId into release	est (never published).
+    [switch]$TestInstall
 )
 $ErrorActionPreference='Stop'
 $repo=Split-Path $PSScriptRoot -Parent
@@ -9,6 +11,7 @@ $version=([regex]::Match([IO.File]::ReadAllText($mainSource),'public const strin
 if(!$version){throw 'VersionString not found in MiniMap.cs.'}
 $package=Join-Path $repo 'package\SCUM-MiniMap'
 $release=Join-Path $repo 'release'
+if($TestInstall){$release=Join-Path $release 'test'}
 
 if(!$SkipAppBuild) {
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repo 'Build-LocalCandidate.ps1')
@@ -30,7 +33,8 @@ $iscc=@(
 if(!$iscc){throw 'Inno Setup 6 not found. Install it with: winget install JRSoftware.InnoSetup'}
 
 New-Item -ItemType Directory -Path $release -Force | Out-Null
-& $iscc /Qp "/DAppVersion=$version" "/DPackageDir=$package" "/DOutputDir=$release" (Join-Path $PSScriptRoot 'SCUM-MiniMap.iss')
+$defines=@("/DAppVersion=$version");if($TestInstall){$defines+="/DTestInstall"}
+& $iscc /Qp @defines "/DPackageDir=$package" "/DOutputDir=$release" (Join-Path $PSScriptRoot 'SCUM-MiniMap.iss')
 if($LASTEXITCODE -ne 0){throw 'Inno Setup compilation failed.'}
 
 $setup=Join-Path $release "SCUM-MiniMap-Setup-$version.exe"

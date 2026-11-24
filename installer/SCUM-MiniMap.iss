@@ -20,7 +20,12 @@
 
 [Setup]
 ; Keep AppId fixed forever: it is how upgrades find the existing installation.
+#ifdef TestInstall
+; Separate identity so test installs never take over the real installation's uninstall entry or shortcuts.
+AppId={{6F0B7C52-3E8A-4D4B-9C2E-5A1D7E3B9F42}
+#else
 AppId={{6F0B7C52-3E8A-4D4B-9C2E-5A1D7E3B9F41}
+#endif
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppVerName={#AppName} {#AppVersion}
@@ -33,7 +38,11 @@ VersionInfoVersion={#AppVersion}.0
 VersionInfoProductVersion={#AppVersion}
 VersionInfoDescription={#AppName} 安装程序
 DefaultDirName={localappdata}\Programs\SCUM-MiniMap
+#ifdef TestInstall
+DefaultGroupName={#AppName} 测试
+#else
 DefaultGroupName={#AppName}
+#endif
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 UsePreviousAppDir=yes
@@ -153,20 +162,46 @@ end;
 function InitializeSetup(): Boolean;
 begin
   Result := True;
+  { Silent runs come from the in-app updater; PrepareToInstall finishes the hand-over. }
+  if WizardSilent then
+    Exit;
   while not WaitForMiniMapExit(20) do
   begin
-    if WizardSilent then
-    begin
-      Log('MiniMap is still running; silent update aborted.');
-      Result := False;
-      Exit;
-    end;
     if MsgBox(CustomMessage('WaitForClose'), mbError, MB_RETRYCANCEL) <> IDRETRY then
     begin
       Result := False;
       Exit;
     end;
   end;
+end;
+
+{ Ends MiniMap processes started from this installation only. Needed for 2.5.0, whose updater
+  hid its window and tray icon but left the process (and its mutex) running. }
+procedure StopInstalledMiniMap();
+var
+  Code: Integer;
+  Script: String;
+begin
+  Script := ExpandConstant('{app}');
+  StringChangeEx(Script, '''', '''''', True);
+  Script := '$p=''' + Script + '\'';' +
+    'Get-Process -Name SkynettMiniMap -ErrorAction SilentlyContinue | ' +
+    'Where-Object { $_.Path -and $_.Path.StartsWith($p,[StringComparison]::OrdinalIgnoreCase) } | ' +
+    'Stop-Process -Force';
+  Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
+    '-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "' + Script + '"',
+    '', SW_HIDE, ewWaitUntilTerminated, Code);
+  Log('Stopped running MiniMap under ' + ExpandConstant('{app}') + ', exit code ' + IntToStr(Code));
+end;
+
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+begin
+  Result := '';
+  if WaitForMiniMapExit(20) then
+    Exit;
+  StopInstalledMiniMap();
+  if not WaitForMiniMapExit(10) then
+    Result := CustomMessage('WaitForClose');
 end;
 
 function InitializeUninstall(): Boolean;
