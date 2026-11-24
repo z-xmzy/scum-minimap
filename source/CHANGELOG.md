@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.5.0] - 2026-11-23
+
+- Ship a Windows installer (Inno Setup, per-user, Simplified Chinese and English). Upgrades keep settings, saved routes and logs in app\data; uninstall asks before removing them.
+- Check this fork's GitHub releases (z-xmzy/scum-minimap) at startup instead of the upstream repository. When a newer version exists, ask first; downloading shows progress and can be cancelled. The installer is verified by SHA256 and size before it runs, then MiniMap restarts on the new version.
+- Include the new interface and the rebuilt bunker maps (mirrored rooms, recognised room types).
+
 ## [2.4.12] - 2026-11-23
 
 - Hide the compact minimap while the foreground game shows its system cursor. Restore it when gameplay resumes if enabled.

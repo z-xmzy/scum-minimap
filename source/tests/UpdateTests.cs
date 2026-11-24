@@ -369,6 +369,44 @@ static class UpdateTests {
             "Helper startup must reject an approved process path different from its installation");
         Check(launches==0 && !File.Exists(status+".helper"),"Invalid process-path approval cannot launch an elevated helper or create a live request marker");
     }
+    static string InstallerManifest(string version,string hash,long size) { return "schema=3\nversion="+version+"\ninstaller-sha256="+hash+"\ninstaller-size="+size+"\n"; }
+    static void CheckInstallerUpdates(string root) {
+        byte[] setup=Encoding.UTF8.GetBytes("MZinstaller fixture with enough bytes to stream in pieces");
+        string hash;
+        using(var sha=SHA256.Create()) hash=BitConverter.ToString(sha.ComputeHash(setup)).Replace("-","").ToLowerInvariant();
+        string manifest=InstallerManifest("2.5.0",hash,setup.Length);
+        var release=UpdateRelease.Parse(manifest);
+        Check(release.IsInstaller && !release.IsPackage && release.InstallerSize==setup.Length,"Installer manifest parsed");
+        Check(release.InstallerName=="SCUM-MiniMap-Setup-2.5.0.exe","Installer asset name");
+        foreach(string bad in new [] { manifest+"url=https://evil.example/x.exe\n", InstallerManifest("2.5.0","short",setup.Length), InstallerManifest("2.5.0",hash,0),
+            InstallerManifest("2.5.0",hash,UpdateRelease.MaxInstallerSize+1), InstallerManifest("2.5",hash,setup.Length), manifest.Replace("installer-size","size") })
+            Reject(()=>UpdateRelease.Parse(bad),"Invalid installer manifest accepted");
+        Func<Uri,int,byte[]> fetch=(url,limit)=>Encoding.UTF8.GetBytes(manifest);
+        var service=new UpdateService("owner/releases",root,fetch);
+        Check(service.DownloadUri(release).AbsoluteUri=="https://github.com/owner/releases/releases/download/v2.5.0/SCUM-MiniMap-Setup-2.5.0.exe","Installer download endpoint");
+        long lastProgress=0;Uri requested=null;
+        service.StreamTransport=(uri,expected,output,progress,cancel)=> {
+            requested=uri;
+            for(int i=0;i<setup.Length;i+=8) { int n=Math.Min(8,setup.Length-i);output.Write(setup,i,n);progress(i+n,expected); }
+        };
+        string target=Path.Combine(root,"setup.exe");
+        service.DownloadInstaller(release,target,(done,total)=>lastProgress=done,System.Threading.CancellationToken.None);
+        Check(File.Exists(target) && File.ReadAllBytes(target).Length==setup.Length,"Verified installer saved");
+        Check(lastProgress==setup.Length && requested==service.DownloadUri(release),"Installer progress reported");
+        var forged=UpdateRelease.Parse(InstallerManifest("2.5.0",new string('1',64),setup.Length));
+        Reject(()=>service.DownloadInstaller(forged,Path.Combine(root,"forged.exe"),null,System.Threading.CancellationToken.None),"Cached installer identity not re-pinned");
+        service.StreamTransport=(uri,expected,output,progress,cancel)=>output.Write(Encoding.UTF8.GetBytes("MZtampered"),0,10);
+        Reject(()=>service.DownloadInstaller(release,Path.Combine(root,"tampered.exe"),null,System.Threading.CancellationToken.None),"Tampered installer accepted");
+        Check(!File.Exists(Path.Combine(root,"tampered.exe")),"Tampered installer retained");
+        using(var cts=new System.Threading.CancellationTokenSource()) {
+            service.StreamTransport=(uri,expected,output,progress,cancel)=> { output.Write(setup,0,4);cts.Cancel();cancel.ThrowIfCancellationRequested(); };
+            bool cancelled=false;
+            try { service.DownloadInstaller(release,Path.Combine(root,"cancelled.exe"),null,cts.Token); } catch(OperationCanceledException) { cancelled=true; }
+            Check(cancelled && !File.Exists(Path.Combine(root,"cancelled.exe")),"Cancelled installer download discarded");
+        }
+        Check(Directory.GetFiles(root,"*.partial").Length==0,"Partial installer retained");
+        Check(UpdateService.Repository=="z-xmzy/scum-minimap","Updates come from this fork, not upstream");
+    }
     static int Main() {
         CheckSchedule();
         string root=Path.Combine(Path.GetTempPath(),"MiniMap-UpdateTests-"+Guid.NewGuid().ToString("N"));
@@ -430,6 +468,7 @@ static class UpdateTests {
             CheckHelperLaunchConfiguration(root);
             CheckBundleAndInstallationSelection(root);
             CheckCancelledHelperStartup(root);
+            CheckInstallerUpdates(root);
             Console.WriteLine("Passed "+count+" GitHub updater regression checks.");
             return 0;
         } catch(Exception ex) { Console.Error.WriteLine(ex); return 1; }

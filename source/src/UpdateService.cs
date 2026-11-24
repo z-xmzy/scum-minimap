@@ -27,7 +27,13 @@ namespace ScumMiniMap {
         public string PackageSha256 { get; private set; }
         public bool IsPackage { get { return PackageSha256!=null; } }
         public string VersionText { get { return Version.ToString(3); } }
-        public string Filename { get { return "v" + VersionText + " - SkynettMiniMap.exe"; } }
+        public string Filename { get { return IsInstaller?InstallerName+" ("+(InstallerSize/1048576.0).ToString("0",CultureInfo.InvariantCulture)+" MB)":"v" + VersionText + " - SkynettMiniMap.exe"; } }
+
+        public string InstallerSha256 { get; private set; }
+        public long InstallerSize { get; private set; }
+        public bool IsInstaller { get { return InstallerSha256!=null; } }
+        public string InstallerName { get { return "SCUM-MiniMap-Setup-"+VersionText+".exe"; } }
+        public const long MaxInstallerSize=4L*1024*1024*1024;
 
         public static UpdateRelease Parse(string manifest) {
             if(string.IsNullOrWhiteSpace(manifest) || manifest.Length > 4096) throw new FormatException("Invalid update manifest.");
@@ -41,7 +47,19 @@ namespace ScumMiniMap {
             }
             string schema, version, hash, packageHash=null;
             Version parsed;
-            if(!values.TryGetValue("schema",out schema) || (schema!="1" && schema!="2") ||
+            if(values.TryGetValue("schema",out schema) && schema=="3") {
+                // Schema 3 publishes a complete Windows installer (Inno Setup) as the release asset.
+                string installerHash,sizeText;long size;
+                if(values.Count!=4 ||
+                   !values.TryGetValue("version",out version) || !Regex.IsMatch(version,@"\A(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\z") ||
+                   !System.Version.TryParse(version + ".0",out parsed) ||
+                   !values.TryGetValue("installer-sha256",out installerHash) || !Regex.IsMatch(installerHash,@"\A[0-9a-fA-F]{64}\z") ||
+                   !values.TryGetValue("installer-size",out sizeText) || !Regex.IsMatch(sizeText,@"\A[1-9]\d{0,12}\z") ||
+                   !long.TryParse(sizeText,NumberStyles.None,CultureInfo.InvariantCulture,out size) || size>MaxInstallerSize)
+                    throw new FormatException("The update manifest does not describe a valid installer release.");
+                return new UpdateRelease { Version=parsed,InstallerSha256=installerHash.ToLowerInvariant(),InstallerSize=size };
+            }
+            if(schema==null || (schema!="1" && schema!="2") ||
                values.Count!=(schema=="2"?4:3) ||
                (schema=="2" && (!values.TryGetValue("package-sha256",out packageHash) || !Regex.IsMatch(packageHash,@"\A[0-9a-fA-F]{64}\z"))) ||
                !values.TryGetValue("version",out version) || !Regex.IsMatch(version,@"\A(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\z") ||
@@ -60,7 +78,8 @@ namespace ScumMiniMap {
 
     public sealed class UpdateService {
         // Set to the release repository before distributing a build. No credentials are shipped.
-        public const string Repository = "Mike-Rafone-SCUM/MiniMap";
+        // This fork publishes its own releases; never fall back to the upstream repository.
+        public const string Repository = "z-xmzy/scum-minimap";
         readonly string repository;
         readonly string cacheDirectory;
         readonly Func<Uri,int,byte[]> fetch;
@@ -73,6 +92,7 @@ namespace ScumMiniMap {
         }
         public Uri ManifestUri { get { return new Uri("https://github.com/"+repository+"/releases/latest/download/update.txt"); } }
         public Uri DownloadUri(UpdateRelease release) {
+            if(release.IsInstaller)return new Uri("https://github.com/"+repository+"/releases/download/v"+release.VersionText+"/"+release.InstallerName);
             return new Uri("https://github.com/"+repository+"/releases/download/v"+release.VersionText+"/"+(release.IsPackage?"SkynettMiniMap.zip":"SkynettMiniMap.exe"));
         }
         public UpdateRelease Check(bool manual) {
@@ -144,6 +164,62 @@ namespace ScumMiniMap {
                 if(bytes.Length<2 || bytes[0]!='M' || bytes[1]!='Z') throw new InvalidDataException("The update is not a Windows executable.");
                 File.Move(staging,destination);
             } finally { if(File.Exists(staging)) File.Delete(staging); }
+        }
+        // Streams the installer to a new file with progress; the multi-hundred-MB asset is never held in memory.
+        public void DownloadInstaller(UpdateRelease release,string destination,Action<long,long> progress,System.Threading.CancellationToken cancel) {
+            if(!release.IsInstaller)throw new InvalidOperationException("The release does not publish an installer.");
+            var authoritative=CheckVersion(release.VersionText);
+            if(authoritative.InstallerSha256!=release.InstallerSha256 || authoritative.InstallerSize!=release.InstallerSize)
+                throw new InvalidDataException("The release identity changed. Check for updates again.");
+            string staging=destination+"."+Guid.NewGuid().ToString("N")+".partial";
+            try {
+                using(var output=new FileStream(staging,FileMode.CreateNew,FileAccess.Write,FileShare.None))
+                    (StreamTransport!=null?StreamTransport:StreamBounded)(DownloadUri(release),release.InstallerSize,output,progress,cancel);
+                cancel.ThrowIfCancellationRequested();
+                string actual;
+                using(var sha=SHA256.Create()) using(var stream=File.OpenRead(staging))
+                    actual=BitConverter.ToString(sha.ComputeHash(stream)).Replace("-","").ToLowerInvariant();
+                if(new FileInfo(staging).Length!=release.InstallerSize || actual!=release.InstallerSha256)
+                    throw new InvalidDataException("Update checksum mismatch. The download was discarded.");
+                using(var stream=File.OpenRead(staging)) if(stream.ReadByte()!='M' || stream.ReadByte()!='Z')
+                    throw new InvalidDataException("The update is not a Windows executable.");
+                File.Move(staging,destination);
+            } finally { try { if(File.Exists(staging)) File.Delete(staging); } catch(IOException) {} catch(UnauthorizedAccessException) {} }
+        }
+        // Test seam for the streaming transport (uri, expected size, output, progress, cancel).
+        internal Action<Uri,long,Stream,Action<long,long>,System.Threading.CancellationToken> StreamTransport=null;
+        internal static void StreamBounded(Uri uri,long expected,Stream output,Action<long,long> progress,System.Threading.CancellationToken cancel) {
+            ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
+            for(int redirect=0;redirect<=5;redirect++) {
+                cancel.ThrowIfCancellationRequested();
+                if(!AllowedDownloadUri(uri,false))throw new InvalidDataException("Unapproved download endpoint.");
+                var request=(HttpWebRequest)WebRequest.Create(uri);
+                request.UserAgent="SCUM-MiniMap/"+MapWindow.VersionString;
+                request.Timeout=30000;request.ReadWriteTimeout=60000;request.AllowAutoRedirect=false;
+                using(cancel.Register(()=>{ try { request.Abort(); } catch {} }))
+                using(var response=(HttpWebResponse)request.GetResponse()) {
+                    int status=(int)response.StatusCode;
+                    if(status==301 || status==302 || status==303 || status==307 || status==308) {
+                        string location=response.Headers["Location"];
+                        if(redirect==5 || string.IsNullOrWhiteSpace(location))throw new InvalidDataException("Invalid download redirect.");
+                        uri=new Uri(uri,location);continue;
+                    }
+                    if(status!=200)throw new InvalidDataException("Unexpected download response.");
+                    if(response.ContentLength>expected)throw new InvalidDataException("Update response exceeds the size limit.");
+                    using(var input=response.GetResponseStream()) {
+                        byte[] buffer=new byte[81920];long total=0;int count;
+                        while((count=input.Read(buffer,0,buffer.Length))>0) {
+                            cancel.ThrowIfCancellationRequested();
+                            total+=count;
+                            if(total>expected)throw new InvalidDataException("Update response exceeds the size limit.");
+                            output.Write(buffer,0,count);
+                            if(progress!=null)progress(total,expected);
+                        }
+                        return;
+                    }
+                }
+            }
+            throw new InvalidDataException("Too many download redirects.");
         }
         static void TrySave(string path,string text) {
             try { Directory.CreateDirectory(Path.GetDirectoryName(path)); File.WriteAllText(path,text); }

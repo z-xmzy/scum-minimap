@@ -15,6 +15,7 @@ SCUM 游戏的外置地图覆盖层和道路导航工具：全屏战术地图、
 - **v2.4.9** 保存命名路线，LX- 路线码分享导入，顺序/循环导航
 - **v2.4.10–v2.4.11** 桥面与地面道路分层导航，桥区路口语音播报修复
 - **v2.4.12** 游戏显示系统光标时隐藏小地图；轨迹学习默认关闭
+- **v2.5.0** Windows 安装程序；启动时检查本仓库 Releases 的新版本，可取消
 - 新界面（ui-redesign，已合入 main）
 - 地堡地图房间识别与生成管线（bunker-rooms 分支）
 
@@ -29,6 +30,7 @@ SCUM 游戏的外置地图覆盖层和道路导航工具：全屏战术地图、
 | `tools/bunker-pipeline/` | 地堡地图生成管线 |
 | `checks/` | 回归检查、基准测试与诊断脚本 |
 | `Build-LocalCandidate.ps1` | 本地候选版本构建脚本 |
+| `installer/` | Windows 安装程序（Inno Setup）脚本与构建脚本 |
 
 `版本/`、`实验/`、`发布包/` 等归档与构建产物不进 git（见 `.gitignore`）。
 
@@ -50,6 +52,17 @@ SCUM 游戏的外置地图覆盖层和道路导航工具：全屏战术地图、
 - `ui-redesign`：新界面开发分支
 - `bunker-rooms`：地堡地图修复与生成管线，尚未合入 main
 - 标签 `v2.4.0` … `v2.4.12` 对应各发布版本
+
+## 安装程序与发布
+
+普通用户从 [Releases](https://github.com/z-xmzy/scum-minimap/releases) 下载 `SCUM-MiniMap-Setup-x.y.z.exe` 安装。
+
+发布新版本：
+
+1. 在 `source/CHANGELOG.md` 写新版本条目，并改 `source/src/MiniMap.cs` 的 `VersionString`。
+2. 把完整软件资源放到 `package/SCUM-MiniMap/`（含 `app/assets`、`app/fine`、`dist`，不进 git）。
+3. 安装 [Inno Setup 6](https://jrsoftware.org/isinfo.php)，运行 `installer\Build-Installer.ps1`，在 `release/` 得到安装包和 `update.txt`。
+4. 建 GitHub Release（标签 `vX.Y.Z`，设为 Latest），上传这两个文件。已安装的软件启动时读 `releases/latest/download/update.txt`，按其中的 SHA256 和大小校验安装包。
 
 ## Git LFS
 
