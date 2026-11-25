@@ -5,6 +5,16 @@ SCUM 游戏的外置地图覆盖层和道路导航工具：全屏战术地图、
 ## 上游项目与出处
 
 **本项目基于 [Mike-Rafone-SCUM/MiniMap](https://github.com/Mike-Rafone-SCUM/MiniMap) 修改而来。** 
+
+## 许可证
+
+本仓库中由 z-xmzy 编写的原创代码、数据处理脚本和文档（主要是 v2.4.0 起的改动，见 [source/CHANGELOG.md](source/CHANGELOG.md)）按 [MIT 许可证](LICENSE) 发布。
+
+MIT 许可证**只适用于这些原创修改**，不适用于以下内容：
+
+- **上游代码和资源**：来自 [Mike-Rafone-SCUM/MiniMap](https://github.com/Mike-Rafone-SCUM/MiniMap) 的原始设计、代码和素材，版权归原作者所有。上游仓库没有声明开源许可证，本仓库也没有获得原作者的授权，因此不能以 MIT 或任何其他许可证再授权这些部分。
+- **第三方数据和组件**：地图点位数据、字体、图标等保留各自的许可证和署名，见 [source/ATTRIBUTION.md](source/ATTRIBUTION.md)。
+- **游戏内容**：SCUM 的美术、地形、名称和商标归 Gamepires 和 Jagex 所有。
 ## 本版本在上游基础上的主要改动
 
 从 v2.4.0 起（详见 [source/CHANGELOG.md](source/CHANGELOG.md)）：

@@ -89,6 +89,8 @@ We gratefully acknowledge the creators and community contributors whose publicly
 * **This version is a modified fork of [Mike-Rafone-SCUM/MiniMap](https://github.com/Mike-Rafone-SCUM/MiniMap)** (SCUM MiniMap, made for the Skynett Gaming community). The original design, code and assets remain the copyright of the original author.
 * The upstream repository declares no open-source license; all rights to the original work are reserved by its author. Changes from v2.4.0 onward (local world navigation, bridge layers, saved routes, new interface, bunker maps) are listed in `CHANGELOG.md`.
 * 本版本基于 Mike-Rafone-SCUM/MiniMap 修改，原作版权归原作者所有。
+* **License scope:** the original modifications in this repository by z-xmzy are released under the MIT License (see `LICENSE` in the repository root). The MIT License covers only those modifications. It does not cover the upstream code, design or assets, which remain the copyright of the original author and have not been licensed to this project; nor does it cover third-party data, fonts, icons or SCUM game content listed in this document.
+* 许可证范围：本仓库中 z-xmzy 的原创修改按 MIT 许可证发布（见仓库根目录 `LICENSE`）。MIT 只适用于这些原创修改；上游的代码、设计和素材版权归原作者所有，本项目未获得原作者授权，不在 MIT 范围内；本文列出的第三方数据、字体、图标和 SCUM 游戏内容也不在 MIT 范围内。
 
 * **Upstream Repository:** [Mike-Rafone-SCUM/MiniMap](https://github.com/Mike-Rafone-SCUM/MiniMap)
 * **Skynett Gaming Community:** [Discord: discord.gg/MYzcGaFDMn](https://discord.gg/MYzcGaFDMn) | Dedicated server hosting, bot development, and player community.
