@@ -303,10 +303,6 @@ namespace ScumMiniMap {
                 new[]{"ZeDetailsTotalLayer","{0} zones, {1} shown in layer “{2}”","共 {0} 个区域，图层“{2}”中显示 {1} 个","共 {0} 個區域，圖層「{2}」中顯示 {1} 個"},
                 new[]{"ZeDetailsHint","Select a zone to view or edit it","选择一个区域即可查看或编辑","選擇一個區域即可檢視或編輯"},
                 new[]{"TrayUpdatesOffInTest","Off in test builds","测试版不可用","測試版不可用"},
-#if MINIMAP_TEST
-                new[]{"TrayDemoTeammates","Simulated teammates (test)","模拟队友（测试版）","模擬隊友（測試版）"},
-                new[]{"DemoTeammate","Test teammate","测试队友","測試隊友"},
-#endif
                 new[]{"LxEmpty","No saved routes on this map yet.","这张地图还没有保存的路线。","這張地圖還沒有儲存的路線。"},
                 new[]{"HintCloseMap","Close map","关闭地图","關閉地圖"},
                 new[]{"HintSearch","Search","搜索","搜尋"},

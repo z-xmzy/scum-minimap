@@ -231,6 +231,7 @@ namespace ScumMiniMap {
 
 
                     Localization.DetectSystemLanguage();
+                    voiceName=VoicePacks.DefaultFor(Localization.CurrentCode);
 
 
 
@@ -269,7 +270,7 @@ namespace ScumMiniMap {
 
 
 
-                bool foundWelcomed=false, foundLanguage=false, foundTrackingRevision=false;
+                bool foundWelcomed=false, foundLanguage=false, foundTrackingRevision=false, foundVoiceRevision=false;
 
 
 
@@ -316,6 +317,7 @@ namespace ScumMiniMap {
                         if((key=="TrackingRevision" && val=="1") || (Program.IsTestBuild && key=="TestTrackingRevision" && val=="2")) { foundTrackingRevision=true; continue; }
                         if(key=="VoiceEnabled") { bool enabled; if(bool.TryParse(val,out enabled)) voiceEnabled=enabled; continue; }
                         if(key=="VoiceName") { if(val==Path.GetFileName(val)) voiceName=val; continue; }
+                        if(key=="VoiceRevision") { foundVoiceRevision=val=="1"; continue; }
                         if(key=="VoiceVolume") { int volume; if(int.TryParse(val,out volume)) voiceVolume=Math.Max(0,Math.Min(100,volume)); continue; }
                         if(key=="SuppressCopyKeyReminder") { if(bool.TryParse(val,out b)) suppressCopyKeyReminder=b; continue; }
                         if(key=="Welcomed") { foundWelcomed=true; continue; }
@@ -436,6 +438,8 @@ namespace ScumMiniMap {
 
 
                 if(!foundLanguage) Localization.DetectSystemLanguage();
+                // Once, move Chinese-interface users still on the old English default to the Mandarin voice.
+                if(!foundVoiceRevision && voiceName==VoicePacks.DefaultName) voiceName=VoicePacks.DefaultFor(Localization.CurrentCode);
 
 
 
@@ -535,7 +539,7 @@ namespace ScumMiniMap {
 
 
 
-            try { var settingsLines=new List<string>(new string[]{"Welcomed=True","TrackingRevision=1","LocationHistory="+locationHistory,"LocationHistoryTimestamps="+locationHistoryTimestamps,"TrailLearning="+trailLearning,"LocationHistoryMinutes="+locationHistoryMinutes,"SuppressCopyKeyReminder="+suppressCopyKeyReminder,"VoiceEnabled="+voiceEnabled,"VoiceName="+voiceName,"VoiceVolume="+voiceVolume,"Language="+Localization.CurrentCode,"GridLabels="+gridLabels,"GridBorders="+gridBorders,"GridOpacity="+gridOpacity,"ShowZones="+showZones,"LabelSize="+labelSize,"Shape="+overlayShape,"ShowHeading="+showHeading,"ShowCompass="+showCompass,"ZoneChime="+zoneChime,"CopyIntervalMs="+copyIntervalMs,"AutoZoom="+autoZoom,"AutoZoomMin="+autoZoomMin,"AutoZoomMax="+autoZoomMax,"ShowStatus="+showStatus,"StatusPos="+statusPos,"Opacity="+mapOpacity,"FullMapOpacity="+fullMapOpacity,"Width="+minimapBounds.Width,"Height="+minimapBounds.Height,"Left="+minimapBounds.Left,"Top="+minimapBounds.Top,"Zoom="+zoom.ToString(CultureInfo.InvariantCulture),"MaxZoom="+maxZoom,"ZoomStep="+zoomStepPercent,"ScumMapKey="+scumMapKey,"ScumChatKey="+scumChatKey,"ScumCopyModifierKey="+scumCopyModifierKey,"ScumCopyKey="+scumCopyKey,"ShowCustomWaypoints="+showCustomWaypoints,"ShowScumMap="+showScumMap,"ScumMapDisabledCats="+(scumMap!=null?scumMap.GetDisabledCategoriesString():""),"ShowZoneLabels="+showZoneLabels,"SmartLabelLod="+smartLabelLod,"SidebarWildlifeExpanded="+sidebarWildlifeExpanded,"SidebarZonesExpanded="+sidebarZonesExpanded,"DisabledZoneLayers="+string.Join(";",disabledZoneLayers),"RouteColor="+ColorTranslator.ToHtml(routeGuidanceColor),"PlayerColor="+ColorTranslator.ToHtml(playerConeColor)});
+            try { var settingsLines=new List<string>(new string[]{"Welcomed=True","TrackingRevision=1","LocationHistory="+locationHistory,"LocationHistoryTimestamps="+locationHistoryTimestamps,"TrailLearning="+trailLearning,"LocationHistoryMinutes="+locationHistoryMinutes,"SuppressCopyKeyReminder="+suppressCopyKeyReminder,"VoiceEnabled="+voiceEnabled,"VoiceName="+voiceName,"VoiceRevision=1","VoiceVolume="+voiceVolume,"Language="+Localization.CurrentCode,"GridLabels="+gridLabels,"GridBorders="+gridBorders,"GridOpacity="+gridOpacity,"ShowZones="+showZones,"LabelSize="+labelSize,"Shape="+overlayShape,"ShowHeading="+showHeading,"ShowCompass="+showCompass,"ZoneChime="+zoneChime,"CopyIntervalMs="+copyIntervalMs,"AutoZoom="+autoZoom,"AutoZoomMin="+autoZoomMin,"AutoZoomMax="+autoZoomMax,"ShowStatus="+showStatus,"StatusPos="+statusPos,"Opacity="+mapOpacity,"FullMapOpacity="+fullMapOpacity,"Width="+minimapBounds.Width,"Height="+minimapBounds.Height,"Left="+minimapBounds.Left,"Top="+minimapBounds.Top,"Zoom="+zoom.ToString(CultureInfo.InvariantCulture),"MaxZoom="+maxZoom,"ZoomStep="+zoomStepPercent,"ScumMapKey="+scumMapKey,"ScumChatKey="+scumChatKey,"ScumCopyModifierKey="+scumCopyModifierKey,"ScumCopyKey="+scumCopyKey,"ShowCustomWaypoints="+showCustomWaypoints,"ShowScumMap="+showScumMap,"ScumMapDisabledCats="+(scumMap!=null?scumMap.GetDisabledCategoriesString():""),"ShowZoneLabels="+showZoneLabels,"SmartLabelLod="+smartLabelLod,"SidebarWildlifeExpanded="+sidebarWildlifeExpanded,"SidebarZonesExpanded="+sidebarZonesExpanded,"DisabledZoneLayers="+string.Join(";",disabledZoneLayers),"RouteColor="+ColorTranslator.ToHtml(routeGuidanceColor),"PlayerColor="+ColorTranslator.ToHtml(playerConeColor)});
 
 
 

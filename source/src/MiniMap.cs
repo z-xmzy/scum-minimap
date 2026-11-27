@@ -1443,13 +1443,6 @@ namespace ScumMiniMap {
             trayMenu.Items.Add(new ToolStripSeparator());
             add(Localization.Get("Settings"),"settings",(s,e)=>ShowSettings()).Hint=key(AppControlAction.Settings);
             add(Localization.Get("TrayAdminCommands"),"shield",(s,e)=>ShowAdminCommands()).Hint=key(AppControlAction.AdminCommands);
-#if MINIMAP_TEST
-            var demo=add(Localization.Get("TrayDemoTeammates"),"users",(s,e)=> {
-                WpfFieldConsoleRuntime.DemoTeammates=!WpfFieldConsoleRuntime.DemoTeammates;
-                if(WpfFieldConsoleRuntime.Active!=null)WpfFieldConsoleRuntime.Active.Refresh();
-            });
-            demo.Toggle=()=>WpfFieldConsoleRuntime.DemoTeammates;demo.Refresh();
-#endif
             trayMenu.Items.Add(new ToolStripSeparator());
             var update=add(Localization.Get("TrayCheckUpdates"),"refresh-cw",(s,e)=>CheckForUpdates(true));
             update.Enabled=!Program.IsTestBuild;
@@ -1740,7 +1733,7 @@ namespace ScumMiniMap {
 
 
 
-        public const string VersionString = "2.7.0";
+        public const string VersionString = "2.7.1";
 
 
 

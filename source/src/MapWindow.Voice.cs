@@ -58,9 +58,11 @@ namespace ScumMiniMap {
             SpeakVoice(new[]{VoicePacks.Clips[11]});
         }
         void TickVoice(DateTime now,bool gameFocused) {
-            if(InBunker) { StopVoice();return; }
-            if(voicePreview && SettingsVisible && voicePlayer!=null && voicePlayer.Busy) return;
+            // The new interface shows Settings in its own window, so SettingsVisible (the legacy form)
+            // stays false there and the game is not focused: let a requested preview play to the end.
+            if(voicePreview && voicePlayer!=null && voicePlayer.Busy) return;
             voicePreview=false;
+            if(InBunker) { StopVoice();return; }
             if(!gameFocused || chat.Paused || SettingsVisible || position==null || (now-updated).TotalSeconds>5) { StopVoice(); return; }
             // Muting speech must not disable wrong-way/off-route detection.
             if(!voiceEnabled)StopVoice();

@@ -1325,25 +1325,6 @@ namespace ScumMiniMap {
         readonly List<Window> dialogs=new List<Window>();
         bool rebuilding,hudEnabled=true;volatile bool disposed;
         internal bool HudEnabled { get { return hudEnabled; } }
-#if MINIMAP_TEST
-        // Test builds only: three made-up teammates around the player (one circling 120 m out, one standing
-        // 540 m away with a stale report, one far off-screen for the edge arrow) so the minimap and big-map markers can be checked
-        // without a squad. Switched from the tray menu; never sent anywhere.
-        internal static volatile bool DemoTeammates;
-        static PrivatePositions.Peer[] DemoPeers(Position self) {
-            double x=self!=null?self.X:-143091,y=self!=null?self.Y:-143191,z=self!=null?self.Z:0;
-            double turn=(DateTime.UtcNow-DateTime.UtcNow.Date).TotalSeconds*2*Math.PI/60;string name=Localization.Get("DemoTeammate");
-            Func<string,string,double,double,double,PrivatePositions.Peer> peer=(id,suffix,px,py,yaw)=>new PrivatePositions.Peer { Online=true,Id=id,Name=name+" "+suffix,Updated=DateTime.UtcNow,Position=new Position { X=px,Y=py,Z=z,Yaw=yaw } };
-            var standing=peer("demo-teammate-b","B",x-45000,y+30000,200);
-            // B's last report is a minute old, so it shows the faded "last known position" look.
-            standing.Updated=DateTime.UtcNow.AddSeconds(-60);
-            return new[]{
-                peer("demo-teammate-a","A",x+12000*Math.Cos(turn),y+12000*Math.Sin(turn),(turn*180/Math.PI+90)%360),
-                standing,
-                peer("demo-teammate-c","C",x+260000,y-180000,45)
-            };
-        }
-#endif
         readonly MapMouseShield mouseShield=new MapMouseShield();
         volatile bool tacticalMouseShieldActive;
         IntPtr gameMapWindow;
@@ -1735,9 +1716,6 @@ namespace ScumMiniMap {
                 state.SharedMarkers=compact.SharedMarkers=squad.Receive((privatePositions==null?new SharedMapMarker[0]:privatePositions.SnapshotMarkers()).Concat(relayGroups==null?new SharedMapMarker[0]:relayGroups.Markers()).Where(PlayerMarkerVisible)).Concat(squad.Local().Select(m=> { m.Owner=S("PrivateGroupSurvivor");return m; })).ToArray();
             }
             else state.SharedMarkers=compact.SharedMarkers=squad.Local();
-#if MINIMAP_TEST
-            if(DemoTeammates)state.Peers=compact.Peers=(state.Peers??new PrivatePositions.Peer[0]).Concat(DemoPeers(state.Position??compact.Position)).ToArray();
-#endif
             state.LocalPeerId=compact.LocalPeerId=sharingSessions.Select(session=>session.LocalId).FirstOrDefault();
             AddRouteState(state,compact);
             deathRemovalButton.IsEnabled=state.Saved.Any(marker=>marker.IsDeathMarker);if(chromeLanguage!=Localization.CurrentCode) { chromeLanguage=Localization.CurrentCode;RefreshLocalizedChrome(tactical);if(settingsWindow!=null)RefreshLocalizedChrome(settingsWindow); }

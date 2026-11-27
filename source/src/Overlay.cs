@@ -1098,6 +1098,14 @@ namespace ScumMiniMap {
         static DateTime lastMouseAction { get { return new DateTime(System.Threading.Interlocked.Read(ref lastMouseTicks),DateTimeKind.Utc); }set { System.Threading.Interlocked.Exchange(ref lastMouseTicks,value.Ticks); } }
         public static DateTime LastUserInputTime { get { return new DateTime(System.Threading.Interlocked.Read(ref lastUserTicks),DateTimeKind.Utc); }set { System.Threading.Interlocked.Exchange(ref lastUserTicks,value.Ticks); } }
         internal static long PhysicalInputRevision;
+        static long nextHookErrorLog;
+        static void LogHookError(string source,Exception error) {
+            // Hooks sit on the system input path: never block it on file I/O, and keep a repeating
+            // fault from flooding the log. One entry per 10 s is enough to find the stack.
+            long now=DateTime.UtcNow.Ticks,next=System.Threading.Interlocked.Read(ref nextHookErrorLog);
+            if(now<next||System.Threading.Interlocked.CompareExchange(ref nextHookErrorLog,now+TimeSpan.TicksPerSecond*10,next)!=next)return;
+            try { System.Threading.ThreadPool.QueueUserWorkItem(_=>Program.LogException(source,error)); }catch(Exception) { }
+        }
         public static DateTime LastFreshKeyDownTime { get { return new DateTime(System.Threading.Interlocked.Read(ref lastFreshKeyTicks),DateTimeKind.Utc); }set { System.Threading.Interlocked.Exchange(ref lastFreshKeyTicks,value.Ticks); } }
         internal static bool UserActiveRecently(int windowMs = 90) {
             return (DateTime.UtcNow - LastFreshKeyDownTime).TotalMilliseconds < windowMs || (DateTime.UtcNow-lastMouseAction).TotalMilliseconds<400;
@@ -1246,7 +1254,7 @@ namespace ScumMiniMap {
                 }
                 if((mouse.flags&1)==0 && OnPhysicalMouse!=null) OnPhysicalMouse(kind,new Point(mouse.x,mouse.y));
             }
-            } catch(Exception) { /* Fail open: input must survive a monitoring failure. */ }
+            } catch(Exception error) { LogHookError("MouseHook",error); /* Fail open: input must survive a monitoring failure. */ }
             return CallNextHookEx(mouseHook,code,message,data);
         }
         internal static bool MouseActionBlocksCopy(int message,int modifier) {
@@ -1355,7 +1363,7 @@ namespace ScumMiniMap {
                 }
                 if(appShortcut) return new IntPtr(1);
             }
-            }catch(Exception) { /* Fail open: never strand the user's physical input. */ }
+            }catch(Exception error) { LogHookError("KeyboardHook",error); /* Fail open: never strand the user's physical input. */ }
             return CallNextHookEx(hook,code,message,data);
         }
         internal static bool ChatOwnsShortcut(bool wasPaused,bool isPaused) {

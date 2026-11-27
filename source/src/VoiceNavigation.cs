@@ -17,12 +17,17 @@ namespace ScumMiniMap {
         internal const string FinnishName="Noora (Suomi)";
         internal const string LithuanianName="Ona (Lietuvių)";
         internal const string SwahiliName="Zuri (Kiswahili)";
-        internal static readonly string[] BundledNames={DefaultName,RussianName,GermanName,SpanishName,FinnishName,LithuanianName,SwahiliName};
-        static bool DistanceOnly(string name) { return name==RussianName || name==GermanName || name==FinnishName || name==LithuanianName || name==SwahiliName; }
+        internal const string ChineseName="晓晓 (中文)";
+        internal static readonly string[] BundledNames={DefaultName,RussianName,GermanName,SpanishName,FinnishName,LithuanianName,SwahiliName,ChineseName};
+        static bool DistanceOnly(string name) { return name==RussianName || name==GermanName || name==FinnishName || name==LithuanianName || name==SwahiliName || name==ChineseName; }
+        // Chinese interfaces start with the Mandarin navigator; every other language keeps the English default.
+        internal static string DefaultFor(string languageCode) {
+            return languageCode!=null && languageCode.StartsWith("zh",StringComparison.OrdinalIgnoreCase)?ChineseName:DefaultName;
+        }
         internal static string[] RequiredClips(string name) { return Clips.Where(clip=>clip!="11_in.mp3" || !DistanceOnly(name)).ToArray(); }
         internal static string[] Compose(string voiceName,IEnumerable<string> clips) {
             // Russian «В» and German north-specific examples are not reusable
-            // distance prefixes. Finnish, Lithuanian and Swahili distance clips
+            // distance prefixes. Finnish, Lithuanian, Swahili and Chinese distance clips
             // already include their language's equivalent of the distance prefix.
             // Those voices say the distance followed by action.
             return clips.Where(clip=>!DistanceOnly(voiceName) || clip!="11_in.mp3").ToArray();
@@ -45,9 +50,11 @@ namespace ScumMiniMap {
                 if(parts.Length!=3 || parts[1]!=Path.GetFileName(parts[1]) || !IsClip(parts[2])) continue;
                 string directory=Path.Combine(root,parts[1]); Directory.CreateDirectory(directory);
                 string path=Path.Combine(directory,parts[2]);
-                if(File.Exists(path)) continue;
-                using(Stream source=assembly.GetManifestResourceStream(resource))
-                using(FileStream destination=File.Create(path)) source.CopyTo(destination);
+                using(Stream source=assembly.GetManifestResourceStream(resource)) {
+                    // Replace a bundled clip that a newer build changed; identical clips are left alone.
+                    if(File.Exists(path) && new FileInfo(path).Length==source.Length) continue;
+                    using(FileStream destination=File.Create(path)) source.CopyTo(destination);
+                }
             }
         }
     }

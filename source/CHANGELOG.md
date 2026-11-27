@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.7.1] - 2026-11-27
+
+- An error inside the keyboard or mouse input hooks is now written to automatic.log (at most once every 10 seconds) instead of opening a .NET error dialog that could not be clicked. Input keeps working either way.
+- Add **晓晓 (中文)**, a Mandarin navigation voice: "前方五百米 / 二百五十米 / 一百米 / 五十米" followed by 左转、右转、继续直行、请掉头, plus 您已到达目的地 and 正在重新规划路线. Choose it under Settings → Tracking and voice → Voice. New installs with a Chinese interface start with it, and Chinese-interface users still on the previous English default are switched once; any other chosen voice is kept.
+- Voice preview in Settings plays again. In the new interface it was stopped the moment it started, so nothing was heard.
+- Remove the simulated-teammates switch that test builds had in the tray menu.
+
 ## [2.7.0] - 2026-11-26
 
 - New interface with three themes, switched in one click under Settings → Appearance → Interface theme: Tactical (default; condensed caps, compass tape, key hints, chamfered panels), Glass (frosted rounded panels, gradient accent, segmented tabs) and Minimal (left sidebar, hairlines, status bar). Every window and the in-game minimap follow the chosen theme, and the choice is remembered.
