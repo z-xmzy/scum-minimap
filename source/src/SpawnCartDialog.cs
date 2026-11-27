@@ -104,7 +104,7 @@ namespace ScumMiniMap {
                 error.Text="";
             };
             buttons.Controls.AddRange(new Control[]{apply,cancel,reset});AcceptButton=apply;CancelButton=cancel;
-            Controls.Add(values);Controls.Add(help);Controls.Add(error);Controls.Add(buttons);OverlayTheme.Style(this);error.ForeColor=Color.Salmon;
+            Controls.Add(values);Controls.Add(help);Controls.Add(error);Controls.Add(buttons);OverlayTheme.Style(this);error.ForeColor=WinTheme.Danger;help.ForeColor=WinTheme.Muted;WinTheme.Primary(apply);WinTheme.Quiet(reset);
         }
         internal bool Apply() {
             try {
@@ -178,7 +178,7 @@ namespace ScumMiniMap {
             name.TextChanged+=(s,e)=>RefreshApply();
             buttons.Controls.AddRange(new Control[]{apply,cancel,import});AcceptButton=apply;CancelButton=cancel;
             content.Controls.Add(listPanel);content.Controls.Add(namePanel);content.Controls.Add(hint);content.Controls.Add(heading);content.Controls.Add(details);content.Controls.Add(error);
-            Controls.Add(content);Controls.Add(buttons);OverlayTheme.Style(this);
+            Controls.Add(content);Controls.Add(buttons);OverlayTheme.Style(this);WinTheme.Primary(apply);WinTheme.Secondary(import);
             heading.ForeColor=OverlayTheme.Accent;hint.ForeColor=details.ForeColor=OverlayTheme.InkMuted;error.ForeColor=Color.Salmon;
             list.BackColor=FullMapSidebarStyle.ButtonSurface;list.ForeColor=OverlayTheme.Ink;
             apply.BackColor=OverlayTheme.Accent;apply.ForeColor=Color.Black;apply.FlatAppearance.BorderColor=OverlayTheme.Accent;
@@ -296,49 +296,86 @@ namespace ScumMiniMap {
             ClientSize=new Size(Math.Max(984,Math.Min(1440,available.Width-40)),Math.Max(620,Math.Min(820,available.Height-70)));
             MinimumSize=new Size(1000,660);StartPosition=FormStartPosition.CenterScreen;
             Font=new Font("Segoe UI",9);BackColor=FullMapSidebarStyle.Background;KeyPreview=true;
-            var header=new Panel { Dock=DockStyle.Top,Height=76,Padding=new Padding(16,8,16,4) };
-            var heading=new Label { Text=Localization.Get("SpawnCartTitle"),Dock=DockStyle.Top,Height=30,Font=new Font("Segoe UI",14,FontStyle.Bold) };
-            help=new Label { Dock=DockStyle.Fill,Padding=new Padding(0,3,0,0),Text=Localization.Get("SpawnCartLimits"),Font=new Font("Segoe UI",8.5f) };
+            // Layout: header band; catalogue on the left (framed search, hint row with group actions, category rail
+            // beside the grouped results, quantity and Add at the bottom); the cart as a raised card on the right
+            // (count, entries, edit actions, command preview, Send); a status footer with the item-ID source link.
+            var header=new Panel { Dock=DockStyle.Top,Height=86,Padding=new Padding(24,16,24,8) };
+            var heading=new Label { Text=Localization.Get("SpawnCartTitle"),Dock=DockStyle.Top,Height=WinTheme.Caps?36:32,AutoEllipsis=true };
+            help=new Label { Dock=DockStyle.Fill,Padding=new Padding(0,3,0,0),Text=Localization.Get("SpawnCartLimits"),Font=WinTheme.Body(9f),AutoEllipsis=true };
             header.Controls.Add(help);header.Controls.Add(heading);
-            var split=new SplitContainer { Name="SpawnCartLayout",Size=new Size(1360,620),Dock=DockStyle.Fill,SplitterWidth=10,SplitterDistance=820,
+            header.Paint+=(s,e)=> {
+                using(var line=new Pen(WinTheme.Line))e.Graphics.DrawLine(line,0,header.Height-1,header.Width,header.Height-1);
+                if(WinTheme.Caps)using(var bar=new SolidBrush(WinTheme.Accent))e.Graphics.FillRectangle(bar,24,7,28,3);
+            };
+            var split=new SplitContainer { Name="SpawnCartLayout",Size=new Size(1360,620),Dock=DockStyle.Fill,SplitterWidth=12,SplitterDistance=820,
                 Panel1MinSize=540,Panel2MinSize=380,FixedPanel=FixedPanel.None };
-            split.Panel1.Padding=new Padding(14,6,6,8);split.Panel2.Padding=new Padding(8,6,14,8);
+            split.Panel1.Padding=new Padding(20,14,4,12);split.Panel2.Padding=new Padding(4,14,20,12);
 
-            var filters=new Panel { Dock=DockStyle.Top,Height=118 };
-            search=new TextBox { Name="SpawnItemSearch",Dock=DockStyle.Fill,MaxLength=160,AccessibleName=Localization.Get("SpawnCartSearch") };
-            clearSearch=ActionButton("SpawnCartClearSearch",118,()=> { search.Clear();search.Focus(); });clearSearch.Name="ClearSpawnItemSearch";clearSearch.Dock=DockStyle.Right;clearSearch.CausesValidation=false;
-            var searchContainer=new Panel { Dock=DockStyle.Top,Height=30 };searchContainer.Controls.Add(search);searchContainer.Controls.Add(clearSearch);
-            var groupActions=new FlowLayoutPanel { Dock=DockStyle.Bottom,Height=42,WrapContents=false,Padding=new Padding(0,2,0,0) };
-            expandGroups=ActionButton("SpawnCartExpandGroups",130,()=> { items.SetGroupsCollapsed(false);UpdateResultSelection(); });expandGroups.Name="ExpandSpawnResultGroups";expandGroups.CausesValidation=false;
-            collapseGroups=ActionButton("SpawnCartCollapseGroups",130,()=> { items.SetGroupsCollapsed(true);UpdateResultSelection(); });collapseGroups.Name="CollapseSpawnResultGroups";collapseGroups.CausesValidation=false;
+            // Search: borderless box inside a framed bar with a search glyph; Clear sits inside the frame.
+            var searchBar=new Panel { Dock=DockStyle.Top,Height=42 };
+            search=new TextBox { Name="SpawnItemSearch",MaxLength=160,BorderStyle=BorderStyle.None,Font=WinTheme.Body(10.5f),AccessibleName=Localization.Get("SpawnCartSearch") };
+            clearSearch=ActionButton("SpawnCartClearSearch",96,()=> { search.Clear();search.Focus(); });clearSearch.Name="ClearSpawnItemSearch";clearSearch.CausesValidation=false;clearSearch.Height=32;
+            searchBar.Controls.Add(search);searchBar.Controls.Add(clearSearch);
+            Bitmap searchGlyph=null;
+            searchBar.Layout+=(s,e)=> {
+                clearSearch.Location=new Point(searchBar.Width-clearSearch.Width-5,(searchBar.Height-clearSearch.Height)/2);
+                search.Location=new Point(40,(searchBar.Height-search.Height)/2);search.Width=Math.Max(40,clearSearch.Left-search.Left-8);
+            };
+            searchBar.Paint+=(s,e)=> {
+                e.Graphics.Clear(searchBar.Parent==null?WinTheme.Ground:searchBar.Parent.BackColor);
+                WinTheme.FillShape(e.Graphics,new Rectangle(0,0,searchBar.Width-1,searchBar.Height-1),WinTheme.Input,search.Focused?WinTheme.Accent:WinTheme.Line2,Math.Min(WinTheme.Radius,6));
+                if(searchGlyph==null)searchGlyph=WinTheme.Icon("search",16,WinTheme.Muted);
+                if(searchGlyph!=null)e.Graphics.DrawImage(searchGlyph,new Rectangle(14,(searchBar.Height-16)/2,16,16));
+            };
+            search.Enter+=(s,e)=>searchBar.Invalidate();search.Leave+=(s,e)=>searchBar.Invalidate();
+            searchBar.MouseDown+=(s,e)=>search.Focus();Disposed+=(s,e)=> { if(searchGlyph!=null)searchGlyph.Dispose(); };
+            var hintRow=new Panel { Dock=DockStyle.Top,Height=40,Padding=new Padding(0,4,0,0) };
+            var groupActions=new FlowLayoutPanel { Dock=DockStyle.Right,Width=244,WrapContents=false,Padding=new Padding(0,0,0,0) };
+            expandGroups=ActionButton("SpawnCartExpandGroups",116,()=> { items.SetGroupsCollapsed(false);UpdateResultSelection(); });expandGroups.Name="ExpandSpawnResultGroups";expandGroups.CausesValidation=false;
+            collapseGroups=ActionButton("SpawnCartCollapseGroups",116,()=> { items.SetGroupsCollapsed(true);UpdateResultSelection(); });collapseGroups.Name="CollapseSpawnResultGroups";collapseGroups.CausesValidation=false;
+            foreach(var action in new[]{expandGroups,collapseGroups}) { action.Height=30;action.Margin=new Padding(6,2,0,0); }
             groupActions.Controls.AddRange(new Control[]{expandGroups,collapseGroups});
-            var searchHint=new Label { Text=Localization.Get("SpawnCartSearchHint"),Dock=DockStyle.Bottom,Height=23,Font=new Font("Segoe UI",8),AutoEllipsis=true };
-            filters.Controls.Add(searchContainer);filters.Controls.Add(new Label { Text=Localization.Get("SpawnCartSearch"),Dock=DockStyle.Top,Height=21 });
-            filters.Controls.Add(searchHint);filters.Controls.Add(groupActions);
-            categoryTree=new TreeView { Name="SpawnItemCategories",Dock=DockStyle.Left,Width=178,HideSelection=false,ShowLines=true,ShowRootLines=false,
-                BorderStyle=BorderStyle.None,ItemHeight=27,ShowNodeToolTips=true,AccessibleName=Localization.Get("SpawnCartCategory") };
+            var searchHint=new Label { Text=Localization.Get("SpawnCartSearchHint"),Dock=DockStyle.Fill,Font=WinTheme.Body(8.5f),AutoEllipsis=true,TextAlign=ContentAlignment.MiddleLeft };
+            hintRow.Controls.Add(searchHint);hintRow.Controls.Add(groupActions);
+            var filters=new Panel { Dock=DockStyle.Top,Height=82 };filters.Controls.Add(hintRow);filters.Controls.Add(searchBar);
+            categoryTree=new TreeView { Name="SpawnItemCategories",Dock=DockStyle.Left,Width=196,HideSelection=false,ShowLines=false,ShowRootLines=false,
+                BorderStyle=BorderStyle.None,ItemHeight=30,ShowNodeToolTips=true,AccessibleName=Localization.Get("SpawnCartCategory") };
             var allCategories=new TreeNode(Localization.Get("SpawnCartAll")+" ("+catalog.Items.Count+")");
             foreach(var group in SpawnItemCategories.Build(catalog))allCategories.Nodes.Add(CategoryNode(group));
             categoryTree.Nodes.Add(allCategories);allCategories.Expand();categoryTree.SelectedNode=allCategories;
-            var browser=new Panel { Dock=DockStyle.Fill };
+            // The browser frame is a 1 px line around the category rail and the results, with a divider between them.
+            var browser=new Panel { Dock=DockStyle.Fill,Padding=new Padding(1) };
+            var divider=new Panel { Dock=DockStyle.Left,Width=1 };
             items=new SpawnResultsListView { Name="SpawnItemResults",Dock=DockStyle.Fill,View=View.Details,FullRowSelect=true,HideSelection=false,
                 MultiSelect=true,ShowItemToolTips=true,BorderStyle=BorderStyle.None,AccessibleName=Localization.Get("SpawnCartSelect") };
-            items.Columns.Add(Localization.Get("SpawnCartName"),240);items.Columns.Add(Localization.Get("SpawnCartCompatibility"),190);
+            items.Columns.Add(Localization.Get("SpawnCartName"),240);items.Columns.Add(Localization.Get("SpawnCartCompatibility"),180);
             items.Columns.Add(Localization.Get("SpawnCartId"),150);
             items.SelectedIndexChanged+=(s,e)=>UpdateResultSelection();
             items.MouseDoubleClick+=(s,e)=> { if(e.Button==MouseButtons.Left && items.GetItemAt(e.X,e.Y)!=null)AddSelected(); };
             items.KeyDown+=(s,e)=> { if(e.KeyCode==Keys.Enter) { AddSelected();e.Handled=true;e.SuppressKeyPress=true; } };
-            var selection=new FlowLayoutPanel { Dock=DockStyle.Bottom,Height=46,Padding=new Padding(0,6,0,0),WrapContents=false };
-            selection.Controls.Add(new Label { Text=Localization.Get("SpawnCartQuantity"),AutoSize=true,Padding=new Padding(0,6,4,0) });
-            quantity=new NumericUpDown { Name="SpawnItemQuantity",Minimum=1,Maximum=SpawnCart.MaximumQuantity,Value=1,Width=66,AccessibleName=Localization.Get("SpawnCartQuantity") };
-            add=ActionButton("SpawnCartAdd",145,AddSelected);selection.Controls.Add(quantity);selection.Controls.Add(add);
-            selectedMatches=new Label { Name="SpawnItemSelection",AutoSize=true,Padding=new Padding(8,7,0,0),Text=Localization.T("SpawnCartSelectedItems",0) };selection.Controls.Add(selectedMatches);
-            matches=new Label { Dock=DockStyle.Bottom,Height=24,TextAlign=ContentAlignment.MiddleLeft };
             emptyResults=new Label { Name="SpawnItemEmptyResults",Dock=DockStyle.Fill,Text=Localization.Get("SpawnCartEmptyResults"),TextAlign=ContentAlignment.MiddleCenter,Padding=new Padding(20),Visible=false };
-            browser.Controls.Add(items);browser.Controls.Add(emptyResults);browser.Controls.Add(categoryTree);
-            split.Panel1.Controls.Add(browser);split.Panel1.Controls.Add(filters);split.Panel1.Controls.Add(selection);split.Panel1.Controls.Add(matches);
+            browser.Controls.Add(items);browser.Controls.Add(emptyResults);browser.Controls.Add(divider);browser.Controls.Add(categoryTree);
+            // Selection bar: what is selected and how many match on the left; quantity and Add on the right.
+            var selection=new TableLayoutPanel { Dock=DockStyle.Bottom,Height=58,ColumnCount=4,RowCount=1,Padding=new Padding(0,6,0,0) };
+            selection.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));selection.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            selection.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,96));selection.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,156));
+            selection.RowStyles.Add(new RowStyle(SizeType.Percent,100));
+            var counts=new Panel { Dock=DockStyle.Fill,Margin=new Padding(0) };
+            selectedMatches=new Label { Name="SpawnItemSelection",Dock=DockStyle.Top,Height=24,TextAlign=ContentAlignment.BottomLeft,Font=WinTheme.Body(9f,FontStyle.Bold),Text=Localization.T("SpawnCartSelectedItems",0),AutoEllipsis=true };
+            matches=new Label { Dock=DockStyle.Fill,TextAlign=ContentAlignment.TopLeft,Font=WinTheme.Body(8.5f),AutoEllipsis=true };
+            counts.Controls.Add(matches);counts.Controls.Add(selectedMatches);
+            var quantityLabel=new Label { Text=Localization.Get("SpawnCartQuantity"),AutoSize=true,Anchor=AnchorStyles.Left,Margin=new Padding(8,0,0,0) };
+            quantity=new NumericUpDown { Name="SpawnItemQuantity",Minimum=1,Maximum=SpawnCart.MaximumQuantity,Value=1,Font=WinTheme.Body(10f),Anchor=AnchorStyles.Left|AnchorStyles.Right,Margin=new Padding(18,0,10,0),AccessibleName=Localization.Get("SpawnCartQuantity") };
+            add=ActionButton("SpawnCartAdd",150,AddSelected);add.Dock=DockStyle.Fill;add.Margin=new Padding(4,7,0,7);
+            selection.Controls.Add(counts,0,0);selection.Controls.Add(quantityLabel,1,0);selection.Controls.Add(quantity,2,0);selection.Controls.Add(add,3,0);
+            split.Panel1.Controls.Add(browser);split.Panel1.Controls.Add(filters);split.Panel1.Controls.Add(selection);
 
-            var title=new Label { Text=Localization.Get("SpawnCartContents"),Dock=DockStyle.Top,Height=32,ForeColor=OverlayTheme.Accent,Font=new Font("Segoe UI",11,FontStyle.Bold) };
+            // Cart card.
+            var cartCard=new Panel { Dock=DockStyle.Fill,Padding=new Padding(16,10,16,16) };
+            var titleRow=new Panel { Dock=DockStyle.Top,Height=42 };
+            var title=new Label { Text=Localization.Get("SpawnCartContents"),Dock=DockStyle.Fill,ForeColor=WinTheme.Ink,TextAlign=ContentAlignment.MiddleLeft,AutoEllipsis=true };
+            summary=new Label { Dock=DockStyle.Right,Width=190,TextAlign=ContentAlignment.MiddleRight,Font=WinTheme.Body(8.5f),AutoEllipsis=true };
+            titleRow.Controls.Add(title);titleRow.Controls.Add(summary);
             grid=new DataGridView { Name="SpawnCartEntries",Dock=DockStyle.Fill,AllowUserToAddRows=false,AllowUserToDeleteRows=false,AllowUserToResizeRows=false,
                 RowHeadersVisible=false,AutoGenerateColumns=false,MultiSelect=true,SelectionMode=DataGridViewSelectionMode.FullRowSelect,
                 BorderStyle=BorderStyle.None,BackgroundColor=FullMapSidebarStyle.ButtonSurface,EnableHeadersVisualStyles=false,AutoSizeColumnsMode=DataGridViewAutoSizeColumnsMode.Fill };
@@ -363,36 +400,60 @@ namespace ScumMiniMap {
                 Persist();RefreshPreview();
             };
             grid.SelectionChanged+=(s,e)=> { remove.Enabled=!sending && grid.SelectedRows.Count>0;if(editModifiers!=null)editModifiers.Enabled=!sending && grid.SelectedRows.Count>0; };
-            var edits=new FlowLayoutPanel { Dock=DockStyle.Bottom,Height=86,WrapContents=true,Padding=new Padding(0,5,0,0) };
+            // Two fixed rows of actions, so every action stays reachable at the smallest window size.
+            var edits=new TableLayoutPanel { Dock=DockStyle.Bottom,Height=88,ColumnCount=3,RowCount=2,Padding=new Padding(0,8,0,0) };
+            for(int i=0;i<3;i++)edits.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,33.33f));
+            edits.RowStyles.Add(new RowStyle(SizeType.Percent,50));edits.RowStyles.Add(new RowStyle(SizeType.Percent,50));
             remove=ActionButton("SpawnCartRemove",140,RemoveSelected);clear=ActionButton("SpawnCartClear",100,ClearCart);
             save=ActionButton("SpawnCartSave",108,SaveKit);load=ActionButton("SpawnCartLoad",108,LoadKit);
             editModifiers=ActionButton("SpawnCartEditModifiers",170,EditModifiers);editModifiers.Name="EditSpawnModifiers";editModifiers.CausesValidation=false;
-            edits.Controls.AddRange(new Control[]{editModifiers,remove,clear,save,load});
-            preview=new TextBox { Name="SpawnCartPreview",Dock=DockStyle.Bottom,Height=86,ReadOnly=true,Multiline=true,ScrollBars=ScrollBars.Both,WordWrap=false,BorderStyle=BorderStyle.FixedSingle,Font=new Font("Consolas",8.5f),
+            foreach(var action in new[]{editModifiers,remove,save,load,clear}) { action.Dock=DockStyle.Fill;action.Margin=new Padding(0,3,6,3); }
+            remove.Margin=clear.Margin=new Padding(0,3,0,3);
+            edits.Controls.Add(editModifiers,0,0);edits.SetColumnSpan(editModifiers,2);edits.Controls.Add(remove,2,0);
+            edits.Controls.Add(save,0,1);edits.Controls.Add(load,1,1);edits.Controls.Add(clear,2,1);
+            var previewLabel=new Label { Text=Localization.Get("SpawnCartPreview"),Dock=DockStyle.Bottom,Height=30,TextAlign=ContentAlignment.BottomLeft,Font=WinTheme.Body(8.25f,FontStyle.Bold) };
+            preview=new TextBox { Name="SpawnCartPreview",Dock=DockStyle.Bottom,Height=82,ReadOnly=true,Multiline=true,ScrollBars=ScrollBars.Both,WordWrap=false,BorderStyle=BorderStyle.None,Font=new Font("Consolas",9f),
                 AccessibleName=Localization.Get("SpawnCartPreview") };
-            var previewLabel=new Label { Text=Localization.Get("SpawnCartPreview"),Dock=DockStyle.Bottom,Height=22 };
-            summary=new Label { Dock=DockStyle.Bottom,Height=28,TextAlign=ContentAlignment.MiddleLeft };
-            split.Panel2.Controls.Add(grid);split.Panel2.Controls.Add(title);split.Panel2.Controls.Add(summary);split.Panel2.Controls.Add(edits);
-            split.Panel2.Controls.Add(previewLabel);split.Panel2.Controls.Add(preview);
-
-            var footer=new TableLayoutPanel { Dock=DockStyle.Bottom,Height=88,Padding=new Padding(14,6,14,10),ColumnCount=2,RowCount=2 };
-            footer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));footer.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,180));
-            footer.RowStyles.Add(new RowStyle(SizeType.Absolute,25));footer.RowStyles.Add(new RowStyle(SizeType.Percent,100));
-            var source=new LinkLabel { Text=Localization.Get("SpawnCartSource"),AutoSize=true,LinkColor=Color.SkyBlue,ActiveLinkColor=OverlayTheme.Accent };
-            source.LinkClicked+=(s,e)=>Process.Start(new ProcessStartInfo("https://scum-db.com/") { UseShellExecute=true });
-            status=new Label { Name="SpawnCartStatus",Dock=DockStyle.Fill,Text=Localization.Get("SpawnCartSelect"),Padding=new Padding(0,5,8,0) };
-            submit=new Button { Text=Localization.Get("SpawnCartSend"),Width=170,Height=42,Name="SendSpawnCart",Dock=DockStyle.Bottom,AutoEllipsis=true,CausesValidation=false,Font=new Font("Segoe UI",10,FontStyle.Bold) };
+            var previewGap=new Panel { Dock=DockStyle.Bottom,Height=6 };
+            var sendGap=new Panel { Dock=DockStyle.Bottom,Height=14 };
+            submit=new Button { Text=Localization.Get("SpawnCartSend"),Height=46,Name="SendSpawnCart",Dock=DockStyle.Bottom,AutoEllipsis=true,CausesValidation=false,Font=WinTheme.Body(10.5f,FontStyle.Bold) };
             submit.Click+=(s,e)=>QueueSendCart();
-            footer.Controls.Add(source,0,0);footer.Controls.Add(status,0,1);footer.Controls.Add(submit,1,0);footer.SetRowSpan(submit,2);
+            cartCard.Controls.Add(grid);cartCard.Controls.Add(titleRow);cartCard.Controls.Add(edits);cartCard.Controls.Add(previewLabel);cartCard.Controls.Add(previewGap);
+            cartCard.Controls.Add(preview);cartCard.Controls.Add(sendGap);cartCard.Controls.Add(submit);
+            split.Panel2.Controls.Add(cartCard);
+
+            var footer=new Panel { Dock=DockStyle.Bottom,Height=42,Padding=new Padding(24,0,24,0) };
+            footer.Paint+=(s,e)=> { using(var line=new Pen(WinTheme.Line))e.Graphics.DrawLine(line,0,0,footer.Width,0); };
+            var source=new LinkLabel { Text=Localization.Get("SpawnCartSource"),AutoSize=false,Dock=DockStyle.Right,Width=220,TextAlign=ContentAlignment.MiddleRight,LinkColor=Color.SkyBlue,ActiveLinkColor=OverlayTheme.Accent };
+            source.LinkClicked+=(s,e)=>Process.Start(new ProcessStartInfo("https://scum-db.com/") { UseShellExecute=true });
+            // Status messages (including send errors) wrap in full: the footer grows to fit the text instead of cutting it off.
+            status=new Label { Name="SpawnCartStatus",Dock=DockStyle.Fill,Text=Localization.Get("SpawnCartSelect"),TextAlign=ContentAlignment.MiddleLeft };
+            footer.Controls.Add(status);footer.Controls.Add(source);
+            Action fitFooter=()=> {
+                int width=Math.Max(100,footer.ClientSize.Width-footer.Padding.Horizontal-source.Width);
+                int height=TextRenderer.MeasureText(status.Text,status.Font,new Size(width,int.MaxValue),TextFormatFlags.WordBreak).Height;
+                int target=Math.Max(42,Math.Min(220,height+16));if(footer.Height!=target)footer.Height=target;
+            };
+            status.TextChanged+=(s,e)=>fitFooter();int footerWidth=-1;footer.SizeChanged+=(s,e)=> { if(footer.Width!=footerWidth) { footerWidth=footer.Width;fitFooter(); } };
             var tips=new ToolTip { AutoPopDelay=20000 };tips.SetToolTip(submit,Localization.Get("SpawnCartUnconfirmed"));
             tips.SetToolTip(searchHint,searchHint.Text);tips.SetToolTip(status,status.Text);tips.SetToolTip(help,help.Text);
             status.TextChanged+=(s,e)=>tips.SetToolTip(status,status.Text);help.TextChanged+=(s,e)=>tips.SetToolTip(help,help.Text);Disposed+=(s,e)=>tips.Dispose();
             Controls.Add(split);Controls.Add(header);Controls.Add(footer);
             AttachCopyMenus();
-            OverlayTheme.Style(this);StyleLists();submit.BackColor=OverlayTheme.Accent;submit.ForeColor=FullMapSidebarStyle.Background;title.ForeColor=OverlayTheme.Accent;
-            source.LinkColor=Color.SkyBlue;heading.ForeColor=OverlayTheme.Accent;help.ForeColor=searchHint.ForeColor=matches.ForeColor=OverlayTheme.InkMuted;
-            selectedMatches.ForeColor=OverlayTheme.Accent;categoryTree.BackColor=FullMapSidebarStyle.Background;categoryTree.ForeColor=OverlayTheme.Ink;
-            split.BackColor=FullMapSidebarStyle.Background;preview.BackColor=OverlayTheme.Surface;emptyResults.BackColor=FullMapSidebarStyle.ButtonSurface;emptyResults.ForeColor=OverlayTheme.InkMuted;
+            OverlayTheme.Style(this);StyleLists();WinTheme.Primary(submit);WinTheme.Primary(add);
+            foreach(var action in new[]{save,load,editModifiers})WinTheme.Secondary(action);
+            foreach(var action in new[]{expandGroups,collapseGroups,clearSearch,clear})WinTheme.Quiet(action);WinTheme.DangerButton(remove);
+            // Surfaces after Style(): the search frame is input-coloured, the cart is a raised card, the browser frame is a line.
+            Surface(cartCard,WinTheme.Raised);WinTheme.Card(cartCard);
+            searchBar.BackColor=search.BackColor=WinTheme.Input;search.ForeColor=WinTheme.Ink;WinTheme.Cue(search,Localization.Get("SpawnCartSearch"));
+            browser.BackColor=divider.BackColor=WinTheme.Line;WinTheme.Tree(categoryTree);WinTheme.FillLastColumn(items);
+            WinTheme.Frame(quantity,8,8);
+            source.LinkColor=WinTheme.Info;source.ActiveLinkColor=WinTheme.Accent;heading.ForeColor=WinTheme.Ink;heading.Text=WinTheme.Upper(heading.Text);WinTheme.DisplayLabel(heading,16f);
+            title.Text=WinTheme.Upper(title.Text);WinTheme.DisplayLabel(title,12f);title.ForeColor=WinTheme.Ink;
+            help.ForeColor=searchHint.ForeColor=matches.ForeColor=summary.ForeColor=WinTheme.Muted;previewLabel.ForeColor=WinTheme.Muted;quantityLabel.ForeColor=WinTheme.Muted;
+            selectedMatches.ForeColor=WinTheme.Accent;
+            split.BackColor=WinTheme.Ground;split.Panel1.BackColor=split.Panel2.BackColor=WinTheme.Ground;preview.BackColor=WinTheme.Input;preview.ForeColor=WinTheme.Accent;emptyResults.BackColor=WinTheme.Input;emptyResults.ForeColor=WinTheme.Muted;
+            footer.BackColor=WinTheme.Panel;status.BackColor=source.BackColor=WinTheme.Panel;
             PerformLayout();split.SplitterDistance=Math.Max(split.Panel1MinSize,Math.Min(split.Width-split.Panel2MinSize-split.SplitterWidth,(int)(split.Width*0.60)));
             search.TextChanged+=(s,e)=>FilterItems();categoryTree.AfterSelect+=(s,e)=>FilterItems();
             KeyDown+=(s,e)=> { if(e.Control && e.KeyCode==Keys.F && !sending) { search.Focus();search.SelectAll();e.Handled=true;e.SuppressKeyPress=true; } };
@@ -455,21 +516,29 @@ namespace ScumMiniMap {
             sendQueued=true;
             BeginInvoke(new Action(async()=> { sendQueued=false;if(!IsDisposed)await SendCart(); }));
         }
+        // Labels and layout panels inside a card take the card colour; inputs, grids and buttons keep their own.
+        static void Surface(Control root,Color colour) {
+            foreach(Control child in root.Controls) {
+                if(child is Label || child.GetType()==typeof(Panel) || child is TableLayoutPanel || child is FlowLayoutPanel)child.BackColor=colour;
+                if(!(child is DataGridView) && !(child is TextBoxBase))Surface(child,colour);
+            }
+        }
         Button ActionButton(string key,int width,Action action) {
             var button=new Button { Text=Localization.Get(key),Width=width,Height=32,AutoEllipsis=true };
             button.Click+=(s,e)=> { if(!sending)action(); };return button;
         }
         void StyleLists() {
-            items.BackColor=FullMapSidebarStyle.ButtonSurface;items.ForeColor=Color.WhiteSmoke;
-            grid.BackgroundColor=FullMapSidebarStyle.ButtonSurface;grid.GridColor=FullMapSidebarStyle.Border;
-            grid.DefaultCellStyle.BackColor=FullMapSidebarStyle.ButtonSurface;grid.DefaultCellStyle.ForeColor=Color.WhiteSmoke;
-            grid.DefaultCellStyle.SelectionBackColor=FullMapSidebarStyle.SelectedSurface;grid.DefaultCellStyle.SelectionForeColor=OverlayTheme.AccentHover;
-            grid.ColumnHeadersDefaultCellStyle.BackColor=FullMapSidebarStyle.Background;grid.ColumnHeadersDefaultCellStyle.ForeColor=Color.WhiteSmoke;
-            grid.RowTemplate.Height=28;
+            items.BackColor=WinTheme.Input;items.ForeColor=WinTheme.Ink;
+            grid.BackgroundColor=WinTheme.Input;grid.GridColor=WinTheme.Line;grid.BorderStyle=BorderStyle.None;grid.CellBorderStyle=DataGridViewCellBorderStyle.SingleHorizontal;
+            grid.DefaultCellStyle.BackColor=WinTheme.Input;grid.DefaultCellStyle.ForeColor=WinTheme.Ink;
+            grid.DefaultCellStyle.SelectionBackColor=WinTheme.AccentSoft;grid.DefaultCellStyle.SelectionForeColor=WinTheme.Ink;
+            grid.ColumnHeadersDefaultCellStyle.BackColor=WinTheme.Panel;grid.ColumnHeadersDefaultCellStyle.ForeColor=WinTheme.Muted;grid.ColumnHeadersDefaultCellStyle.SelectionBackColor=WinTheme.Panel;
+            grid.ColumnHeadersBorderStyle=DataGridViewHeaderBorderStyle.None;grid.ColumnHeadersDefaultCellStyle.Font=WinTheme.Body(8.5f,FontStyle.Bold);
+            grid.RowTemplate.Height=30;
             grid.Columns[0].MinimumWidth=80;grid.Columns[1].MinimumWidth=72;
             grid.Columns[2].MinimumWidth=80;grid.Columns[3].MinimumWidth=90;
-            grid.AlternatingRowsDefaultCellStyle.BackColor=Color.FromArgb(26,32,38);
-            grid.DefaultCellStyle.Padding=new Padding(5,2,5,2);
+            grid.AlternatingRowsDefaultCellStyle.BackColor=WinTheme.Mix(WinTheme.Input,WinTheme.Raised,.45);
+            grid.DefaultCellStyle.Padding=new Padding(6,2,6,2);
             grid.ColumnHeadersHeight=32;grid.ColumnHeadersHeightSizeMode=DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
             grid.Columns[1].DefaultCellStyle.Alignment=DataGridViewContentAlignment.MiddleCenter;
             grid.Columns[2].DefaultCellStyle.Font=new Font("Consolas",8);grid.Columns[3].DefaultCellStyle.Font=new Font("Consolas",8);
@@ -580,7 +649,7 @@ namespace ScumMiniMap {
         }
         void ClearCart() {
             if(!FinishEdit() || cart.Entries.Count==0)return;
-            if(RunDialogInteraction(()=>MessageBox.Show(this,Localization.Get("SpawnCartClearConfirm"),Text,MessageBoxButtons.YesNo,MessageBoxIcon.Question))!=DialogResult.Yes)return;
+            if(RunDialogInteraction(()=>ThemedMessage.Show(this,Localization.Get("SpawnCartClearConfirm"),Text,MessageBoxButtons.YesNo,MessageBoxIcon.Question))!=DialogResult.Yes)return;
             cart.Clear();Persist();RefreshCart();
         }
         bool Persist() {
@@ -622,7 +691,7 @@ namespace ScumMiniMap {
                 if(ShowKitEditor(dialog)!=DialogResult.OK)return;
                 bool exists=kits.Any(kit=>kit.Name.Normalize(System.Text.NormalizationForm.FormC).ToUpperInvariant()==dialog.KitName.ToUpperInvariant());
                 if(exists && !(kitOverwriteConfirmation==null?
-                    RunDialogInteraction(()=>MessageBox.Show(this,Localization.T("SpawnCartKitReplace",dialog.KitName),Localization.Get("SpawnCartSave"),MessageBoxButtons.YesNo,MessageBoxIcon.Question))==DialogResult.Yes:
+                    RunDialogInteraction(()=>ThemedMessage.Show(this,Localization.T("SpawnCartKitReplace",dialog.KitName),Localization.Get("SpawnCartSave"),MessageBoxButtons.YesNo,MessageBoxIcon.Question))==DialogResult.Yes:
                     kitOverwriteConfirmation(dialog.KitName)))return;
                 kitDatabase.SaveKit(dialog.KitName,source,exists);
                 status.Text=Localization.T(imported?"SpawnCartKitImported":"SpawnCartKitSaved",dialog.KitName);
@@ -689,7 +758,7 @@ namespace ScumMiniMap {
             PrepareUiInput();
             if(spawnCartDialog==null || spawnCartDialog.IsDisposed) {
                 try { spawnCartDialog=new SpawnCartDialog(SpawnItemCatalog.LoadBundled(),Path.Combine(dataFolder,"spawn-cart.tsv"),RunAdminSpawnCart); }
-                catch(Exception ex) { RunUiModal(() => MessageBox.Show(this,Localization.T("SpawnCartCatalogError",ex.Message)));return; }
+                catch(Exception ex) { RunUiModal(() => ThemedMessage.Show(this,Localization.T("SpawnCartCatalogError",ex.Message)));return; }
                 var dialog=spawnCartDialog;Disposed+=(s,e)=>dialog.Dispose();
                 ProtectToolWindow(dialog);
             }

@@ -486,6 +486,21 @@ namespace ScumMiniMap {
             return cachedGame;
         }
 
+        static long gameRunningUntil;static bool gameRunning;
+        // Whether SCUM is still open, checked at most every two seconds. Used to
+        // keep sharing the last location while the game window is not readable.
+        internal static bool GameProcessRunning() {
+            long now=Stopwatch.GetTimestamp();if(now<gameRunningUntil)return gameRunning;
+            gameRunningUntil=now+Stopwatch.Frequency*2;bool running=false;uint pid=knownGamePid;
+            if(pid!=0)try { using(Process p=Process.GetProcessById((int)pid))running=!p.HasExited&&(p.ProcessName.Equals("SCUM",StringComparison.OrdinalIgnoreCase)||p.ProcessName.Equals("SCUM-Win64-Shipping",StringComparison.OrdinalIgnoreCase)); } catch { running=false; }
+            if(!running)foreach(string name in new[]{"SCUM-Win64-Shipping","SCUM"}) {
+                Process[] found;try { found=Process.GetProcessesByName(name); } catch { continue; }
+                foreach(var p in found) { if(!running) { running=true;knownGamePid=(uint)p.Id; }p.Dispose(); }
+                if(running)break;
+            }
+            gameRunning=running;return running;
+        }
+
         internal static bool IsAltOrTabOrWinDown() {
             return (GetAsyncKeyState(0x12)&0x8000)!=0
                 || (GetAsyncKeyState(0xA4)&0x8000)!=0

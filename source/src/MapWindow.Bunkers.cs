@@ -32,7 +32,11 @@ namespace ScumMiniMap {
         void ObserveBunker() {
             if(bunkerLoad==null||!bunkerLoad.IsCompleted||position==null)return;
             if(bunkerTracker==null) {
-                if(bunkerLoad.IsFaulted) { bunkerError=Localization.Get("BunkerUnavailable");var observed=bunkerLoad.Exception;return; }
+                if(bunkerLoad.IsFaulted) {
+                    // Log the load failure once: a missing assets\bunkers folder otherwise only shows as a status suffix.
+                    if(bunkerError==null)Program.LogException("BunkerAtlas.Load",bunkerLoad.Exception.GetBaseException());
+                    bunkerError=Localization.Get("BunkerUnavailable");return;
+                }
                 if(bunkerLoad.IsCanceled)return;
                 bunkerTracker=new BunkerTracker(bunkerLoad.Result.Floors);
             }
@@ -120,6 +124,9 @@ namespace ScumMiniMap {
             state.Route=null;state.Calculating=state.SquadPlanning=false;
             state.RouteSummary=state.Target==null||state.Position==null?"":DestinationSearch.Distance(DestinationSearch.Metres(ToMap(state.Position),state.Target.Centroid))+" ("+Localization.Get("FieldDirect")+")";
             state.OwnRouteSummary=Localization.Get("FieldDirect");
+            state.TravelRoad=state.TravelCalculating=false;state.TravelNote=null;
+            state.TravelMeters=state.Target==null||state.Position==null?-1:DestinationSearch.Metres(ToMap(state.Position),state.Target.Centroid);
+            state.TravelMinutes=0;
         }
         bool ZoomBunker(bool tactical,int direction) {
             if(displayedBunker==null)return false;

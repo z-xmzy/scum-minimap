@@ -103,28 +103,36 @@ namespace ScumMiniMap {
     internal sealed class AdminCommandEditor:Form {
         internal AdminCommand SavedCommand;
         internal AdminCommandEditor(AdminCommand command) {
-            Text="Edit admin command";ClientSize=new Size(550,320);StartPosition=FormStartPosition.CenterParent;
-            FormBorderStyle=FormBorderStyle.FixedDialog;MaximizeBox=false;MinimizeBox=false;TopMost=true;
-            var label=new TextBox {Name="Label",Left=185,Top=16,Width=345,Text=command.Name,MaxLength=80};
-            var value=new TextBox {Name="Command",Left=185,Top=56,Width=345,Text=command.Command,MaxLength=512};
+            Text=Localization.Get("AdminCommandEditorTitle");ClientSize=new Size(600,486);StartPosition=FormStartPosition.CenterParent;
+            FormBorderStyle=FormBorderStyle.FixedDialog;MaximizeBox=false;MinimizeBox=false;TopMost=true;Font=WinTheme.Body(9f);
+            // Fields keep their names as direct children (tests and automation look them up there); captions sit above each field.
+            Label heading,subtitle;var header=WinTheme.Header(Localization.Get("AdminCommandEditorTitle"),Localization.Get("AdminEditCommandHelp"),out heading,out subtitle);
+            // Each row: a muted caption, then a 38 px field. Text boxes are borderless and the form paints their frames
+            // (WinTheme.Frame), so they stay direct children while looking like the WPF inputs.
+            const int left=24,gap=16,full=552,half=(full-gap)/2,top=100,row=76,pad=10,inset=9;
+            Font fieldFont=WinTheme.Body(10f);
+            var label=new TextBox {Name="Label",Left=left+pad,Top=top+22+inset,Width=half-2*pad,Text=command.Name,MaxLength=80,Font=fieldFont};
+            var value=new TextBox {Name="Command",Left=left+half+gap+pad,Top=top+22+inset,Width=half-2*pad,Text=command.Command,MaxLength=512,Font=new Font("Consolas",10f)};
             var boolean=new CheckBox {Name="IsBoolean",Visible=false,Checked=command.IsBoolean};
-            var type=new ComboBox {Name="CommandType",Left=185,Top=96,Width=345,DropDownStyle=ComboBoxStyle.DropDownList};
-            type.Items.AddRange(new object[]{"Run once / free-text arguments","Pill toggle: true / false","Pill toggle: 1 / 0","Numeric value"});
+            var type=new ComboBox {Name="CommandType",Left=left,Top=top+row+22,Width=half,DropDownStyle=ComboBoxStyle.DropDownList,Font=fieldFont};
+            type.Items.AddRange(new object[]{Localization.Get("AdminCmdTypeOnce"),Localization.Get("AdminCmdTypeBool"),Localization.Get("AdminCmdTypeBit"),Localization.Get("AdminCmdTypeNumber")});
             type.SelectedIndex=command.IsBoolean?(command.ToggleNumeric?2:1):command.NumericMode?3:0;
-            var quantity=new TextBox {Name="Quantity",Left=185,Top=136,Width=345,Text=command.Quantity,MaxLength=32};
-            var extras=new TextBox {Name="ExtraStrings",Left=185,Top=176,Width=345,Text=command.ExtraStrings,MaxLength=512};
-            string[] names={"Button label","Command (starts with #)","Command type","Value / quantity (optional)","Arguments (any text)"};
-            for(int i=0;i<names.Length;i++)Controls.Add(new Label {Left=12,Top=19+i*40,Width=170,Text=names[i]});
+            var quantity=new TextBox {Name="Quantity",Left=left+half+gap+pad,Top=top+row+22+inset,Width=half-2*pad,Text=command.Quantity,MaxLength=32,Font=fieldFont};
+            var extras=new TextBox {Name="ExtraStrings",Left=left+pad,Top=top+2*row+22+inset,Width=full-2*pad,Text=command.ExtraStrings,MaxLength=512,Font=fieldFont};
+            string[] names={"AdminCmdLabel","AdminCmdCommand","AdminCmdType","AdminCmdQuantity","AdminCmdArgs"};
+            int[] xs={left,left+half+gap,left,left+half+gap,left},ys={top,top,top+row,top+row,top+2*row},ws={half,half,half,half,full};
+            for(int i=0;i<names.Length;i++)Controls.Add(new Label {Left=xs[i],Top=ys[i],Width=ws[i],Height=20,Text=WinTheme.Upper(Localization.Get(names[i])),Font=WinTheme.Body(8.25f,FontStyle.Bold),Tag="theme-muted",AutoEllipsis=true});
             Controls.AddRange(new Control[]{label,value,boolean,type,quantity,extras});
-            var preview=new Label {Left=12,Top=215,Width=518,Height=30};Controls.Add(preview);
-            var validation=new Label {Name="ValidationError",Left=12,Top=246,Width=518,Height=27};Controls.Add(validation);
+            var previewCaption=new Label {Left=left,Top=top+3*row,Width=full,Height=20,Text=WinTheme.Upper(Localization.Get("AdminCmdSends")),Font=WinTheme.Body(8.25f,FontStyle.Bold),Tag="theme-muted"};Controls.Add(previewCaption);
+            var preview=new Label {Left=left,Top=top+3*row+22,Width=full,Height=50,Padding=new Padding(14,6,12,6),Font=new Font("Consolas",9.5f),TextAlign=ContentAlignment.MiddleLeft,AutoEllipsis=true};Controls.Add(preview);
+            var validation=new Label {Name="ValidationError",Left=left,Top=top+3*row+78,Width=full,Height=22};Controls.Add(validation);
             Func<AdminCommand> read=()=>new AdminCommand(label.Text.Trim(),value.Text.Trim(),type.SelectedIndex==1 || type.SelectedIndex==2) {ToggleNumeric=type.SelectedIndex==2,NumericMode=type.SelectedIndex==3,Quantity=quantity.Text.Trim(),ExtraStrings=extras.Text.Trim()};
-            Action refresh=()=> { var entry=read();preview.Text=entry.IsBoolean?"ON: "+entry.Build(true)+"\nOFF: "+entry.Build(false):"Sends: "+entry.Build();validation.Text=""; };
+            Action refresh=()=> { var entry=read();preview.Text=entry.IsBoolean?Localization.Get("AdminCmdOn")+"   "+entry.Build(true)+"\n"+Localization.Get("AdminCmdOff")+"   "+entry.Build(false):entry.Build();validation.Text=""; };
             type.SelectedIndexChanged+=(s,e)=> { boolean.Checked=type.SelectedIndex==1 || type.SelectedIndex==2;refresh(); };
             boolean.CheckedChanged+=(s,e)=> { if(boolean.Checked && type.SelectedIndex!=1 && type.SelectedIndex!=2)type.SelectedIndex=1;else if(!boolean.Checked && (type.SelectedIndex==1 || type.SelectedIndex==2))type.SelectedIndex=0; };
             foreach(var box in new[]{label,value,quantity,extras})box.TextChanged+=(s,e)=>refresh();boolean.CheckedChanged+=(s,e)=>refresh();refresh();
-            var save=new Button {Name="Save",Left=330,Top=278,Width=95,Text="Save"};
-            var cancel=new Button {Left=435,Top=278,Width=95,Text="Cancel",DialogResult=DialogResult.Cancel};
+            var save=new Button {Name="Save",Left=left+full-128,Top=ClientSize.Height-50,Width=128,Height=34,Text=Localization.Get("AdminCmdSave")};
+            var cancel=new Button {Left=left+full-128-8-104,Top=ClientSize.Height-50,Width=104,Height=34,Text=Localization.Get("Cancel"),DialogResult=DialogResult.Cancel};
             Controls.Add(save);Controls.Add(cancel);AcceptButton=save;CancelButton=cancel;
             save.Click+=(s,e)=> {
                 var entry=read();
@@ -132,7 +140,17 @@ namespace ScumMiniMap {
                 string error=entry.ValidationError();if(error!=null) {validation.Text=error;return;}
                 SavedCommand=entry;DialogResult=DialogResult.OK;
             };
-            OverlayTheme.Style(this);
+            Controls.Add(header);
+            OverlayTheme.Style(this);WinTheme.Caption(this);
+            // Re-apply the looks Style() flattens: header band, muted captions, code preview, danger error text, button roles.
+            header.BackColor=WinTheme.Ground;heading.ForeColor=WinTheme.Ink;subtitle.ForeColor=WinTheme.Muted;
+            foreach(Control child in Controls)if(child is Label && Equals(child.Tag,"theme-muted"))child.ForeColor=WinTheme.Muted;
+            preview.BackColor=WinTheme.Raised;preview.ForeColor=WinTheme.Accent;validation.ForeColor=WinTheme.Danger;
+            WinTheme.Primary(save);WinTheme.Quiet(cancel);
+            foreach(var box in new[]{label,value,quantity,extras})WinTheme.Frame(box,pad,inset);
+            WinTheme.Combo(type,38);
+            Paint+=(s,e)=> { using(var line=new Pen(WinTheme.Line))e.Graphics.DrawLine(line,0,ClientSize.Height-66,ClientSize.Width,ClientSize.Height-66); };
+            preview.Paint+=(s,e)=> { using(var edge=new SolidBrush(WinTheme.Accent))e.Graphics.FillRectangle(edge,0,0,3,preview.Height); };
         }
     }
 
@@ -741,7 +759,7 @@ namespace ScumMiniMap {
             if(closing || adminCommandBusy)return;
             string path=Path.Combine(dataFolder,"admin-commands.tsv");
             List<AdminCommand> commands;
-            try { commands=AdminCommand.Load(path); } catch(Exception ex) { RunUiModal(() => MessageBox.Show(this,"Cannot load admin buttons: "+ex.Message));return; }
+            try { commands=AdminCommand.Load(path); } catch(Exception ex) { RunUiModal(() => ThemedMessage.Show(this,"Cannot load admin buttons: "+ex.Message));return; }
             var form=new AdminControlsWindow { Text=Localization.Get("AdminFloatingTitle"),ClientSize=new Size(AdminControlsCollapsedWidth,AdminControlsCollapsedHeight),StartPosition=FormStartPosition.Manual,
                 ShowInTaskbar=false,TopMost=true,FullMapPalette=attachToMap,SuppressActivation=!activate || diagnosticMode };
             adminCommandsPanel=form;
@@ -819,7 +837,7 @@ namespace ScumMiniMap {
             sendTeleport.Click+=async(s,e)=> {
                 // Rebuild at click time, so the command always uses the latest accepted sample.
                 string problem=RelativeTeleportProblem(relativeTeleportDirection,relativeTeleportDistanceMeters);
-                if(problem!=null) { RunUiModal(() => MessageBox.Show(form,problem));return; }
+                if(problem!=null) { RunUiModal(() => ThemedMessage.Show(form,problem));return; }
                 await SubmitRelativeTeleport(relativeTeleportDirection,relativeTeleportDistanceMeters,text=>RunAdminCommand(text,form));
             };
             var teleportTimer=new System.Windows.Forms.Timer { Interval=250 };
@@ -854,7 +872,7 @@ namespace ScumMiniMap {
                     command.IsBoolean=saved.IsBoolean;command.ToggleNumeric=saved.ToggleNumeric;command.NumericMode=saved.NumericMode;command.Quantity=saved.Quantity;command.ExtraStrings=saved.ExtraStrings;return true;
                 }
             };
-            Action persist=()=> { try { AdminCommand.Save(path,commands); } catch(Exception ex) { RunUiModal(() => MessageBox.Show(form,"Could not save buttons: "+ex.Message)); }rebuild(); };
+            Action persist=()=> { try { AdminCommand.Save(path,commands); } catch(Exception ex) { RunUiModal(() => ThemedMessage.Show(form,"Could not save buttons: "+ex.Message)); }rebuild(); };
             requestEdit=(command,adding)=> {
                 if(commandEditorPending || closing || form.IsDisposed || adminCommandBusy || relativeTeleportBusy)return;
                 commandEditorPending=true;
@@ -867,7 +885,7 @@ namespace ScumMiniMap {
                         if(edit(command)) { if(adding)commands.Add(command);persist(); }
                     } catch(Exception error) {
                         Program.LogException("AdminCommandEditor",error);
-                        if(!closing && !form.IsDisposed)RunUiModal(()=>MessageBox.Show(SettingsVisible?this:null,"Could not edit command: "+error.Message));
+                        if(!closing && !form.IsDisposed)RunUiModal(()=>ThemedMessage.Show(SettingsVisible?this:null,"Could not edit command: "+error.Message));
                     } finally {
                         commandEditorPending=false;
                         adminControlsCommandReturn=returnControls;
@@ -989,6 +1007,7 @@ namespace ScumMiniMap {
             };
             var close=new SidebarButton { Name="CloseAdminControls",Text="\u00d7",Left=3,Top=5,Width=20,Height=22,TabStop=false,AccessibleName=Localization.Get("AdminCollapse") };
             var expand=new SidebarButton { Name="ExpandAdminControls",Left=3,Top=5,Width=20,Height=24,TabStop=false,Font=new Font("Segoe UI",11,FontStyle.Bold) };
+            close.Glyph="x";
             close.Click+=(s,e)=>DismissAdminControls();
             expand.Click+=(s,e)=>SetAdminControlsExpanded(!adminPanelExpanded);
             caption.Click+=(s,e)=>SetAdminControlsExpanded(!adminPanelExpanded);
@@ -998,6 +1017,7 @@ namespace ScumMiniMap {
                 Font=new Font("Segoe UI",12,FontStyle.Bold),AccessibleName=Localization.Get("AdminCommandsSection"),TabStop=false };
             var teleportToggle=new SidebarButton { Name="AdminTeleportSectionToggle",Text="\u2191",Left=3,Top=144,Width=20,Height=26,
                 Font=new Font("Segoe UI",12,FontStyle.Bold),AccessibleName=Localization.Get("AdminTeleportSection"),TabStop=false };
+            commandToggle.Glyph="list";teleportToggle.Glyph="navigation";
             rail.Controls.AddRange(new Control[]{commandToggle,teleportToggle,header});
             form.Controls.Add(content);form.Controls.Add(rail);
             form.FormBorderStyle=FormBorderStyle.None;form.Padding=new Padding(1);form.Font=new Font("Segoe UI",8.25f);
@@ -1040,7 +1060,7 @@ namespace ScumMiniMap {
                 header.Height=adminPanelExpanded?112:AdminControlsCollapsedHeight;
                 if(adminPanelExpanded) { commandToggle.Top=144;teleportToggle.Top=178; }
                 form.ClientSize=new Size(adminPanelExpanded?AdminControlsExpandedWidth:AdminControlsCollapsedWidth,adminPanelExpanded?660:AdminControlsCollapsedHeight);
-                expand.Text=(adminPanelExpanded==adminPanelDockedLeft)?"\u203a":"\u2039";
+                expand.Text=(adminPanelExpanded==adminPanelDockedLeft)?"\u203a":"\u2039";expand.Glyph=(adminPanelExpanded==adminPanelDockedLeft)?"chevron-right":"chevron-left";
                 expand.AccessibleName=Localization.Get(adminPanelExpanded?"AdminCollapse":"AdminExpand");
                 tips.SetToolTip(expand,expand.AccessibleName);
                 commandHeader.Text=Localization.Get("AdminCommandsSection");commandHeader.Expanded=adminCommandsSectionExpanded;
@@ -1122,20 +1142,20 @@ namespace ScumMiniMap {
                 result.StopReason="keyboard-monitor";
                 result.Error=Localization.Get("SpawnCartMonitorUnavailable");
                 LogAdminCommandStatus("blocked","keyboard-monitor",commands.Count,0,IntPtr.Zero);
-                if(showFailures)RunUiModal(() => MessageBox.Show(panel??this,result.Error));return result;
+                if(showFailures)RunUiModal(() => ThemedMessage.Show(panel??this,result.Error));return result;
             }
             if(chat.Paused || inventoryInputLocked) {
                 result.StopReason=chat.Paused?"chat-open":"inventory-open";
                 result.Error=Localization.Get("SpawnCartCloseChatInventory");
                 LogAdminCommandStatus("blocked",chat.Paused?"chat-open":"inventory-open",commands.Count,0,IntPtr.Zero);
-                if(showFailures)RunUiModal(() => MessageBox.Show(panel??this,result.Error));return result;
+                if(showFailures)RunUiModal(() => ThemedMessage.Show(panel??this,result.Error));return result;
             }
             IntPtr game=Native.AdminGameWindow();
             if(game==IntPtr.Zero || (!Native.IsOurWindow(Native.GetForegroundWindow()) && Native.GetForegroundWindow()!=game)) {
                 result.StopReason=game==IntPtr.Zero?"no-game-window":"unrelated-foreground";
                 result.Error=Localization.Get(game==IntPtr.Zero?"SpawnCartGameUnavailable":"SpawnCartForegroundBlocked");
                 LogAdminCommandStatus("blocked",game==IntPtr.Zero?"no-game-window":"unrelated-foreground",commands.Count,0,game);
-                if(showFailures)RunUiModal(() => MessageBox.Show(panel??this,result.Error));return result;
+                if(showFailures)RunUiModal(() => ThemedMessage.Show(panel??this,result.Error));return result;
             }
             var returnTools=new List<Form>();
             bool returnControls=panel!=null && Object.ReferenceEquals(panel,adminCommandsPanel) && panel.Visible;
@@ -1290,7 +1310,7 @@ namespace ScumMiniMap {
                 if(showFailures && !result.ChatClosed && !closing && (panel==null || !panel.IsDisposed)
                     && (Native.GetForegroundWindow()==game || Native.IsOurWindow(Native.GetForegroundWindow()))) {
                     if(panel!=null && !Object.ReferenceEquals(panel,adminCommandsPanel) && !(playerToolsAwaitingReopen && IsPlayerTool(panel))) { panel.Show();if(!diagnosticMode)panel.Activate(); }
-                    RunUiModal(() => MessageBox.Show(panel??overlay,(result.Error??Native.AdminDispatchGateError(result.StopReason)??Localization.Get("SpawnCartFocusUnavailable"))+" ["+result.StopReason+"]"));
+                    RunUiModal(() => ThemedMessage.Show(panel??overlay,(result.Error??Native.AdminDispatchGateError(result.StopReason)??Localization.Get("SpawnCartFocusUnavailable"))+" ["+result.StopReason+"]"));
                 }
                 note=showFailures?(result.SubmittedCount>0?(result.ChatClosed?"Admin command submitted; Escape sent to close chat. Check SCUM for the result.":"Admin command submitted; chat cleanup interrupted."):(result.Error??Localization.Get("SpawnCartFocusUnavailable"))+" ["+result.StopReason+"]"):
                     Localization.T("SpawnCartSubmittedStatus",result.SubmittedCount,commands.Count);

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
@@ -32,24 +33,25 @@ namespace ScumMiniMap {
         public void Dispose() { if(disposed)return;disposed=true;timer.Dispose();pending=0; }
     }
     internal static class FullMapSidebarStyle {
-        internal static readonly Color Background=Color.FromArgb(14,17,20);
-        internal static readonly Color Border=OverlayTheme.Border;
-        internal static readonly Color Divider=Color.FromArgb(60,60,75,90);
-        internal static readonly Color ButtonSurface=OverlayTheme.Surface;
-        internal static readonly Color SelectedSurface=OverlayTheme.SurfaceCard;
-        internal static readonly Color Muted=Color.FromArgb(160,170,180);
-        internal static readonly Color Secondary=Color.FromArgb(120,135,150);
-        internal static readonly Color Ink=Color.WhiteSmoke;
-        internal static readonly Color MiniInk=Color.FromArgb(180,190,200);
-        internal static readonly Color SelectedInk=OverlayTheme.Accent;
-        internal static readonly Color Accent=OverlayTheme.Accent;
-        internal static readonly Color Arrow=OverlayTheme.InkMuted;
-        internal static readonly Color SectionExpanded=Color.FromArgb(200,22,27,32);
-        internal static readonly Color SectionCollapsed=Color.FromArgb(160,16,20,24);
-        internal static readonly Color SectionBorder=Color.FromArgb(140,42,52,61);
+        // Colours follow the active interface theme (see WinTheme).
+        internal static Color Background { get { return WinTheme.Ground; } }
+        internal static Color Border { get { return WinTheme.Line; } }
+        internal static Color Divider { get { return WinTheme.Line; } }
+        internal static Color ButtonSurface { get { return WinTheme.Raised; } }
+        internal static Color SelectedSurface { get { return WinTheme.AccentSoft; } }
+        internal static Color Muted { get { return WinTheme.Muted; } }
+        internal static Color Secondary { get { return WinTheme.Dim; } }
+        internal static Color Ink { get { return WinTheme.Ink; } }
+        internal static Color MiniInk { get { return WinTheme.Mix(WinTheme.Ink,WinTheme.Muted,.45); } }
+        internal static Color SelectedInk { get { return WinTheme.Accent; } }
+        internal static Color Accent { get { return WinTheme.Accent; } }
+        internal static Color Arrow { get { return WinTheme.Muted; } }
+        internal static Color SectionExpanded { get { return WinTheme.Raised; } }
+        internal static Color SectionCollapsed { get { return WinTheme.Panel; } }
+        internal static Color SectionBorder { get { return WinTheme.Line; } }
         internal static readonly Color ScrollTrack=Color.FromArgb(40,255,255,255);
-        internal static readonly Color ScrollThumb=Color.FromArgb(160,70,140,200);
-        internal static readonly Color ScrollThumbDragging=Color.FromArgb(220,80,170,240);
+        internal static Color ScrollThumb { get { return Color.FromArgb(160,WinTheme.Accent); } }
+        internal static Color ScrollThumbDragging { get { return Color.FromArgb(230,WinTheme.Accent); } }
 
         static GraphicsPath RoundedPath(Rectangle rect,int diameter) {
             var path=new GraphicsPath();
@@ -66,7 +68,7 @@ namespace ScumMiniMap {
         }
         internal static void DrawMiniButton(Graphics graphics,Rectangle rect,string text,bool selected,Font font,bool enabled,bool compact=true) {
             if(rect.Width<=0 || rect.Height<=0)return;
-            using(var path=RoundedPath(rect,6)) {
+            using(var path=RoundedPath(rect,WinTheme.Radius*2)) {
                 using(var fill=new SolidBrush(selected && enabled?SelectedSurface:ButtonSurface))graphics.FillPath(fill,path);
                 using(var border=new Pen(selected && enabled?Accent:Border,1f))graphics.DrawPath(border,path);
             }
@@ -77,13 +79,14 @@ namespace ScumMiniMap {
         }
         internal static void DrawActionButton(Graphics graphics,Rectangle rect,string text,Color background,Font font,bool enabled,bool compact=true) {
             if(rect.Width<=0 || rect.Height<=0)return;
-            using(var path=RoundedPath(rect,7)) {
+            using(var path=RoundedPath(rect,WinTheme.Radius*2)) {
                 using(var fill=new SolidBrush(background))graphics.FillPath(fill,path);
-                using(var border=new Pen(OverlayTheme.Border,1f))graphics.DrawPath(border,path);
+                using(var border=new Pen(WinTheme.Line2,1f))graphics.DrawPath(border,path);
             }
             DrawText(graphics,rect,text,font,enabled?Ink:Secondary,compact);
         }
         static void DrawText(Graphics graphics,Rectangle rect,string text,Font font,Color ink,bool compact) {
+            text=WinTheme.Upper(text);
             using(var brush=new SolidBrush(ink))
             using(var format=new StringFormat { Alignment=StringAlignment.Center,LineAlignment=StringAlignment.Center,
                 Trimming=compact?StringTrimming.EllipsisCharacter:StringTrimming.None,FormatFlags=compact?StringFormatFlags.NoWrap:0 })
@@ -92,9 +95,12 @@ namespace ScumMiniMap {
     }
 
     internal sealed class SidebarButton:Button {
-        readonly Font sidebarFont=new Font("Segoe UI",7.5f,FontStyle.Bold);
+        readonly Font sidebarFont=WinTheme.Body(7.5f,FontStyle.Bold);
         bool selected,sectionHeader,expanded;
         internal bool Pill;
+        // Optional Lucide icon drawn in place of the text glyph (rail and close buttons).
+        string glyph;readonly System.Collections.Generic.Dictionary<string,Bitmap> glyphs=new System.Collections.Generic.Dictionary<string,Bitmap>(StringComparer.Ordinal);
+        internal string Glyph { get { return glyph; } set { if(glyph!=value) { glyph=value;Invalidate(); } } }
         internal bool Selected { get { return selected; } set { if(selected!=value) { selected=value;Invalidate(); } } }
         internal bool SectionHeader { get { return sectionHeader; } set { if(sectionHeader!=value) { sectionHeader=value;Invalidate(); } } }
         internal bool Expanded { get { return expanded; } set { if(expanded!=value) { expanded=value;Invalidate(); } } }
@@ -103,21 +109,33 @@ namespace ScumMiniMap {
             FlatStyle=FlatStyle.Flat;UseVisualStyleBackColor=false;BackColor=FullMapSidebarStyle.Background;
             ForeColor=FullMapSidebarStyle.Ink;Font=sidebarFont;Cursor=Cursors.Hand;AutoEllipsis=true;
         }
-        protected override void Dispose(bool disposing) { if(disposing)sidebarFont.Dispose();base.Dispose(disposing); }
+        protected override void Dispose(bool disposing) { if(disposing) { sidebarFont.Dispose();foreach(var image in glyphs.Values)if(image!=null)image.Dispose();glyphs.Clear(); }base.Dispose(disposing); }
+        Bitmap GlyphImage(Color ink) {
+            int size=Math.Max(10,Math.Min(16,Math.Min(Width,Height)-6));string key=glyph+"|"+size+"|"+ink.ToArgb();Bitmap image;
+            if(!glyphs.TryGetValue(key,out image)) { image=WinTheme.Icon(glyph,size,ink);glyphs[key]=image; }
+            return image;
+        }
         protected override void OnPaint(PaintEventArgs e) {
             e.Graphics.SmoothingMode=SmoothingMode.AntiAlias;
+            if(glyph!=null&&!sectionHeader&&!Pill) {
+                e.Graphics.Clear(BackColor);var area=new Rectangle(0,0,Math.Max(0,Width-1),Math.Max(0,Height-1));bool hot=selected||ClientRectangle.Contains(PointToClient(Cursor.Position));
+                if(hot)WinTheme.FillShape(e.Graphics,area,selected?FullMapSidebarStyle.SelectedSurface:FullMapSidebarStyle.ButtonSurface,selected?OverlayTheme.Accent:FullMapSidebarStyle.Border,WinTheme.Radius);
+                var image=GlyphImage(!Enabled?FullMapSidebarStyle.Secondary:selected?OverlayTheme.Accent:FullMapSidebarStyle.Ink);
+                if(image!=null) { float scale=e.Graphics.DpiX/96f;int w=(int)Math.Round(image.Width/scale),h=(int)Math.Round(image.Height/scale);e.Graphics.InterpolationMode=InterpolationMode.HighQualityBicubic;e.Graphics.DrawImage(image,new Rectangle((Width-w)/2,(Height-h)/2,w,h)); }
+                else TextRenderer.DrawText(e.Graphics,Text,Font,area,ForeColor,TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter);
+                if(Focused && ShowFocusCues)ControlPaint.DrawFocusRectangle(e.Graphics,Rectangle.Inflate(area,-2,-2),FullMapSidebarStyle.Muted,BackColor);
+                return;
+            }
             e.Graphics.Clear(BackColor);
             var rect=new Rectangle(0,0,Math.Max(0,Width-1),Math.Max(0,Height-1));
             if(sectionHeader) {
-                using(var fill=new SolidBrush(expanded?FullMapSidebarStyle.SectionExpanded:FullMapSidebarStyle.SectionCollapsed))e.Graphics.FillRectangle(fill,rect);
-                using(var border=new Pen(FullMapSidebarStyle.SectionBorder,1f))e.Graphics.DrawRectangle(border,rect);
-                using(var arrowFont=new Font("Segoe UI",7f,FontStyle.Bold))
-                using(var arrow=new SolidBrush(Enabled?FullMapSidebarStyle.Arrow:FullMapSidebarStyle.Secondary))
-                    e.Graphics.DrawString(expanded?"\u25bc":"\u25ba",arrowFont,arrow,6,6);
+                WinTheme.FillShape(e.Graphics,rect,expanded?FullMapSidebarStyle.SectionExpanded:FullMapSidebarStyle.SectionCollapsed,FullMapSidebarStyle.SectionBorder,WinTheme.Radius);
+                if(WinTheme.Caps&&expanded)using(var bar=new SolidBrush(WinTheme.Accent))e.Graphics.FillRectangle(bar,0,0,3,rect.Height+1);
+                WinTheme.Chevron(e.Graphics,new Rectangle(4,0,16,Height),expanded,Enabled?FullMapSidebarStyle.Arrow:FullMapSidebarStyle.Secondary);
                 using(var textBrush=new SolidBrush(Enabled?FullMapSidebarStyle.Ink:FullMapSidebarStyle.Secondary))
                 using(var format=new StringFormat { LineAlignment=StringAlignment.Center,Trimming=StringTrimming.EllipsisCharacter,
                     FormatFlags=StringFormatFlags.NoWrap })
-                    e.Graphics.DrawString(Text,Font,textBrush,new Rectangle(22,0,Math.Max(0,Width-26),Height),format);
+                    e.Graphics.DrawString(WinTheme.Upper(Text),Font,textBrush,new Rectangle(22,0,Math.Max(0,Width-26),Height),format);
             } else if(Pill && rect.Width>rect.Height && rect.Height>0) {
                 int diameter=rect.Height;
                 using(var shape=new GraphicsPath()) {
@@ -138,7 +156,7 @@ namespace ScumMiniMap {
     }
 
     internal sealed class SidebarRadioButton:RadioButton {
-        readonly Font sidebarFont=new Font("Segoe UI",7f,FontStyle.Bold);
+        readonly Font sidebarFont=WinTheme.Body(7f,FontStyle.Bold);
         internal SidebarRadioButton() {
             SetStyle(ControlStyles.UserPaint|ControlStyles.AllPaintingInWmPaint|ControlStyles.OptimizedDoubleBuffer|ControlStyles.ResizeRedraw,true);
             Appearance=Appearance.Button;FlatStyle=FlatStyle.Flat;UseVisualStyleBackColor=false;
@@ -368,15 +386,16 @@ namespace ScumMiniMap {
 
     // Shared visual language for interactive HUD panels and popup menus (Tactical Survival Hardware aesthetic).
     public static class OverlayTheme {
-        public static readonly Color Background=Color.FromArgb(14,17,20);
-        public static readonly Color Surface=Color.FromArgb(21,26,31);
-        public static readonly Color SurfaceCard=Color.FromArgb(29,36,43);
-        public static readonly Color Accent=Color.FromArgb(255,181,71);
-        public static readonly Color AccentHover=Color.FromArgb(255,199,115);
-        public static readonly Color Border=Color.FromArgb(42,51,60);
-        public static readonly Color BorderHighlight=Color.FromArgb(126,143,159);
-        public static readonly Color Ink=Color.FromArgb(233,238,242);
-        public static readonly Color InkMuted=Color.FromArgb(164,177,188);
+        // Form colours follow the active interface theme (see WinTheme); map route and alert colours stay fixed.
+        public static Color Background { get { return WinTheme.Ground; } }
+        public static Color Surface { get { return WinTheme.Panel; } }
+        public static Color SurfaceCard { get { return WinTheme.Raised; } }
+        public static Color Accent { get { return WinTheme.Accent; } }
+        public static Color AccentHover { get { return WinTheme.AccentHover; } }
+        public static Color Border { get { return WinTheme.Line; } }
+        public static Color BorderHighlight { get { return WinTheme.Line2; } }
+        public static Color Ink { get { return WinTheme.Ink; } }
+        public static Color InkMuted { get { return WinTheme.Muted; } }
 
         public static readonly Color Route=Color.FromArgb(53,214,200);
         public static readonly Color Alert=Color.FromArgb(255,107,94);
@@ -406,31 +425,86 @@ namespace ScumMiniMap {
         [DllImport("user32.dll")] static extern bool ReleaseCapture();
         [DllImport("user32.dll")] static extern IntPtr SendMessage(IntPtr window,int message,IntPtr w,IntPtr l);
 
+        [DllImport("uxtheme.dll",CharSet=CharSet.Unicode)] static extern int SetWindowTheme(IntPtr window,string subApp,string idList);
+        static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Control,object> themedControls=new System.Runtime.CompilerServices.ConditionalWeakTable<Control,object>();
+        // Native parts (scroll bars, list headers) switch to the dark system style once their handle exists.
+        static void DarkNative(Control control) {
+            object marker;if(themedControls.TryGetValue(control,out marker))return;themedControls.Add(control,control);
+            EventHandler apply=(s,e)=> {
+                try {
+                    SetWindowTheme(control.Handle,"DarkMode_Explorer",null);
+                    if(control is ListView) { IntPtr header=SendMessage(control.Handle,0x101F,IntPtr.Zero,IntPtr.Zero);if(header!=IntPtr.Zero)SetWindowTheme(header,"DarkMode_ItemsView",null); }
+                } catch(EntryPointNotFoundException) {} catch(DllNotFoundException) {}
+            };
+            control.HandleCreated+=apply;if(control.IsHandleCreated)apply(control,EventArgs.Empty);
+        }
+        // Flat check and radio glyphs repainted in the theme: rounded box (circle) with a vector tick (dot).
+        static void ThemedGlyph(ButtonBase control) {
+            object marker;if(themedControls.TryGetValue(control,out marker))return;themedControls.Add(control,control);
+            control.Paint+=(s,e)=> {
+                var check=control as CheckBox;var radio=control as RadioButton;
+                if((check!=null&&check.Appearance==Appearance.Button)||(radio!=null&&radio.Appearance==Appearance.Button))return;
+                bool on=check!=null?check.CheckState!=CheckState.Unchecked:radio!=null&&radio.Checked;
+                int size=Math.Min(16,Math.Max(12,control.Font.Height-2));
+                var align=check!=null?check.CheckAlign:radio.CheckAlign;
+                int x=align==ContentAlignment.MiddleRight||align==ContentAlignment.TopRight||align==ContentAlignment.BottomRight?control.Width-size-1:0;
+                int y=align==ContentAlignment.TopLeft||align==ContentAlignment.TopRight?2:align==ContentAlignment.BottomLeft||align==ContentAlignment.BottomRight?control.Height-size-2:(control.Height-size)/2;
+                var box=new Rectangle(x,y,size,size);var back=control.BackColor.A==255?control.BackColor:Background;
+                using(var clear=new SolidBrush(back))e.Graphics.FillRectangle(clear,Rectangle.Inflate(box,2,2));
+                Color fill=!control.Enabled?WinTheme.Raised:on?WinTheme.Accent:WinTheme.Input,edge=on&&control.Enabled?WinTheme.Accent:control.Focused?WinTheme.Accent:WinTheme.Line2;
+                if(radio!=null) {
+                    var mode=e.Graphics.SmoothingMode;e.Graphics.SmoothingMode=System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                    using(var brush=new SolidBrush(WinTheme.Input))e.Graphics.FillEllipse(brush,box);using(var pen=new Pen(edge,1.5f))e.Graphics.DrawEllipse(pen,box);
+                    if(on)using(var dot=new SolidBrush(WinTheme.Accent))e.Graphics.FillEllipse(dot,Rectangle.Inflate(box,-size/4-1,-size/4-1));
+                    e.Graphics.SmoothingMode=mode;
+                } else {
+                    WinTheme.FillShape(e.Graphics,box,fill,edge,Math.Min(4,WinTheme.Radius));
+                    if(check.CheckState==CheckState.Checked)WinTheme.Tick(e.Graphics,box,WinTheme.AccentInk);
+                    else if(check.CheckState==CheckState.Indeterminate)using(var dash=new SolidBrush(WinTheme.AccentInk))e.Graphics.FillRectangle(dash,box.X+size/4,box.Y+size/2-1,size/2,2);
+                }
+            };
+            if(control is CheckBox)((CheckBox)control).CheckStateChanged+=(s,e)=>control.Invalidate();
+        }
         public static void Style(Control root) {
             if(root.ForeColor!=InkMuted && root.ForeColor!=Accent && root.ForeColor!=Route)root.ForeColor=Ink;
+            var form=root as Form;if(form!=null)WinTheme.Caption(form);
             Button button=root as Button;
             if(button!=null) {
                 if((string)button.Tag == "swatch") return;
                 button.FlatStyle=FlatStyle.Flat;
                 button.FlatAppearance.BorderSize=1;
-                button.FlatAppearance.BorderColor=Border;
-                button.FlatAppearance.MouseOverBackColor=SurfaceCard;
-                button.FlatAppearance.MouseDownBackColor=SurfaceCard;
+                button.FlatAppearance.BorderColor=WinTheme.Line2;
+                button.FlatAppearance.MouseOverBackColor=WinTheme.Hover;
+                button.FlatAppearance.MouseDownBackColor=WinTheme.Hover;
                 button.BackColor=Surface;
                 button.UseVisualStyleBackColor=false;
                 button.Cursor=Cursors.Hand;
                 button.Height=Math.Max(28,button.Height);
             } else if(root is TextBox || root is ListBox || root is NumericUpDown) {
-                root.BackColor=Color.FromArgb(14,17,20);
+                root.BackColor=WinTheme.Input;
                 if(root.ForeColor!=InkMuted && root.ForeColor!=Accent && root.ForeColor!=Route)root.ForeColor=Ink;
+                if(root is ListBox || ((root is TextBox) && ((TextBox)root).Multiline))DarkNative(root);
+                else if(root is TextBox && ((TextBox)root).BorderStyle!=BorderStyle.None)WinTheme.DarkEdit((TextBox)root);
+                if(root is NumericUpDown)WinTheme.Spin((NumericUpDown)root);
+            } else if(root is ListView) {
+                root.BackColor=WinTheme.Input;root.ForeColor=Ink;DarkNative(root);
+            } else if(root is DataGridView) {
+                var grid=(DataGridView)root;grid.BackgroundColor=WinTheme.Input;grid.GridColor=WinTheme.Line;grid.EnableHeadersVisualStyles=false;
+                grid.BorderStyle=BorderStyle.None;grid.CellBorderStyle=DataGridViewCellBorderStyle.SingleHorizontal;grid.ColumnHeadersBorderStyle=DataGridViewHeaderBorderStyle.None;
+                grid.DefaultCellStyle.BackColor=WinTheme.Input;grid.DefaultCellStyle.ForeColor=Ink;grid.DefaultCellStyle.SelectionBackColor=WinTheme.AccentSoft;grid.DefaultCellStyle.SelectionForeColor=Ink;
+                grid.AlternatingRowsDefaultCellStyle.BackColor=WinTheme.Mix(WinTheme.Input,WinTheme.Raised,.5);
+                grid.ColumnHeadersDefaultCellStyle.BackColor=WinTheme.Panel;grid.ColumnHeadersDefaultCellStyle.ForeColor=WinTheme.Muted;grid.ColumnHeadersDefaultCellStyle.SelectionBackColor=WinTheme.Panel;
+                grid.ColumnHeadersDefaultCellStyle.Padding=new Padding(6,0,0,0);grid.DefaultCellStyle.Padding=new Padding(6,0,0,0);
+                DarkNative(root);
             } else if(root is TreeView) {
                 TreeView tv=root as TreeView;
-                tv.BackColor=Color.FromArgb(14,17,20);
+                tv.BackColor=WinTheme.Input;
                 tv.ForeColor=Ink;
-                tv.LineColor=Border;
+                tv.LineColor=Border;DarkNative(tv);
             } else if(!(root is Panel) || (root.BackColor!=Surface && root.BackColor!=SurfaceCard)) {
                 root.BackColor=Background;
             }
+            if((root is CheckBox || root is RadioButton) && !(root is SidebarRadioButton))ThemedGlyph((ButtonBase)root);
             CheckBox check=root as CheckBox;
             if(check!=null) {
                 check.FlatStyle=FlatStyle.Flat;
@@ -443,23 +517,8 @@ namespace ScumMiniMap {
                 check.FlatAppearance.MouseOverBackColor=SurfaceCard;
             }
             ComboBox combo=root as ComboBox;
-            if(combo!=null && !(combo is TacticalComboBox)) {
-                combo.FlatStyle=FlatStyle.Flat;
-                combo.BackColor=Surface;
-                combo.ForeColor=Ink;
-                combo.DrawMode=DrawMode.OwnerDrawFixed;
-                combo.ItemHeight=22;
-                if((string)combo.Tag != "styled") {
-                    combo.Tag = "styled";
-                    combo.DrawItem+=(s,e)=> {
-                        if(e.Index<0) return;
-                        bool sel=(e.State & DrawItemState.Selected)!=0;
-                        using(Brush b=new SolidBrush(sel?SurfaceCard:Surface)) e.Graphics.FillRectangle(b,e.Bounds);
-                        string itmText=combo.Items[e.Index].ToString();
-                        TextRenderer.DrawText(e.Graphics, itmText, combo.Font, e.Bounds, sel?Accent:Ink, TextFormatFlags.Left|TextFormatFlags.VerticalCenter);
-                    };
-                }
-            }
+            // Drop-down lists are painted by the theme (frame, text, chevron, item rows) at their existing height.
+            if(combo!=null && !(combo is TacticalComboBox))WinTheme.Combo(combo,28);
             if(!(root is NumericUpDown)) {
                 foreach(Control child in root.Controls) Style(child);
             }
@@ -468,18 +527,22 @@ namespace ScumMiniMap {
         public static void Frame(Form form,string title,Action dismiss,int headerHeight=52) {
             form.FormBorderStyle=FormBorderStyle.None; form.TopMost=true; form.ShowInTaskbar=true;
             form.Padding=new Padding(1); form.BackColor=Background; form.Font=new Font("Segoe UI",9);
-            Panel header=new Panel { Dock=DockStyle.Top,Height=headerHeight,Padding=new Padding(14,8,8,8),BackColor=Surface };
-            Label caption=new Label { Text=title,Dock=DockStyle.Fill,TextAlign=ContentAlignment.MiddleLeft,Font=new Font("Segoe UI",11,FontStyle.Bold),ForeColor=Accent };
-            Button close=new Button { Name="CloseWindow",Text=Localization.Get("Close"),Dock=DockStyle.Right,Width=62,TabStop=false,CausesValidation=false };
+            Panel header=new Panel { Dock=DockStyle.Top,Height=headerHeight,Padding=new Padding(18,8,10,8),BackColor=Surface };
+            Label caption=new Label { Text=WinTheme.Upper(title),Dock=DockStyle.Fill,TextAlign=ContentAlignment.MiddleLeft,Font=WinTheme.Display(12f),ForeColor=Ink };
+            Button close=new Button { Name="CloseWindow",Text=Localization.Get("Close"),Dock=DockStyle.Right,Width=72,TabStop=false,CausesValidation=false };
+            header.Paint+=(s,e)=> {
+                using(Pen line=new Pen(WinTheme.Line)) e.Graphics.DrawLine(line,0,header.Height-1,header.Width,header.Height-1);
+                if(WinTheme.Caps) using(Brush bar=new SolidBrush(WinTheme.Accent)) e.Graphics.FillRectangle(bar,0,0,3,header.Height);
+            };
             close.Click+=(s,e)=>dismiss();
             caption.MouseDown+=(s,e)=> { if(e.Button==MouseButtons.Left) { ReleaseCapture(); SendMessage(form.Handle,0xA1,new IntPtr(2),IntPtr.Zero); } };
             header.Controls.Add(caption); header.Controls.Add(close); form.Controls.Add(header);
-            form.TextChanged+=(s,e)=>caption.Text=form.Text;
+            form.TextChanged+=(s,e)=>caption.Text=WinTheme.Upper(form.Text);
             Action languageChanged=()=> { if(!form.IsDisposed) close.Text=Localization.Get("Close"); };
             Localization.LanguageChanged+=languageChanged;
             form.Disposed+=(s,e)=>Localization.LanguageChanged-=languageChanged;
-            Style(form); caption.ForeColor=Accent;
-            form.Paint+=(s,e)=> { using(Pen pen=new Pen(Border,1f)) e.Graphics.DrawRectangle(pen,0,0,form.ClientSize.Width-1,form.ClientSize.Height-1); };
+            Style(form); caption.ForeColor=Ink; WinTheme.Quiet(close);
+            form.Paint+=(s,e)=> { using(Pen pen=new Pen(WinTheme.Chamfer?Accent:WinTheme.Line2,1f)) e.Graphics.DrawRectangle(pen,0,0,form.ClientSize.Width-1,form.ClientSize.Height-1); };
             form.KeyPreview=true;
             form.KeyDown+=(s,e)=> { if(e.KeyCode==Keys.Escape) { dismiss(); e.Handled=true; e.SuppressKeyPress=true; } };
         }
@@ -545,21 +608,211 @@ namespace ScumMiniMap {
         }
 
         internal static void Menu(ContextMenuStrip menu) {
-            menu.Renderer=new HudMenuRenderer(); menu.ShowImageMargin=false; menu.BackColor=Background; menu.ForeColor=Ink;
-            menu.Font=new Font("Segoe UI",9); menu.Padding=new Padding(5);
-            foreach(ToolStripItem item in menu.Items) { item.Padding=new Padding(12,7,12,7); item.ForeColor=Ink; }
+            bool icons=false;foreach(ToolStripItem item in menu.Items)if(item.Image!=null)icons=true;
+            menu.Renderer=new HudMenuRenderer(); menu.ShowImageMargin=icons; menu.ImageScalingSize=new Size(16,16); menu.BackColor=WinTheme.Panel; menu.ForeColor=Ink;
+            menu.Font=new Font("Segoe UI",9.5f); menu.Padding=new Padding(6,6,6,6);
+            foreach(ToolStripItem item in menu.Items) {
+                if(item is ToolStripSeparator) { item.Margin=new Padding(0,4,0,4);continue; }
+                if(item is ToolStripLabel) { item.Padding=new Padding(8,4,12,6);item.ForeColor=WinTheme.Muted;item.Font=new Font("Segoe UI",8.25f);continue; }
+                item.Padding=new Padding(8,7,16,7); item.ForeColor=Ink;item.Margin=new Padding(0,1,0,1);
+            }
+        }
+
+        // Tray menu: a full-bleed header band, roomy rows that draw their own icon, text, key hint and switch,
+        // and a window that Windows 11 rounds and outlines in the theme colour.
+        internal static void TrayMenu(ContextMenuStrip menu) {
+            var renderer=new TrayMenuRenderer();
+            menu.Renderer=renderer;menu.ShowImageMargin=false;menu.ShowCheckMargin=false;
+            menu.BackColor=WinTheme.Panel;menu.ForeColor=Ink;menu.Font=WinTheme.Body(10f);menu.Padding=new Padding(0,0,0,6);menu.DropShadowEnabled=true;
+            foreach(ToolStripItem item in menu.Items) {
+                if(item is ToolStripSeparator) { item.Margin=new Padding(0,3,0,3);continue; }
+                var row=item as TrayItem;if(row!=null) { row.Margin=Padding.Empty;row.Padding=Padding.Empty;row.Font=menu.Font; }
+            }
+            TrayWidths(menu);
+            if(!"tray-themed".Equals(menu.Tag)) {
+                menu.Tag="tray-themed";
+                menu.HandleCreated+=(s,e)=>TrayCorners(menu);
+                menu.Opening+=(s,e)=> {
+                    menu.BackColor=WinTheme.Panel;
+                    foreach(ToolStripItem item in menu.Items) { var row=item as TrayItem;if(row!=null)row.Refresh(); }
+                    TrayWidths(menu);TrayCorners(menu);
+                };
+            }
+            TrayCorners(menu);
+        }
+        // Every row shares the widest row's width, so key hints and switches form one right-hand column.
+        // The drop-down would otherwise size itself from its own menu-item columns and leave a strip on the right,
+        // so its width is fixed to exactly that shared row width.
+        static void TrayWidths(ContextMenuStrip menu) {
+            int width=(int)(264*TrayItem.Scale);
+            foreach(ToolStripItem item in menu.Items) {
+                var head=item as TrayHeader;if(head!=null)width=Math.Max(width,head.Measure());
+                var row=item as TrayItem;if(row!=null)width=Math.Max(width,row.Measure());
+            }
+            foreach(ToolStripItem item in menu.Items) {
+                var row=item as TrayItem;if(row!=null)row.PreferredWidth=width;
+                var head=item as TrayHeader;if(head!=null)head.PreferredWidth=width;
+            }
+            menu.AutoSize=true;menu.PerformLayout();
+            int height=menu.GetPreferredSize(Size.Empty).Height;
+            menu.AutoSize=false;menu.Size=new Size(width+menu.Padding.Horizontal,height);
+            menu.PerformLayout();
+        }
+        // Windows 11 rounds the popup (square in the tactical theme) and draws its outline; older Windows keeps the painted border.
+        static void TrayCorners(ContextMenuStrip menu) {
+            var renderer=menu.Renderer as TrayMenuRenderer;
+            if(renderer==null||!menu.IsHandleCreated)return;
+            try {
+                int preference=WinTheme.Caps?1:2;
+                renderer.Rounded=DwmSetWindowAttribute(menu.Handle,33,ref preference,4)==0&&preference==2;
+                Color line=WinTheme.Line2;int border=line.R|(line.G<<8)|(line.B<<16);
+                if(renderer.Rounded)DwmSetWindowAttribute(menu.Handle,34,ref border,4);
+            } catch { renderer.Rounded=false; }
+        }
+        [DllImport("dwmapi.dll")] static extern int DwmSetWindowAttribute(IntPtr window,int attribute,ref int value,int size);
+
+        sealed class TrayMenuRenderer:ToolStripProfessionalRenderer {
+            internal bool Rounded;
+            protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e) { e.Graphics.Clear(WinTheme.Panel); }
+            protected override void OnRenderImageMargin(ToolStripRenderEventArgs e) {}
+            protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e) {}
+            protected override void OnRenderSeparator(ToolStripSeparatorRenderEventArgs e) {
+                int inset=(int)(16*TrayItem.Scale);
+                using(Pen p=new Pen(WinTheme.Line)) e.Graphics.DrawLine(p,inset,e.Item.Height/2,e.Item.Width-inset,e.Item.Height/2);
+            }
+            protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e) {
+                if(Rounded)return;
+                using(Pen p=new Pen(WinTheme.Line2)) e.Graphics.DrawRectangle(p,0,0,e.ToolStrip.Width-1,e.ToolStrip.Height-1);
+            }
         }
 
         sealed class HudMenuRenderer:ToolStripProfessionalRenderer {
-            protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e) { e.Graphics.Clear(Background); }
+            protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e) { e.Graphics.Clear(WinTheme.Panel); }
+            protected override void OnRenderImageMargin(ToolStripRenderEventArgs e) {}
             protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e) {
-                if(e.Item.Selected) {
-                    using(Brush b=new SolidBrush(Surface)) e.Graphics.FillRectangle(b,new Rectangle(Point.Empty,e.Item.Size));
-                    using(Pen p=new Pen(Border)) e.Graphics.DrawRectangle(p,new Rectangle(0,0,e.Item.Size.Width-1,e.Item.Size.Height-1));
+                if(e.Item.Selected && e.Item.Enabled) {
+                    WinTheme.FillShape(e.Graphics,new Rectangle(2,0,e.Item.Width-5,e.Item.Height-1),WinTheme.Hover,Color.Transparent,WinTheme.Radius);
+                    if(WinTheme.Caps)using(Brush bar=new SolidBrush(WinTheme.Accent)) e.Graphics.FillRectangle(bar,2,3,2,e.Item.Height-7);
                 }
             }
-            protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e) { e.TextColor=e.Item.Selected?Accent:Ink; base.OnRenderItemText(e); }
-            protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e) { using(Pen p=new Pen(Border)) e.Graphics.DrawRectangle(p,0,0,e.ToolStrip.Width-1,e.ToolStrip.Height-1); }
+            protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e) {
+                e.TextColor=!e.Item.Enabled?WinTheme.Dim:e.Item is ToolStripLabel?WinTheme.Muted:Ink;
+                if(WinTheme.Caps && !(e.Item is ToolStripLabel))e.Text=WinTheme.Upper(e.Text);
+                base.OnRenderItemText(e);
+            }
+            protected override void OnRenderSeparator(ToolStripSeparatorRenderEventArgs e) {
+                using(Pen p=new Pen(WinTheme.Line)) e.Graphics.DrawLine(p,8,e.Item.Height/2,e.Item.Width-8,e.Item.Height/2);
+            }
+            protected override void OnRenderArrow(ToolStripArrowRenderEventArgs e) { WinTheme.Chevron(e.Graphics,e.ArrowRectangle,false,WinTheme.Muted); }
+            protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e) { using(Pen p=new Pen(WinTheme.Line2)) e.Graphics.DrawRectangle(p,0,0,e.ToolStrip.Width-1,e.ToolStrip.Height-1); }
+        }
+    }
+    // One tray row. It paints itself so the icon, label, key hint and on/off switch line up at any DPI.
+    internal sealed class TrayItem:ToolStripMenuItem {
+        internal readonly string IconName;internal string Hint;internal bool HintIsKey=true;internal bool Danger;internal Func<bool> Toggle;
+        internal int PreferredWidth;bool on;
+        static readonly Dictionary<string,Bitmap> icons=new Dictionary<string,Bitmap>();
+        static float scale;
+        internal static float Scale { get { if(scale<=0)try { using(var screen=Graphics.FromHwnd(IntPtr.Zero))scale=Math.Max(1f,screen.DpiX/96f); } catch { scale=1f; } return scale; } }
+        internal TrayItem(string text,string icon,EventHandler click):base(text,null,click) { IconName=icon;Refresh(); }
+        internal void Refresh() { if(Toggle!=null)try { on=Toggle(); } catch { on=false; } Invalidate(); }
+        internal bool On { get { return on; } }
+        static Bitmap Glyph(string name,Color ink) {
+            if(name==null)return null;string key=name+"|"+ink.ToArgb();Bitmap bitmap;
+            lock(icons) { if(icons.TryGetValue(key,out bitmap))return bitmap; }
+            bitmap=WinTheme.Icon(name,16,ink);
+            lock(icons) { if(icons.Count>96)icons.Clear();icons[key]=bitmap; }
+            return bitmap;
+        }
+        string Label { get { return WinTheme.Upper(Text); } }
+        Font HintFont { get { return WinTheme.Body(8.25f); } }
+        int Px(float value) { return (int)Math.Round(value*Scale); }
+        int RightWidth() {
+            if(Toggle!=null)return Px(30);
+            if(string.IsNullOrEmpty(Hint))return 0;
+            using(var font=HintFont)return TextRenderer.MeasureText(Hint,font,Size.Empty,TextFormatFlags.NoPadding|TextFormatFlags.NoPrefix).Width+(HintIsKey?Px(14):0);
+        }
+        internal int Measure() {
+            int text=TextRenderer.MeasureText(Label,Font,Size.Empty,TextFormatFlags.NoPadding|TextFormatFlags.NoPrefix).Width;
+            int right=RightWidth();
+            return Px(48)+text+(right>0?Px(20)+right:0)+Px(18);
+        }
+        public override Size GetPreferredSize(Size constrainingSize) { return new Size(Math.Max(PreferredWidth,Measure()),Px(36)); }
+        protected override void OnPaint(PaintEventArgs e) {
+            var g=e.Graphics;bool hot=Selected&&Enabled;
+            Color accent=Danger?WinTheme.Danger:WinTheme.Accent;
+            if(hot) {
+                var pill=new Rectangle(Px(6),Px(1),Width-Px(12),Height-Px(2));
+                WinTheme.FillShape(g,pill,Danger?WinTheme.Alpha(WinTheme.Danger,44,WinTheme.Panel):WinTheme.Hover,Color.Transparent,WinTheme.Radius);
+                if(WinTheme.Caps)using(Brush bar=new SolidBrush(accent))g.FillRectangle(bar,pill.X,pill.Y+Px(7),Px(2),pill.Height-Px(14));
+            }
+            Color ink=!Enabled?WinTheme.Dim:hot&&Danger?WinTheme.Danger:WinTheme.Ink;
+            Color glyphInk=!Enabled?WinTheme.Dim:hot?accent:Danger?WinTheme.Mix(WinTheme.Muted,WinTheme.Danger,.35):WinTheme.Muted;
+            string iconName=Toggle!=null&&!on&&IconName=="eye"?"eye-off":IconName;
+            var glyph=Glyph(iconName,glyphInk);int size=Px(16);
+            if(glyph!=null) { g.InterpolationMode=InterpolationMode.HighQualityBicubic;g.DrawImage(glyph,new Rectangle(Px(18),(Height-size)/2,size,size)); }
+            int right=RightWidth();int textLeft=Px(48);
+            var textBox=new Rectangle(textLeft,0,Math.Max(10,Width-textLeft-Px(18)-(right>0?right+Px(12):0)),Height);
+            TextRenderer.DrawText(g,Label,Font,textBox,ink,TextFormatFlags.VerticalCenter|TextFormatFlags.Left|TextFormatFlags.EndEllipsis|TextFormatFlags.NoPrefix|TextFormatFlags.SingleLine|TextFormatFlags.NoPadding);
+            int edge=Width-Px(18);
+            if(Toggle!=null) {
+                var track=new Rectangle(edge-Px(30),(Height-Px(16))/2,Px(30),Px(16));
+                int round=WinTheme.Caps?Px(2):track.Height/2;
+                WinTheme.FillShape(g,track,on?WinTheme.Accent:WinTheme.Input,on?WinTheme.Accent:WinTheme.Line2,round);
+                int knob=Px(10);var dot=new Rectangle(on?track.Right-Px(3)-knob:track.X+Px(3),track.Y+(track.Height-knob)/2,knob,knob);
+                WinTheme.FillShape(g,dot,on?WinTheme.AccentInk:WinTheme.Muted,Color.Transparent,WinTheme.Caps?Px(1):knob/2);
+            } else if(!string.IsNullOrEmpty(Hint)) {
+                using(var font=HintFont) {
+                    var flags=TextFormatFlags.VerticalCenter|TextFormatFlags.HorizontalCenter|TextFormatFlags.NoPrefix|TextFormatFlags.SingleLine|TextFormatFlags.NoPadding;
+                    if(HintIsKey) {
+                        var cap=new Rectangle(edge-right,(Height-Px(20))/2,right,Px(20));
+                        WinTheme.FillShape(g,cap,WinTheme.Input,WinTheme.Line2,Math.Min(WinTheme.Radius,Px(4)));
+                        TextRenderer.DrawText(g,Hint,font,cap,hot?WinTheme.Ink:WinTheme.Muted,flags);
+                    } else {
+                        TextRenderer.DrawText(g,Hint,font,new Rectangle(edge-right,0,right,Height),WinTheme.Dim,flags);
+                    }
+                }
+            }
+        }
+    }
+    // Brand band at the top of the tray menu: mark, name, version and a test badge.
+    internal sealed class TrayHeader:ToolStripItem {
+        readonly string title,version,badge;internal int PreferredWidth;
+        internal TrayHeader(string title,string version,string badge) { this.title=title;this.version=version;this.badge=badge;AutoSize=true;Margin=new Padding(0,0,0,6); }
+        public override bool CanSelect { get { return false; } }
+        int Px(float value) { return (int)Math.Round(value*TrayItem.Scale); }
+        Font TitleFont() { return WinTheme.DisplayFor(title,10.5f); }
+        internal int Measure() {
+            int titleWidth,lineWidth;
+            using(var font=TitleFont())titleWidth=TextRenderer.MeasureText(WinTheme.Upper(title),font,Size.Empty,TextFormatFlags.NoPadding).Width;
+            using(var small=WinTheme.Body(8.5f))lineWidth=TextRenderer.MeasureText(version,small,Size.Empty,TextFormatFlags.NoPadding).Width;
+            if(!string.IsNullOrEmpty(badge))using(var tag=WinTheme.Body(7.5f,FontStyle.Bold))lineWidth+=Px(8)+TextRenderer.MeasureText(badge,tag,Size.Empty,TextFormatFlags.NoPadding).Width+Px(12);
+            return Px(64)+Math.Max(titleWidth,lineWidth)+Px(20);
+        }
+        public override Size GetPreferredSize(Size constrainingSize) { return new Size(Math.Max(PreferredWidth,Measure()),Px(62)); }
+        protected override void OnPaint(PaintEventArgs e) {
+            var g=e.Graphics;var band=new Rectangle(0,0,Width,Height);
+            using(var fill=new SolidBrush(WinTheme.Raised))g.FillRectangle(fill,band);
+            using(var line=new Pen(WinTheme.Line))g.DrawLine(line,0,Height-1,Width,Height-1);
+            int tile=Px(34);var mark=new Rectangle(Px(16),(Height-tile)/2,tile,tile);
+            WinTheme.FillShape(g,mark,WinTheme.AccentSoft,WinTheme.Alpha(WinTheme.Accent,90,WinTheme.AccentSoft),WinTheme.Caps?Px(2):Px(8));
+            var glyph=WinTheme.Icon("map",18,WinTheme.Accent);
+            if(glyph!=null)using(glyph) { int size=Px(18);g.InterpolationMode=InterpolationMode.HighQualityBicubic;g.DrawImage(glyph,new Rectangle(mark.X+(tile-size)/2,mark.Y+(tile-size)/2,size,size)); }
+            int left=Px(64);var flags=TextFormatFlags.Left|TextFormatFlags.NoPadding|TextFormatFlags.NoPrefix|TextFormatFlags.SingleLine|TextFormatFlags.EndEllipsis;
+            using(var font=TitleFont()) {
+                var size=TextRenderer.MeasureText(WinTheme.Upper(title),font,Size.Empty,TextFormatFlags.NoPadding);
+                TextRenderer.DrawText(g,WinTheme.Upper(title),font,new Rectangle(left,Height/2-size.Height-Px(1),Width-left-Px(12),size.Height),WinTheme.Ink,flags);
+            }
+            using(var small=WinTheme.Body(8.5f)) {
+                var size=TextRenderer.MeasureText(version,small,Size.Empty,TextFormatFlags.NoPadding);int top=Height/2+Px(3);
+                TextRenderer.DrawText(g,version,small,new Rectangle(left,top,size.Width+Px(2),size.Height),WinTheme.Muted,flags);
+                if(!string.IsNullOrEmpty(badge))using(var tag=WinTheme.Body(7.5f,FontStyle.Bold)) {
+                    var tagSize=TextRenderer.MeasureText(badge,tag,Size.Empty,TextFormatFlags.NoPadding);
+                    var pill=new Rectangle(left+size.Width+Px(8),top+(size.Height-tagSize.Height-Px(4))/2,tagSize.Width+Px(12),tagSize.Height+Px(4));
+                    WinTheme.FillShape(g,pill,WinTheme.AccentSoft,Color.Transparent,WinTheme.Caps?Px(2):pill.Height/2);
+                    TextRenderer.DrawText(g,badge,tag,pill,WinTheme.Accent,TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter|TextFormatFlags.NoPadding|TextFormatFlags.NoPrefix);
+                }
+            }
         }
     }
     // FlowLayoutPanel that prevents automatic snapping/jumping to top when child controls are focused or clicked.
@@ -876,6 +1129,9 @@ namespace ScumMiniMap {
                         if(keyboardContext!=null)keyboardContext.Dispose();
                         return;
                     }
+                    // Unhandled-exception handlers are per WinForms thread. Without one here an error in work
+                    // dispatched to this thread shows the stock .NET dialog and is never written to the log.
+                    System.Windows.Forms.Application.ThreadException+=(s,e)=>Program.LogException("KeyboardInputThread",e.Exception);
                     try { System.Windows.Forms.Application.Run(keyboardContext); }
                     finally {
                         if(hook!=IntPtr.Zero)UnhookWindowsHookEx(hook);
@@ -903,6 +1159,7 @@ namespace ScumMiniMap {
                         if(mouseContext!=null)mouseContext.Dispose();
                         return;
                     }
+                    System.Windows.Forms.Application.ThreadException+=(s,e)=>Program.LogException("MouseInputThread",e.Exception);
                     try { System.Windows.Forms.Application.Run(mouseContext); }
                     finally {
                         if(mouseHook!=IntPtr.Zero)UnhookWindowsHookEx(mouseHook);

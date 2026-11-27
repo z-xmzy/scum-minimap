@@ -612,7 +612,7 @@ static class MapRenderingTests {
         }
         // Imports add a map hash, staging ID and atomic-save suffix beneath this fixture.
         // Keep its temporary prefix short enough for .NET Framework's MAX_PATH limit.
-        string testFolder=Path.Combine(Path.GetTempPath(),"mmr-"+Guid.NewGuid().ToString("N"));
+        string testFolder=Path.Combine(Path.GetTempPath(),"mmr-"+Guid.NewGuid().ToString("N").Substring(0,8));
         Directory.CreateDirectory(testFolder);
         CheckMapSidecars(testFolder);
         CheckManualZoneEditor(testFolder,args[0]);
@@ -690,11 +690,13 @@ static class MapRenderingTests {
             var recordHistory=typeof(MapWindow).GetMethod("RecordLocationHistory",Hidden);
             var drawHistory=typeof(MapWindow).GetMethod("DrawLocationHistory",Hidden);
             DateTime historyTime=DateTime.UtcNow.AddMinutes(-2);
+            var historyPosition=typeof(MapWindow).GetField("position",Hidden);var savedHistoryPosition=historyPosition.GetValue(window);historyPosition.SetValue(window,null);
             recordHistory.Invoke(window,new object[]{new PointF(.1f,.1f),historyTime});
-            recordHistory.Invoke(window,new object[]{new PointF(.2f,.1f),historyTime.AddSeconds(30)});
+            recordHistory.Invoke(window,new object[]{new PointF(.11f,.1f),historyTime.AddSeconds(30)});
+            historyPosition.SetValue(window,savedHistoryPosition);
             using(var plain=new Bitmap(200,200))
             using(var hovered=new Bitmap(200,200)) {
-                Set(window,"locationHistoryHoverPoint",new Point(30,20));
+                Set(window,"locationHistoryHoverPoint",new Point(21,20));
                 Set(window,"fullMapActive",false);
                 using(var g=Graphics.FromImage(plain)) drawHistory.Invoke(window,new object[]{g,0f,0f,200f});
                 Set(window,"fullMapActive",true);

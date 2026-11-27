@@ -921,7 +921,7 @@ namespace ScumMiniMap {
                 else tileResource.Dispose();
             } else map=SafeMapImage.Load(mapFile,()=>System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("map.png"),out mapWarning);
             if(tileResource==null && File.Exists(mapFile) && mapWarning==null) customMapLoaded=true;
-            if(mapWarning!=null && !diagnosticMode) Shown+=(sender,e)=>RunUiModal(() => MessageBox.Show(mapWarning,Localization.Get("ZoneEditorTitle"),MessageBoxButtons.OK,MessageBoxIcon.Warning));
+            if(mapWarning!=null && !diagnosticMode) Shown+=(sender,e)=>RunUiModal(() => ThemedMessage.Show(mapWarning,Localization.Get("ZoneEditorTitle"),MessageBoxButtons.OK,MessageBoxIcon.Warning));
 
             mapSidecarPaths=MapSidecarPaths.ForMap(dataFolder,customMapLoaded?mapFile:null);
             mapSidecarPaths.EnsureImage(map);
@@ -1203,7 +1203,7 @@ namespace ScumMiniMap {
                     if(!Directory.Exists(dataFolder)) Directory.CreateDirectory(dataFolder);
                     Process.Start(new ProcessStartInfo { FileName="explorer.exe",Arguments="\""+dataFolder+"\"",UseShellExecute=true });
                 } catch(Exception ex) {
-                    RunUiModal(() => MessageBox.Show(UiDialogOwner,Localization.T("DataFolderOpenError",ex.Message)));
+                    RunUiModal(() => ThemedMessage.Show(UiDialogOwner,Localization.T("DataFolderOpenError",ex.Message)));
                 }
             };
 
@@ -1361,7 +1361,7 @@ namespace ScumMiniMap {
                 }
 
                 if(updateResetPending && !isFirstLaunch && !diagnosticMode && !Program.IsShortcutDiagnosticSession) {
-                    DialogResult reset = RunUiModal(() => MessageBox.Show(
+                    DialogResult reset = RunUiModal(() => ThemedMessage.Show(
                         Localization.Get("UpdateResetBody"),
                         Localization.Get("UpdateResetTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Question));
                     if(reset==DialogResult.Yes) {
@@ -1431,15 +1431,38 @@ namespace ScumMiniMap {
                 itm.Dispose();
             }
 
-            trayMenu.Items.Add(Localization.Get("Settings"),null,(s,e)=>ShowSettings());
-            trayMenu.Items.Add("Admin commands",null,(s,e)=>ShowAdminCommands());
-            trayMenu.Items.Add(Localization.Get("FullMap"),null,(s,e)=>TriggerFullMap());
-            trayMenu.Items.Add(Localization.Get("SearchPlaceOrGrid"),null,(s,e)=>ShowZoneSearch());
-            trayMenu.Items.Add(Localization.Get("TrayCheckUpdates"),null,(s,e)=>CheckForUpdates(true)).Enabled=!Program.IsTestBuild;
-            trayMenu.Items.Add(Localization.Get("TrayShowHide"),null,(s,e)=>ToggleOverlay());
-            trayMenu.Items.Add(Localization.Get("TrayExit"),null,(s,e)=>ExitApp());
+            // Grouped by what people reach for: the map first, then tools, then the app itself.
+            // Rows show the bound key, and show/hide carries a live on/off switch.
+            Func<string,string,EventHandler,TrayItem> add=(text,icon,click)=> { var row=new TrayItem(text,icon,click);trayMenu.Items.Add(row);return row; };
+            Func<AppControlAction,string> key=action=> { int code=appControls.Key(action);return code==0?null:PhysicalKeyCapture.KeyName(code); };
+            trayMenu.Items.Add(new TrayHeader("SCUM MiniMap","v"+VersionString,Program.IsTestBuild?"TEST":null));
+            add(Localization.Get("FullMap"),"map",(s,e)=>TriggerFullMap());
+            add(Localization.Get("SearchPlaceOrGrid"),"search",(s,e)=>ShowZoneSearch()).Hint=key(AppControlAction.Search);
+            var visibility=add(Localization.Get("TrayShowHide"),"eye",(s,e)=>ToggleOverlay());
+            visibility.Toggle=TrayOverlayShown;visibility.Refresh();
+            trayMenu.Items.Add(new ToolStripSeparator());
+            add(Localization.Get("Settings"),"settings",(s,e)=>ShowSettings()).Hint=key(AppControlAction.Settings);
+            add(Localization.Get("TrayAdminCommands"),"shield",(s,e)=>ShowAdminCommands()).Hint=key(AppControlAction.AdminCommands);
+#if MINIMAP_TEST
+            var demo=add(Localization.Get("TrayDemoTeammates"),"users",(s,e)=> {
+                WpfFieldConsoleRuntime.DemoTeammates=!WpfFieldConsoleRuntime.DemoTeammates;
+                if(WpfFieldConsoleRuntime.Active!=null)WpfFieldConsoleRuntime.Active.Refresh();
+            });
+            demo.Toggle=()=>WpfFieldConsoleRuntime.DemoTeammates;demo.Refresh();
+#endif
+            trayMenu.Items.Add(new ToolStripSeparator());
+            var update=add(Localization.Get("TrayCheckUpdates"),"refresh-cw",(s,e)=>CheckForUpdates(true));
+            update.Enabled=!Program.IsTestBuild;
+            if(Program.IsTestBuild) { update.Hint=Localization.Get("TrayUpdatesOffInTest");update.HintIsKey=false; }
+            add(Localization.Get("TrayExit"),"power",(s,e)=>ExitApp()).Danger=true;
 
-            OverlayTheme.Menu(trayMenu);
+            OverlayTheme.TrayMenu(trayMenu);
+        }
+
+        bool TrayOverlayShown() {
+            var runtime=WpfFieldConsoleRuntime.Active;
+            if(runtime!=null)return runtime.HudEnabled;
+            return overlay!=null&&overlay.Visible;
         }
 
         static void DisposeChildControls(Control parent) {
@@ -1619,19 +1642,19 @@ namespace ScumMiniMap {
             zoneButton.Click += (s, e) => OpenZoneImport(null);
             bar.Controls.Add(zoneButton);
             var zoneFilesButton=new Button { Text=Localization.Get("EnableZoneTsv"),Width=280 };
-            zoneFilesButton.Click+=(s,e)=> { if(WpfFieldConsoleRuntime.Active!=null)WpfFieldConsoleRuntime.Active.ShowZoneAssociation();else try { ZoneFileOpen.Register(Application.ExecutablePath);RunUiModal(()=>MessageBox.Show(UiDialogOwner,Localization.Get("ZoneAssociationInfo"),Localization.Get("ZoneEditorTitle"))); }catch(Exception error) { Program.LogException("ZoneFileAssociation",error); } };bar.Controls.Add(zoneFilesButton);
+            zoneFilesButton.Click+=(s,e)=> { if(WpfFieldConsoleRuntime.Active!=null)WpfFieldConsoleRuntime.Active.ShowZoneAssociation();else try { ZoneFileOpen.Register(Application.ExecutablePath);RunUiModal(()=>ThemedMessage.Show(UiDialogOwner,Localization.Get("ZoneAssociationInfo"),Localization.Get("ZoneEditorTitle"))); }catch(Exception error) { Program.LogException("ZoneFileAssociation",error); } };bar.Controls.Add(zoneFilesButton);
             Button clearZonesBtn = new Button { Text = Localization.Get("ClearAllCustomZones"), Width = 280 };
             clearZonesBtn.Click += (s, e) => {
                 if (zones == null || zones.Count == 0) {
-                    RunUiModal(() => MessageBox.Show(UiDialogOwner, Localization.Get("NoCustomZonesToDelete"), Localization.Get("ZoneEditorTitle"), MessageBoxButtons.OK, MessageBoxIcon.Information));
+                    RunUiModal(() => ThemedMessage.Show(UiDialogOwner, Localization.Get("NoCustomZonesToDelete"), Localization.Get("ZoneEditorTitle"), MessageBoxButtons.OK, MessageBoxIcon.Information));
                     return;
                 }
-                if (RunUiModal(() => MessageBox.Show(UiDialogOwner, Localization.T("ClearAllZonesConfirm", zones.Count), Localization.Get("ZoneEditorTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning)) == DialogResult.Yes) {
+                if (RunUiModal(() => ThemedMessage.Show(UiDialogOwner, Localization.T("ClearAllZonesConfirm", zones.Count), Localization.Get("ZoneEditorTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning)) == DialogResult.Yes) {
                     if(!TryCommitZones(new List<MapZone>(),this)) return;
                     searchTarget=null; activeRoute=null; routeGeneration++; lastRouteTarget=null;
                     SettingsChanged();
                     RenderOverlay();
-                    RunUiModal(() => MessageBox.Show(UiDialogOwner, Localization.Get("AllZonesDeletedDone"), Localization.Get("ZoneEditorTitle"), MessageBoxButtons.OK, MessageBoxIcon.Information));
+                    RunUiModal(() => ThemedMessage.Show(UiDialogOwner, Localization.Get("AllZonesDeletedDone"), Localization.Get("ZoneEditorTitle"), MessageBoxButtons.OK, MessageBoxIcon.Information));
                 }
             };
             bar.Controls.Add(clearZonesBtn);
@@ -1687,13 +1710,13 @@ namespace ScumMiniMap {
             OverlayTheme.Section(bar, Localization.Get("SecToolsShortcuts"));
             Button resetMapBtn = new Button { Text = Localization.Get("ResetDefaultMap"), Width = 280 };
             resetMapBtn.Click += (s, e) => {
-                if (RunUiModal(() => MessageBox.Show(UiDialogOwner, Localization.Get("ResetDefaultMapConfirm"), Localization.Get("ZoneEditorTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Question)) == DialogResult.Yes) {
+                if (RunUiModal(() => ThemedMessage.Show(UiDialogOwner, Localization.Get("ResetDefaultMapConfirm"), Localization.Get("ZoneEditorTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Question)) == DialogResult.Yes) {
                     try {
                         string customMap = Path.Combine(dataFolder, "map.png");
                         if (File.Exists(customMap)) File.Delete(customMap);
-                        RunUiModal(() => MessageBox.Show(UiDialogOwner, Localization.Get("ResetDefaultMapDone"), Localization.Get("ZoneEditorTitle"), MessageBoxButtons.OK, MessageBoxIcon.Information));
+                        RunUiModal(() => ThemedMessage.Show(UiDialogOwner, Localization.Get("ResetDefaultMapDone"), Localization.Get("ZoneEditorTitle"), MessageBoxButtons.OK, MessageBoxIcon.Information));
                     } catch (Exception ex) {
-                        RunUiModal(() => MessageBox.Show(UiDialogOwner, Localization.T("MapResetFailed", ex.Message), Localization.Get("ZoneEditorTitle"), MessageBoxButtons.OK, MessageBoxIcon.Error));
+                        RunUiModal(() => ThemedMessage.Show(UiDialogOwner, Localization.T("MapResetFailed", ex.Message), Localization.Get("ZoneEditorTitle"), MessageBoxButtons.OK, MessageBoxIcon.Error));
                     }
                 }
             };
@@ -1717,7 +1740,7 @@ namespace ScumMiniMap {
 
 
 
-        public const string VersionString = "2.6.1";
+        public const string VersionString = "2.7.0";
 
 
 
@@ -1933,7 +1956,7 @@ namespace ScumMiniMap {
 
 
 
-                if(RunUiModal(() => MessageBox.Show(UiDialogOwner,Localization.T("UpdateAvailableDialogMsg",VersionString,release.VersionText,release.Filename),
+                if(RunUiModal(() => ThemedMessage.Show(UiDialogOwner,Localization.T("UpdateAvailableDialogMsg",VersionString,release.VersionText,release.Filename),
 
 
 
@@ -1965,7 +1988,7 @@ namespace ScumMiniMap {
 
 
 
-                if(!closing && !IsDisposed) RunUiModal(() => MessageBox.Show(UiDialogOwner,"Local update test failed: "+ex.Message,"Local Update Test",MessageBoxButtons.OK,MessageBoxIcon.Warning));
+                if(!closing && !IsDisposed) RunUiModal(() => ThemedMessage.Show(UiDialogOwner,"Local update test failed: "+ex.Message,"Local Update Test",MessageBoxButtons.OK,MessageBoxIcon.Warning));
 
 
 
@@ -2038,7 +2061,7 @@ namespace ScumMiniMap {
                         if(closing || IsDisposed) return;
                     }
                     string downloadSummary=filePlan!=null?"v"+release.VersionText+" ("+filePlan.Summary+")":release.Filename;
-                    if(RunUiModal(() => MessageBox.Show(UiDialogOwner, Localization.T("UpdateAvailableDialogMsg", VersionString, release.VersionText, downloadSummary),
+                    if(RunUiModal(() => ThemedMessage.Show(UiDialogOwner, Localization.T("UpdateAvailableDialogMsg", VersionString, release.VersionText, downloadSummary),
 
 
 
@@ -2089,7 +2112,7 @@ namespace ScumMiniMap {
 
 
 
-                    RunUiModal(() => MessageBox.Show(UiDialogOwner, Localization.T("UpdateUpToDateMsg", VersionString, release.VersionText), Localization.Get("UpdateUpToDateTitle"), MessageBoxButtons.OK, MessageBoxIcon.Information));
+                    RunUiModal(() => ThemedMessage.Show(UiDialogOwner, Localization.T("UpdateUpToDateMsg", VersionString, release.VersionText), Localization.Get("UpdateUpToDateTitle"), MessageBoxButtons.OK, MessageBoxIcon.Information));
 
 
 
@@ -2101,7 +2124,7 @@ namespace ScumMiniMap {
 
 
 
-                if(userInitiated && !closing && !IsDisposed) RunUiModal(() => MessageBox.Show(UiDialogOwner, Localization.T("UpdateRateLimited",ex.RetryAt.ToLocalTime().ToString("g")), Localization.Get("UpdateCheckTitle"), MessageBoxButtons.OK, MessageBoxIcon.Warning));
+                if(userInitiated && !closing && !IsDisposed) RunUiModal(() => ThemedMessage.Show(UiDialogOwner, Localization.T("UpdateRateLimited",ex.RetryAt.ToLocalTime().ToString("g")), Localization.Get("UpdateCheckTitle"), MessageBoxButtons.OK, MessageBoxIcon.Warning));
 
 
 
@@ -2109,7 +2132,7 @@ namespace ScumMiniMap {
 
 
 
-                if(userInitiated && !closing && !IsDisposed) RunUiModal(() => MessageBox.Show(UiDialogOwner, Localization.Get("UpdateConnectError"), Localization.Get("UpdateCheckTitle"), MessageBoxButtons.OK, MessageBoxIcon.Warning));
+                if(userInitiated && !closing && !IsDisposed) RunUiModal(() => ThemedMessage.Show(UiDialogOwner, Localization.Get("UpdateConnectError"), Localization.Get("UpdateCheckTitle"), MessageBoxButtons.OK, MessageBoxIcon.Warning));
 
 
 
@@ -2117,7 +2140,7 @@ namespace ScumMiniMap {
 
 
 
-                if(userInitiated && !closing && !IsDisposed) RunUiModal(() => MessageBox.Show(UiDialogOwner, Localization.Get("UpdateVersionUnknown"), Localization.Get("UpdateCheckTitle"), MessageBoxButtons.OK, MessageBoxIcon.Warning));
+                if(userInitiated && !closing && !IsDisposed) RunUiModal(() => ThemedMessage.Show(UiDialogOwner, Localization.Get("UpdateVersionUnknown"), Localization.Get("UpdateCheckTitle"), MessageBoxButtons.OK, MessageBoxIcon.Warning));
 
 
 
@@ -2125,7 +2148,7 @@ namespace ScumMiniMap {
 
 
 
-                if(userInitiated && !closing && !IsDisposed) RunUiModal(() => MessageBox.Show(UiDialogOwner, Localization.T("UpdateFailedMsg", ex.Message), Localization.Get("UpdateCheckTitle"), MessageBoxButtons.OK, MessageBoxIcon.Warning));
+                if(userInitiated && !closing && !IsDisposed) RunUiModal(() => ThemedMessage.Show(UiDialogOwner, Localization.T("UpdateFailedMsg", ex.Message), Localization.Get("UpdateCheckTitle"), MessageBoxButtons.OK, MessageBoxIcon.Warning));
 
 
 
@@ -2344,7 +2367,7 @@ namespace ScumMiniMap {
 
         public void OpenZoneImport(string file) {
             if(WpfFieldConsoleRuntime.Active!=null) { WpfFieldConsoleRuntime.Active.ShowZoneWizard(file);return; }
-            if(zonesLoadFailed) { if(!diagnosticMode) RunUiModal(() => MessageBox.Show(Localization.Get("NoteZonesLoadFail"))); return; }
+            if(zonesLoadFailed) { if(!diagnosticMode) RunUiModal(() => ThemedMessage.Show(Localization.Get("NoteZonesLoadFail"))); return; }
             if(IsHandleCreated && InvokeRequired) {
                 BeginInvoke(new Action(() => OpenZoneImport(file)));
                 return;
@@ -2372,7 +2395,7 @@ namespace ScumMiniMap {
                 }
             } catch(Exception ex) {
                 Program.LogException("ZoneEditor", ex);
-                RunUiModal(() => MessageBox.Show(owner,Localization.T("ZoneEditorOpenError",ex.Message),Localization.Get("ZoneEditorTitle"),MessageBoxButtons.OK,MessageBoxIcon.Error));
+                RunUiModal(() => ThemedMessage.Show(owner,Localization.T("ZoneEditorOpenError",ex.Message),Localization.Get("ZoneEditorTitle"),MessageBoxButtons.OK,MessageBoxIcon.Error));
             } finally {
                 if(visible && overlay != null && !overlay.IsDisposed) {
                     overlay.Show();
@@ -3534,7 +3557,7 @@ namespace ScumMiniMap {
                 if(!(ex is IOException) && !(ex is InvalidDataException) && !(ex is UnauthorizedAccessException) && !(ex is ArgumentException)) throw;
                 note=Localization.T("ZeSaveZonesError",ex.Message);
                 Program.LogException("SaveWaypoints",ex);
-                if(!diagnosticMode && !silent) RunUiModal(() => MessageBox.Show(owner,note,Localization.Get("ZoneEditorTitle"),MessageBoxButtons.OK,MessageBoxIcon.Error));
+                if(!diagnosticMode && !silent) RunUiModal(() => ThemedMessage.Show(owner,note,Localization.Get("ZoneEditorTitle"),MessageBoxButtons.OK,MessageBoxIcon.Error));
                 return false;
             }
         }

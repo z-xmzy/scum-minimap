@@ -110,6 +110,8 @@ namespace ScumMiniMap {
             } finally {Monitor.Exit(fineGate);}
         }
         RoadRoute FineResult(List<PointF> path,RoadRouteMode mode,HashSet<PointF> cues,List<int> layers=null) {
+            // Callers read layers back after this call, so both lists are cleaned in place together.
+            if(layers!=null)RemoveBridgeBacktracks(path,layers);
             int[] layerCues = layers != null && mode == RoadRouteMode.Quickest
                 ? BuildRouteJunctionIndices(path, false, false, layers) : null;
             var r=new RoadRoute{Success=true,Mode=mode,PlayerPoint=path[0],TargetPoint=path[path.Count-1],Polyline=path.ToArray()};

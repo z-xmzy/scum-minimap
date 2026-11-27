@@ -101,6 +101,12 @@ namespace ScumMiniMap {
                 bool road=plan!=null&&plan.HasOrigin&&plan.MissingRoads==0;
                 if(plan!=null&&plan.HasOrigin)distance=plan.Distance;
                 state.RouteSummary=compact.RouteSummary=S("NavigationNext")+": "+state.RouteSummary+" · "+S("NavigationRemaining")+": "+engine.WpfTravelSummary(distance,road,state.SquadPlanning,plan==null?(double?)null:plan.EstimatedSeconds,plan==null||!plan.HasOrigin?0:plan.UnplannedLegs,plan!=null&&plan.HasOrigin&&plan.AllFailed);
+                int unplanned=plan==null||!plan.HasOrigin?0:plan.UnplannedLegs;bool allFailed=plan!=null&&plan.HasOrigin&&plan.AllFailed;
+                foreach(var target in new[]{state,compact}) {
+                    target.TravelMeters=distance;target.TravelRoad=road&&!allFailed;target.TravelCalculating=state.SquadPlanning;
+                    target.TravelMinutes=unplanned>0||allFailed?0:engine.WpfTravelMinutes(distance,road,plan==null?(double?)null:plan.EstimatedSeconds);
+                    target.TravelNote=allFailed?S("FieldNoUsableRoute"):unplanned>0?Localization.T("FieldEstimatedLegs",unplanned):S("NavigationRemaining");
+                }
             }
             var markers=ReceivedSquadMarkers();var descriptions=SquadState.Routes(markers).Select(r=>new { Key=SquadState.RouteKey(r[0]),Marker=r[0] }).Concat(markers.Where(m=>m.Id==SharedMapMarker.GpsId).Select(m=>new { Key=(m.OwnerId??"")+":gps",Marker=m })).ToArray();
             state.OtherRoutePlans=compact.OtherRoutePlans=remoteRoutes.Where(p=>p.Value.Planner.Plan!=null).Select(p=> {

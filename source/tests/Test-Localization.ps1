@@ -1,6 +1,11 @@
 ﻿$ErrorActionPreference = 'Stop'
 $miniRoot = Split-Path $PSScriptRoot -Parent
-Add-Type -Path @(('Localization.cs','Localization.MapObjects.cs','Localization.MapObjects.DeNlPl.cs','Localization.Polish.cs','Localization.SpawnItems.cs','Localization.Extended.cs','Localization.Additional.cs','Localization.Finnish.cs','Localization.LithuanianSwahili.cs') | ForEach-Object { Join-Path $miniRoot "src\$_" })
+# Include test-only labels because the source scan below covers both configurations.
+$compiler = New-Object System.CodeDom.Compiler.CompilerParameters
+$compiler.CompilerOptions = '/define:MINIMAP_TEST'
+$compiler.ReferencedAssemblies.AddRange([string[]]@('System.dll','System.Core.dll'))
+$compiler.GenerateInMemory = $true
+Add-Type -CompilerParameters $compiler -Path @(('Localization.cs','Localization.MapObjects.cs','Localization.MapObjects.DeNlPl.cs','Localization.Polish.cs','Localization.SpawnItems.cs','Localization.Extended.cs','Localization.Additional.cs','Localization.Finnish.cs','Localization.LithuanianSwahili.cs') | ForEach-Object { Join-Path $miniRoot "src\$_" })
 [ScumMiniMap.Localization]::SelfTest()
 $english = [ScumMiniMap.Localization]::StringsEn
 $references = 0

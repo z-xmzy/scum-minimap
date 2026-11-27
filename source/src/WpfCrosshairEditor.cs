@@ -28,7 +28,7 @@ namespace ScumMiniMap {
         StackPanel CrosshairSidebarPage() {
             if(crosshairPage!=null)return crosshairPage;
             crosshairPage=new StackPanel { Tag="sidebar-page:crosshair" };crosshairPageDraft=crosshair.Settings.Clone();var draft=crosshairPageDraft;
-            crosshairPage.Children.Add(WpfFieldTheme.Text(Localization.Get("Crosshair"),23,null,true));
+            crosshairPage.Children.Add(WpfFieldTheme.Heading(Localization.Get("Crosshair"),23));
             var preview=new CrosshairSurface { Settings=draft,Backdrop=CrosshairBackdrop(),Height=120,Margin=new Thickness(0),Tag="crosshair-sidebar-preview",SnapsToDevicePixels=true };
             crosshairPage.Children.Add(new Border { BorderBrush=WpfFieldTheme.Line,BorderThickness=new Thickness(1),Margin=new Thickness(0,12,0,4),Child=preview });
             var hint=WpfFieldTheme.Text(Localization.Get("CrosshairPreviewHint"),11,WpfFieldTheme.Muted);hint.Margin=new Thickness(0,0,0,8);crosshairPage.Children.Add(hint);
@@ -132,30 +132,31 @@ namespace ScumMiniMap {
 
         internal Window BuildCrosshairEditor() {
             var original=crosshair.Settings.Clone();var draft=original.Clone();bool committed=false;
-            var window=Window(Localization.Get("CrosshairCustomize"),860,660);window.WindowStyle=WindowStyle.SingleBorderWindow;window.Tag="crosshair-editor";
-            var root=new DockPanel { Margin=new Thickness(26,20,26,20) };
-            var heading=WpfFieldTheme.Text(Localization.Get("CrosshairCustomize"),26,null,true);heading.Margin=new Thickness(0,0,0,14);DockPanel.SetDock(heading,Dock.Top);root.Children.Add(heading);
-            var footer=new DockPanel { Margin=new Thickness(0,16,0,0) };DockPanel.SetDock(footer,Dock.Bottom);root.Children.Add(footer);
-            var workspace=new Grid();workspace.ColumnDefinitions.Add(new ColumnDefinition());workspace.ColumnDefinitions.Add(new ColumnDefinition { Width=new GridLength(320) });root.Children.Add(workspace);
-            var controls=new StackPanel { Margin=new Thickness(0,0,20,0) };workspace.Children.Add(new ScrollViewer { Content=controls,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled });
-
-            var previewColumn=new StackPanel();Grid.SetColumn(previewColumn,1);workspace.Children.Add(previewColumn);
-            previewColumn.Children.Add(WpfFieldTheme.Eyebrow(Localization.Get("CrosshairPreviewHint")));
+            var window=Window(Localization.Get("CrosshairCustomize"),880,720);window.WindowStyle=WindowStyle.SingleBorderWindow;window.Tag="crosshair-editor";
+            var th=WpfFieldTheme.Current;double side=th.Uppercase?34:th.GradientAccent?28:32;
+            var dialog=new WpfKit.Dialog(window,Localization.Get("CrosshairCustomize"));
+            // Controls scroll on the left; the live preview and ×3 magnifier stay in a card on the right.
+            var workspace=new Grid { Margin=new Thickness(side,8,side,20) };workspace.ColumnDefinitions.Add(new ColumnDefinition());workspace.ColumnDefinitions.Add(new ColumnDefinition { Width=new GridLength(24) });workspace.ColumnDefinitions.Add(new ColumnDefinition { Width=GridLength.Auto });
+            dialog.Scroll.Content=workspace;dialog.Scroll.VerticalScrollBarVisibility=ScrollBarVisibility.Disabled;dialog.Scroll.Padding=new Thickness(0);
+            var controls=new StackPanel { Margin=new Thickness(0,0,8,0) };workspace.Children.Add(new ScrollViewer { Content=controls,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled });
+            var previewColumn=new StackPanel();
+            var previewLabel=WpfKit.Label(Localization.Get("CrosshairPreviewHint"));previewLabel.Margin=new Thickness(0,0,0,8);previewColumn.Children.Add(previewLabel);
             var preview=new CrosshairSurface { Settings=draft,Backdrop=CrosshairBackdrop(),Width=280,Height=280,Tag="crosshair-preview",SnapsToDevicePixels=true };
-            previewColumn.Children.Add(new Border { BorderBrush=WpfFieldTheme.Line,BorderThickness=new Thickness(1),Child=preview,HorizontalAlignment=HorizontalAlignment.Left });
-            var zoomLabel=WpfFieldTheme.Eyebrow("×3");zoomLabel.Margin=new Thickness(0,14,0,6);previewColumn.Children.Add(zoomLabel);
-            var zoomHost=new Border { BorderBrush=WpfFieldTheme.Line,BorderThickness=new Thickness(1),HorizontalAlignment=HorizontalAlignment.Left,ClipToBounds=true,Width=282,Height=152 };
+            double radius=th.Uppercase?0:Math.Min(10,th.ControlRadius);
+            previewColumn.Children.Add(new Border { BorderBrush=WpfFieldTheme.Line2,BorderThickness=new Thickness(1),Child=preview,HorizontalAlignment=HorizontalAlignment.Left,CornerRadius=new CornerRadius(radius),ClipToBounds=true });
+            var zoomHead=new DockPanel { Margin=new Thickness(0,16,0,8) };var zoomBadge=WpfKit.Badge("×3");DockPanel.SetDock(zoomBadge,Dock.Right);zoomHead.Children.Add(zoomBadge);zoomHead.Children.Add(WpfKit.Label(Localization.Get("CrosshairZoomTitle")));previewColumn.Children.Add(zoomHead);
+            var zoomHost=new Border { BorderBrush=WpfFieldTheme.Line2,BorderThickness=new Thickness(1),HorizontalAlignment=HorizontalAlignment.Left,ClipToBounds=true,Width=282,Height=132,CornerRadius=new CornerRadius(radius) };
             var zoomVisual=new CrosshairMagnifier(draft,CrosshairBackdrop()) { Tag="crosshair-zoom" };zoomHost.Child=zoomVisual;previewColumn.Children.Add(zoomHost);
+            var previewCard=WpfKit.Card(previewColumn,new Thickness(16));previewCard.VerticalAlignment=VerticalAlignment.Top;Grid.SetColumn(previewCard,2);workspace.Children.Add(previewCard);
 
             Action refreshControls=BuildCrosshairControls(controls,draft,()=> { crosshair.Apply(draft.Clone());preview.InvalidateVisual();zoomVisual.Refresh(); },false);
 
-            var reset=WpfFieldTheme.Button(Localization.Get("CrosshairReset"),()=> { draft.CopyFrom(new CrosshairSettings { Enabled=draft.Enabled });refreshControls(); });
-            reset.Tag="crosshair-reset";DockPanel.SetDock(reset,Dock.Left);footer.Children.Add(reset);
-            var cancel=WpfFieldTheme.Button(Localization.Get("Cancel"),()=>window.Close());
-            var done=WpfFieldTheme.Button(Localization.Get("Done"),()=> { committed=true;crosshair.Apply(draft.Clone());crosshair.Save();window.Close(); },true);done.MinWidth=120;
-            var buttons=new StackPanel { Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Right };buttons.Children.Add(cancel);buttons.Children.Add(done);footer.Children.Add(buttons);
+            var reset=WpfKit.Quiet(Localization.Get("CrosshairReset"),()=> { draft.CopyFrom(new CrosshairSettings { Enabled=draft.Enabled });refreshControls(); },"rotate-ccw");
+            reset.Tag="crosshair-reset";dialog.AddFooterLeft(reset);
+            var cancel=WpfKit.Quiet(Localization.Get("Cancel"),()=>window.Close());dialog.AddAction(cancel);
+            var done=WpfKit.Primary(Localization.Get("Done"),()=> { committed=true;crosshair.Apply(draft.Clone());crosshair.Save();window.Close(); },"check");done.MinWidth=120;dialog.AddAction(done);
             window.Closed+=(s,e)=> { if(!committed)crosshair.Apply(original); };
-            refreshControls();window.Content=root;return window;
+            refreshControls();return window;
         }
 
         // Shows the middle of the crosshair magnified ×3 without smoothing.

@@ -71,7 +71,7 @@ try {
     })
     [IO.File]::WriteAllText($assetManifest,($assetLines -join "`n")+"`n",[Text.UTF8Encoding]::new($false))
     $embedded = @('nav-world-grid.bin','nav-world-terrain.bin','nav-world-grade.bin','nav-bridges.bin','zones.tsv','water-mask.bin','scummap.bin','spawn-items.tsv','spawn-compatibility.tsv','spawn-item-names-pl.tsv','keyboard-setup.png','steam-logo.png' | ForEach-Object { '/resource:' + (Join-Path $res $_) + ',' + $_ })
-    $embedded += @('BarlowSemiCondensed-Regular.ttf','BarlowSemiCondensed-SemiBold.ttf' | ForEach-Object { '/resource:' + (Join-Path $res ('fonts/' + $_)) + ',' + $_ })
+    $embedded += @('BarlowSemiCondensed-Regular.ttf','BarlowSemiCondensed-SemiBold.ttf','Inter-Regular.otf','Inter-SemiBold.otf','Inter-Bold.otf','BarlowCondensed-SemiBold.ttf','BarlowCondensed-Bold.ttf','BarlowCondensed-ExtraBold.ttf' | ForEach-Object { '/resource:' + (Join-Path $res ('fonts/' + $_)) + ',' + $_ })
     $embedded += '/resource:' + $assetManifest + ',installation-assets.txt'
     $embedded += $localizedResources
     $embedded += '/resource:' + (Join-Path $pack 'detect_zones.py') + ',detect_zones.py'

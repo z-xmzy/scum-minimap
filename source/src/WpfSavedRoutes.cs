@@ -41,64 +41,68 @@ namespace ScumMiniMap {
         }
         static System.Drawing.PointF PointOf(SharedMapMarker m) { return new System.Drawing.PointF((float)m.X,(float)m.Y); }
 
+        // Saved routes on this map: save the current stops under a name, start or share a saved route,
+        // and import a shared code.
         void AddSavedRoutes(Panel parent,Window window) {
             var panel=new StackPanel();
-            parent.Children.Add(new Expander { Header=S("LxLibrary"),Content=panel,IsExpanded=true,Margin=new Thickness(0,10,0,12) });
-            panel.Children.Add(SquadHelp("LxHelp"));
-            var name=new TextBox { MaxLength=64,Tag="lx-name" };
-            panel.Children.Add(WpfFieldTheme.Text(S("LxName"),13));panel.Children.Add(name);
-            var kind=new ComboBox { Tag="lx-kind",ItemsSource=new[]{S("LxNormal"),S("LxLoop")},SelectedIndex=0 };
-            panel.Children.Add(kind);
-            var status=WpfFieldTheme.Text("",13,WpfFieldTheme.Amber);status.TextWrapping=TextWrapping.Wrap;
-            var list=new ComboBox { Tag="lx-list",MinWidth=160 };
-            var preview=WpfFieldTheme.Text("",13);preview.TextWrapping=TextWrapping.Wrap;preview.TextTrimming=TextTrimming.None;
-            var code=new TextBox { Tag="lx-code",TextWrapping=TextWrapping.NoWrap,HorizontalScrollBarVisibility=ScrollBarVisibility.Auto };
             string map=engine.WpfRouteMapId,dir=Path.Combine(engine.WpfDataFolder,"maps",map,"routes");
-            Action<SavedRoute> select=route=> {
-                var same=list.Items.Cast<SavedRoute>().FirstOrDefault(r=>r.Code()==route.Code());
-                if(same==null) { list.Items.Add(route);same=route; }
-                list.SelectedItem=same;
+            var status=WpfFieldTheme.Text("",13,WpfFieldTheme.MapAmber);status.TextWrapping=TextWrapping.Wrap;status.TextTrimming=TextTrimming.None;status.Tag="lx-status";
+            var routes=new List<SavedRoute>();var list=new StackPanel();
+            var code=WpfKit.Input(null,"lx-code");code.TextWrapping=TextWrapping.NoWrap;code.HorizontalScrollBarVisibility=ScrollBarVisibility.Auto;code.FontFamily=WpfFieldTheme.MonoFont;
+            Action draw=null;
+            Action<SavedRoute> add=route=> { if(!routes.Any(r=>r.Code()==route.Code()))routes.Add(route);draw(); };
+            Action<SavedRoute> save=route=> { route.Store(dir);add(route);status.Text=S("LxStored"); };
+            draw=()=> {
+                list.Children.Clear();
+                if(routes.Count==0) { list.Children.Add(WpfKit.Empty(S("LxEmpty"),"route"));return; }
+                list.Children.Add(WpfKit.List(routes.Select(r=> {
+                    var route=r;
+                    var start=WpfKit.Secondary(S("SquadStartRoute"),()=> { StartSavedRoute(route);window.Close(); },"play");start.Tag="lx-start";start.MinHeight=32;start.Padding=new Thickness(12,4,14,4);
+                    var export=WpfKit.Quiet(S("LxExport"),()=> {
+                        code.Text=route.Code();code.Focus();code.SelectAll();
+                        try { Clipboard.SetText(code.Text);status.Text=S("LxCopied"); }
+                        catch(System.Runtime.InteropServices.ExternalException) { status.Text=S("LxCopyManually"); }
+                    },"copy");export.Tag="lx-export";export.MinHeight=32;export.Padding=new Thickness(8,4,8,4);
+                    string stops=string.Join(" → ",route.Stops.Select((m,i)=>SavedStopRole(i,route)+" · "+m.Name))+(route.Loop?" → "+S("LxStart"):"");
+                    return (UIElement)WpfKit.Row(WpfKit.IconTile(route.Loop?"refresh-cw":"route",null,30),route.Name+"  ·  "+S(route.Loop?"LxLoop":"LxNormal"),stops,start,export);
+                })));
             };
-            Action<SavedRoute> save=route=> { route.Store(dir);select(route);status.Text=S("LxStored"); };
-            var saveButton=WpfFieldTheme.Button(S("LxSave"),()=> {
-                try { save(new SavedRoute(name.Text,map,kind.SelectedIndex==1,squad.Stops)); }
+            // Save the current stops.
+            var name=WpfKit.Input(null,"lx-name",64);bool loop=false;
+            Button normalKind=null,loopKind=null;
+            Action markKind=()=> { WpfKit.MarkChip(normalKind,!loop);WpfKit.MarkChip(loopKind,loop); };
+            normalKind=WpfKit.Chip(S("LxNormal"),()=> { loop=false;markKind(); },"arrow-right","lx-kind-0");loopKind=WpfKit.Chip(S("LxLoop"),()=> { loop=true;markKind(); },"refresh-cw","lx-kind-1");markKind();
+            var saveButton=WpfKit.Primary(S("LxSave"),()=> {
+                try { save(new SavedRoute(name.Text,map,loop,squad.Stops)); }
                 catch(InvalidDataException) { status.Text=S("LxInvalidDraft"); }
                 catch(Exception error) { Program.LogException("SaveRoute",error);status.Text=S("LocalSaveFailed"); }
-            });saveButton.Tag="lx-save";panel.Children.Add(saveButton);
-            panel.Children.Add(list);panel.Children.Add(preview);
-            var actions=new WrapPanel();panel.Children.Add(actions);
-            var start=WpfFieldTheme.Button(S("SquadStartRoute"),()=> { StartSavedRoute((SavedRoute)list.SelectedItem);window.Close(); });
-            start.Tag="lx-start";actions.Children.Add(start);
-            var export=WpfFieldTheme.Button(S("LxExport"),()=> {
-                var route=(SavedRoute)list.SelectedItem;code.Text=route.Code();code.Focus();code.SelectAll();
-                try { Clipboard.SetText(code.Text);status.Text=S("LxCopied"); }
-                catch(System.Runtime.InteropServices.ExternalException) { status.Text=S("LxCopyManually"); }
-            });export.Tag="lx-export";actions.Children.Add(export);
-            start.IsEnabled=export.IsEnabled=false;
-            list.SelectionChanged+=(s,e)=> {
-                var route=list.SelectedItem as SavedRoute;
-                start.IsEnabled=export.IsEnabled=route!=null;code.Clear();
-                preview.Text=route==null?"":string.Join(" → ",route.Stops.Select((m,i)=>SavedStopRole(i,route)+" · "+m.Name))+(route.Loop?" → "+S("LxStart"):"");
-            };
-            panel.Children.Add(WpfFieldTheme.Text(S("LxCode"),13));panel.Children.Add(code);
-            var import=WpfFieldTheme.Button(S("LxImport"),()=> {
+            },"save");saveButton.Tag="lx-save";
+            var form=new StackPanel();form.Children.Add(WpfKit.Field(S("LxName"),name));var kinds=new WrapPanel();kinds.Children.Add(normalKind);kinds.Children.Add(loopKind);form.Children.Add(kinds);
+            var formActions=WpfKit.Actions(saveButton);formActions.Margin=new Thickness(0,6,0,0);form.Children.Add(formActions);
+            panel.Children.Add(WpfKit.Card(form));panel.Children.Add(list);panel.Children.Add(status);
+            // Share codes.
+            var import=WpfKit.Secondary(S("LxImport"),()=> {
                 SavedRoute route;
                 try { route=SavedRoute.Decode(code.Text,map); }
                 catch(Exception) { status.Text=S("LxInvalidCode");return; }
                 try { save(route); }catch(Exception error) { Program.LogException("ImportRoute",error);status.Text=S("LocalSaveFailed"); }
-            });import.Tag="lx-import";panel.Children.Add(import);status.Tag="lx-status";panel.Children.Add(status);
+            },"download");import.Tag="lx-import";
+            var share=new StackPanel();share.Children.Add(WpfKit.Field(S("LxCode"),code));share.Children.Add(WpfKit.Actions(import));
+            panel.Children.Add(new Expander { Header=WpfKit.Strong(S("LxCode"),14),Content=share,Margin=new Thickness(0,8,0,0) });
+            parent.Children.Add(WpfKit.Section(S("LxLibrary"),panel,S("LxHelp")));
             bool loaded=false;
             panel.Loaded+=(s,e)=> {
                 if(loaded)return;loaded=true;
                 try {
                     if(Directory.Exists(dir))foreach(string file in Directory.EnumerateFiles(dir,"*.lx").OrderBy(f=>f,StringComparer.Ordinal)) {
                         try { if(new FileInfo(file).Length>SavedRoute.MaxCodeLength)throw new InvalidDataException();
-                            list.Items.Add(SavedRoute.Decode(File.ReadAllText(file),map)); }
+                            routes.Add(SavedRoute.Decode(File.ReadAllText(file),map)); }
                         catch(Exception error) { Program.LogException("ReadRoute",error);status.Text=S("LxInvalidCode"); }
                     }
-                    if(list.Items.Count>0)list.SelectedIndex=0;
                 }catch(Exception error) { Program.LogException("ReadRoutes",error);status.Text=S("LxInvalidCode"); }
+                draw();
             };
+            draw();
         }
     }
 }

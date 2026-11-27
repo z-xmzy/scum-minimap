@@ -37,6 +37,11 @@ namespace ScumMiniMap {
         internal PointF[] Trail;
         internal PointF[][] TrailSegments;
         internal string Location,Shape,RouteSummary,TrackingStatus;
+        // Structured travel figures for the large navigation readout. TravelMeters<0 means no estimate.
+        internal double TravelMeters=-1;
+        internal int TravelMinutes;
+        internal bool TravelRoad,TravelCalculating;
+        internal string TravelNote;
         internal bool TrackingPaused;
         internal int Opacity,MapKey,MapScan,ChatKey,CopyKey,CopyModifier;
         internal float Zoom;
@@ -172,7 +177,7 @@ namespace ScumMiniMap {
                 Location=position==null?WpfTrackingStatus():GetLocationDescription().Split(new[]{"  |  -> "},StringSplitOptions.None)[0],
                 Shape=overlayShape,RouteSummary=FieldConsoleRouteSummary(),Opacity=tactical?WpfTacticalOpacityValue:mapOpacity,Zoom=tactical?fullMapZoom:zoom,Pan=fullMapPan,
                 MapKey=scumMapKey,MapScan=scumMapScanCode,ChatKey=scumChatKey,CopyKey=scumCopyKey,CopyModifier=scumCopyModifierKey,Bindings=CurrentAppControls() };
-            ApplyBunker(state,tactical);WpfHistoryForState(state);return state;
+            WpfApplyTravel(state);ApplyBunker(state,tactical);WpfHistoryForState(state);return state;
         }
         internal bool WpfCanPing(bool fromSquadTools) {
             WpfVerifyAccess();

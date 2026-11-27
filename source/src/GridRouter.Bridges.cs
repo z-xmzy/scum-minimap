@@ -117,6 +117,29 @@ namespace ScumMiniMap {
             internal readonly List<int> Layers=new List<int>();
             internal void Add(PointF p,int layer){int n=Points.Count;if(n>0&&Points[n-1]==p&&Layers[n-1]==layer)return;Points.Add(p);Layers.Add(layer);}
         }
+        const double BacktrackStubMeters=8.0,HookStubMeters=2.5;
+        static readonly double BacktrackCosine=Math.Cos(150.0*Math.PI/180.0),HookCosine=Math.Cos(120.0*Math.PI/180.0);
+        // Splicing a road route onto bridge topology joins sampled road points to deck and ground
+        // cell centres, which can sit a few metres behind the route. The result is a short
+        // out-and-back step. Drawn with a wide pen it shows as a long spike beside the bridge, and
+        // voice guidance could read it as a turn, so such reversals are removed. A vertex whose
+        // layer differs from both neighbours is a surface change and is always kept.
+        internal static void RemoveBridgeBacktracks(List<PointF> points,List<int> layers) {
+            if(points==null||layers==null||points.Count!=layers.Count)return;
+            for(int i=1;i+1<points.Count;) {
+                if(layers[i]!=layers[i-1]&&layers[i]!=layers[i+1]){i++;continue;}
+                PointF a=points[i-1],b=points[i],c=points[i+1];
+                double ux=(b.X-a.X)*MapScaleX,uy=(b.Y-a.Y)*MapScaleY,vx=(c.X-b.X)*MapScaleX,vy=(c.Y-b.Y)*MapScaleY;
+                double lu=Math.Sqrt(ux*ux+uy*uy),lv=Math.Sqrt(vx*vx+vy*vy);
+                double stub=Math.Min(lu,lv),cosine=lu<1e-6||lv<1e-6?1:(ux*vx+uy*vy)/(lu*lv);
+                // Long reversals up to 8 m, or sharp hooks around a step of a couple of metres.
+                bool reversal=stub<=BacktrackStubMeters&&cosine<=BacktrackCosine,hook=stub<=HookStubMeters&&cosine<=HookCosine;
+                if(lu<1e-6||lv<1e-6||!(reversal||hook)){i++;continue;}
+                points.RemoveAt(i);layers.RemoveAt(i);
+                // The joined segment may form a new reversal with the previous vertex.
+                if(i>1)i--;
+            }
+        }
         RoadRoute BridgeFailure(PointF a,PointF b,RoadRouteMode mode){return new RoadRoute{BridgeBlocked=true,Mode=mode,PlayerPoint=a,TargetPoint=b,Polyline=new PointF[0],JunctionIndices=new int[0]};}
         bool TouchesBridge(PointF a,PointF z) {
             var b=bridges;int steps=Math.Max(1,(int)Math.Ceiling(Math.Max(Math.Abs(z.X-a.X),Math.Abs(z.Y-a.Y))*b.Width*2));

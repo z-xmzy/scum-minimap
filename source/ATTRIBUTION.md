@@ -73,6 +73,12 @@ We gratefully acknowledge the creators and community contributors whose publicly
 * **Copyright:** © 2020-2026 Paweł Kuna
 * **Usage:** Vector icon glyphs utilized in HTML visualization panels and diagnostic test previews.
 
+### Lucide
+* **Repository / Website:** [https://lucide.dev](https://lucide.dev) | [GitHub: lucide-icons/lucide](https://github.com/lucide-icons/lucide)
+* **License:** ISC License (portions MIT, from Feather). The full notice is in `resources/marker-icons/LICENSE.txt`.
+* **Copyright:** © Lucide Contributors 2022-2026; portions © Cole Bemis 2013-2022 (Feather)
+* **Usage:** Interface icons in all three interface themes, converted to WPF stroke geometry in `src/WpfIcons.cs`, and map marker icons.
+
 ---
 
 ## 4. Project Repository & Community
@@ -97,7 +103,9 @@ We gratefully acknowledge the creators and community contributors whose publicly
 
 ## Field console typography
 
-Barlow Semi Condensed by Jeremy Tribby, bundled from the Google Fonts repository under the SIL Open Font License 1.1. The complete licence is in `resources/fonts/OFL.txt`.
+Barlow Semi Condensed and Barlow Condensed by Jeremy Tribby, bundled from the Google Fonts repository under the SIL Open Font License 1.1. The complete licence is in `resources/fonts/OFL.txt`. Barlow Condensed is the display face of the Tactical interface theme.
+
+Inter by Rasmus Andersson (The Inter Project Authors, https://github.com/rsms/inter), bundled under the SIL Open Font License 1.1, is the interface face of the Glass and Minimal themes. The complete licence is in `resources/fonts/OFL-Inter.txt`.
 
 ### Bundled Barlow Semi Condensed license
 

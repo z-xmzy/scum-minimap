@@ -835,14 +835,12 @@ namespace ScumMiniMap {
                 PointF center = z.Centroid;
                 string sec = SectorFromMapPt(center);
                 Color c = Color.FromArgb(z.Argb);
-                string lay = string.IsNullOrWhiteSpace(z.Layer) ? "Default" : z.Layer;
-                detailsLabel.Text = string.Format(CultureInfo.InvariantCulture,
-                    "Zone {0}/{1} | \"{2}\" [{3}] | {4} pts | Sector {5} | #{6:X2}{7:X2}{8:X2}",
-                    selIdx + 1, zones.Count, z.Name??string.Empty, lay, ptCount, sec, c.R, c.G, c.B);
+                string lay = string.IsNullOrWhiteSpace(z.Layer) ? Localization.Get("ZeDefaultLayer") : z.Layer;
+                detailsLabel.Text = Localization.T("ZeDetailsZone", selIdx + 1, zones.Count, z.Name??string.Empty, lay, ptCount, sec,
+                    string.Format(CultureInfo.InvariantCulture, "#{0:X2}{1:X2}{2:X2}", c.R, c.G, c.B));
             } else {
-                detailsLabel.Text = string.Format(CultureInfo.InvariantCulture,
-                    "Total: {0} zones ({1} visible){2} | Select a zone to inspect or edit",
-                    zones.Count, visibleIndices.Count, selectedLayer != null ? " in layer '" + selectedLayer + "'" : "");
+                detailsLabel.Text = (selectedLayer != null ? Localization.T("ZeDetailsTotalLayer", zones.Count, visibleIndices.Count, selectedLayer)
+                    : Localization.T("ZeDetailsTotal", zones.Count, visibleIndices.Count)) + " · " + Localization.Get("ZeDetailsHint");
             }
         }
 
@@ -988,7 +986,7 @@ namespace ScumMiniMap {
             string selectedLayer = GetSelectedLayer();
             if(string.IsNullOrEmpty(selectedLayer)) return;
             int count = zones.Count(z => string.Equals(string.IsNullOrWhiteSpace(z.Layer) ? "Default" : z.Layer, selectedLayer, StringComparison.OrdinalIgnoreCase));
-            if(MessageBox.Show(DialogOwner, Localization.T("ZeDeleteLayerConfirm", selectedLayer, count), Localization.Get("ZeDeleteLayer"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes) {
+            if(ThemedMessage.Show(DialogOwner, Localization.T("ZeDeleteLayerConfirm", selectedLayer, count), Localization.Get("ZeDeleteLayer"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes) {
                 zones.RemoveAll(z => string.Equals(string.IsNullOrWhiteSpace(z.Layer) ? "Default" : z.Layer, selectedLayer, StringComparison.OrdinalIgnoreCase));
                 sourceZones.RemoveAll(z => string.Equals(string.IsNullOrWhiteSpace(z.Layer) ? "Default" : z.Layer, selectedLayer, StringComparison.OrdinalIgnoreCase));
                 draft.Clear();
@@ -1064,14 +1062,14 @@ namespace ScumMiniMap {
             Button save=new Button { Text=Localization.Get("ZeSaveZones"),Width=105,BackColor=Color.FromArgb(20,70,40),ForeColor=Color.White };
             save.Click+=(s,e)=> {
                 if(busy)return;
-                if(draft.Count>0 || manualDraft.Count>0) { MessageBox.Show(DialogOwner,Localization.Get("ZeDraftWarning"));return; }
+                if(draft.Count>0 || manualDraft.Count>0) { ThemedMessage.Show(DialogOwner,Localization.Get("ZeDraftWarning"));return; }
                 try {
                     string waypointPath=Path.Combine(Path.GetDirectoryName(path),"customwaypoints.tsv");
                     MapSidecarStore.SaveFiles(path,waypointPath,zones.Concat(preservedWaypoints).ToList());
                     saved(zones.Select(z=>z.Clone()).ToList());DialogResult=DialogResult.OK;Close();
                 }
-                catch(InvalidDataException ex) { MessageBox.Show(DialogOwner,Localization.T("ZeSaveZonesError",ex.Message)); }
-                catch(IOException ex) { MessageBox.Show(DialogOwner,Localization.T("ZeSaveZonesError",ex.Message)); }catch(UnauthorizedAccessException ex) { MessageBox.Show(DialogOwner,ex.Message); }
+                catch(InvalidDataException ex) { ThemedMessage.Show(DialogOwner,Localization.T("ZeSaveZonesError",ex.Message)); }
+                catch(IOException ex) { ThemedMessage.Show(DialogOwner,Localization.T("ZeSaveZonesError",ex.Message)); }catch(UnauthorizedAccessException ex) { ThemedMessage.Show(DialogOwner,ex.Message); }
             };
 
             bar.Controls.Add(open);
@@ -1292,7 +1290,7 @@ namespace ScumMiniMap {
                     await ImportAutomatic(dialog.FileName);
                 }
             } catch(Exception ex) {
-                try { MessageBox.Show(DialogOwner, ex.Message, Localization.Get("ZoneEditorTitle"), MessageBoxButtons.OK, MessageBoxIcon.Error); } catch {}
+                try { ThemedMessage.Show(DialogOwner, ex.Message, Localization.Get("ZoneEditorTitle"), MessageBoxButtons.OK, MessageBoxIcon.Error); } catch {}
             }
         }
         public async Task ImportAutomatic(string file) {
@@ -1473,7 +1471,7 @@ namespace ScumMiniMap {
                 RefreshViews();if(zones.Count>0)SetSelectedZoneIndex(insertIdx);UpdateInstruction();
                 try { File.WriteAllText(Path.Combine(folder,"last-detection.json"),report); }catch(IOException) {}catch(UnauthorizedAccessException) {}
             } catch(Exception ex) {
-                if(!IsDisposed) { instruction.Text=Localization.Get("ZeAutoFailedKept");MessageBox.Show(DialogOwner,Localization.T("ZeCouldNotImportAuto",ex.Message)); }
+                if(!IsDisposed) { instruction.Text=Localization.Get("ZeAutoFailedKept");ThemedMessage.Show(DialogOwner,Localization.T("ZeCouldNotImportAuto",ex.Message)); }
             } finally {
                 if(busyTimer!=null)busyTimer.Stop();
                 busy=false;
@@ -1505,7 +1503,7 @@ namespace ScumMiniMap {
             if(busy || list.SelectedIndex<0)return;
             int index=GetSelectedZoneIndex();
             if(index<0 || index>=zones.Count)return;
-            if(string.IsNullOrWhiteSpace(name.Text) || name.Text.Length>80) { MessageBox.Show(DialogOwner,Localization.Get("ZeLabelLengthWarning"));return; }
+            if(string.IsNullOrWhiteSpace(name.Text) || name.Text.Length>80) { ThemedMessage.Show(DialogOwner,Localization.Get("ZeLabelLengthWarning"));return; }
             int original=zones[index].Argb;
             var selected=new HashSet<int>(SelectedZoneIndices());
             for(int i=0;i<zones.Count;i++)if(selected.Contains(i) || (sameColour && zones[i].Argb==original)) {
@@ -1568,7 +1566,7 @@ namespace ScumMiniMap {
         }
         void DeleteAll() {
             if(busy || zones.Count==0)return;
-            if(MessageBox.Show(DialogOwner,Localization.Get("ZeDeleteAllConfirm"),Localization.Get("ZeDeleteAllTitle"),MessageBoxButtons.YesNo,MessageBoxIcon.Warning)==DialogResult.Yes) {
+            if(ThemedMessage.Show(DialogOwner,Localization.Get("ZeDeleteAllConfirm"),Localization.Get("ZeDeleteAllTitle"),MessageBoxButtons.YesNo,MessageBoxIcon.Warning)==DialogResult.Yes) {
                 zones.Clear();sourceZones.Clear();importedSources.Clear();draft.Clear();manualDraft.Clear();
                 PopulateLayerCombo();
                 RefreshViews();name.Text=Localization.Get("ZeNewZone");
@@ -1578,7 +1576,7 @@ namespace ScumMiniMap {
         void ExportZones() {
             if(busy)return;
             if(zones.Count==0) {
-                MessageBox.Show(DialogOwner,Localization.Get("ZeNoZonesToExport"),Localization.Get("ZeExportTitle"),MessageBoxButtons.OK,MessageBoxIcon.Information);
+                ThemedMessage.Show(DialogOwner,Localization.Get("ZeNoZonesToExport"),Localization.Get("ZeExportTitle"),MessageBoxButtons.OK,MessageBoxIcon.Information);
                 return;
             }
             using(SaveFileDialog sfd=new SaveFileDialog {
@@ -1588,9 +1586,9 @@ namespace ScumMiniMap {
                 if(sfd.ShowDialog(DialogOwner)==DialogResult.OK) {
                     try {
                         ZoneStore.Save(sfd.FileName,zones);
-                        MessageBox.Show(DialogOwner,Localization.T("ZeExportSuccess",zones.Count,Path.GetFileName(sfd.FileName)),Localization.Get("ZeExportTitle"),MessageBoxButtons.OK,MessageBoxIcon.Information);
+                        ThemedMessage.Show(DialogOwner,Localization.T("ZeExportSuccess",zones.Count,Path.GetFileName(sfd.FileName)),Localization.Get("ZeExportTitle"),MessageBoxButtons.OK,MessageBoxIcon.Information);
                     } catch(Exception ex) {
-                        MessageBox.Show(DialogOwner,Localization.T("ZeSaveZonesError",ex.Message));
+                        ThemedMessage.Show(DialogOwner,Localization.T("ZeSaveZonesError",ex.Message));
                     }
                 }
             }
@@ -1605,7 +1603,7 @@ namespace ScumMiniMap {
                     try {
                         List<MapZone> imported=ZoneStore.Load(ofd.FileName);
                         if(imported.Count==0) {
-                            MessageBox.Show(DialogOwner,Localization.Get("ZeNoUsableZonesFound"),Localization.Get("ZeImportTitle"),MessageBoxButtons.OK,MessageBoxIcon.Warning);
+                            ThemedMessage.Show(DialogOwner,Localization.Get("ZeNoUsableZonesFound"),Localization.Get("ZeImportTitle"),MessageBoxButtons.OK,MessageBoxIcon.Warning);
                             return;
                         }
 
@@ -1642,9 +1640,9 @@ namespace ScumMiniMap {
                         PopulateLayerCombo(targetLayerName);
                         RefreshViews();
                         if(zones.Count>0)SetSelectedZoneIndex(insertIdx);UpdateInstruction();
-                        MessageBox.Show(DialogOwner,Localization.T("ZeImportSuccess",imported.Count,Path.GetFileName(ofd.FileName)),Localization.Get("ZeImportTitle"),MessageBoxButtons.OK,MessageBoxIcon.Information);
+                        ThemedMessage.Show(DialogOwner,Localization.T("ZeImportSuccess",imported.Count,Path.GetFileName(ofd.FileName)),Localization.Get("ZeImportTitle"),MessageBoxButtons.OK,MessageBoxIcon.Information);
                     } catch(Exception ex) {
-                        MessageBox.Show(DialogOwner,Localization.T("ZeCouldNotImportAuto",ex.Message));
+                        ThemedMessage.Show(DialogOwner,Localization.T("ZeCouldNotImportAuto",ex.Message));
                     }
                 }
             }
@@ -1680,10 +1678,10 @@ namespace ScumMiniMap {
             else if(step==1 && !isSource) { m1=p;step=2; }
             else if(step==2 && isSource) { s2=p;step=3; }
             else if(step==3 && !isSource) {
-                m2=p;try { ZoneStore.Align(s1,s1,s2,m1,m2);step=4; }catch(ArgumentException ex) { MessageBox.Show(DialogOwner,ex.Message);step=0; }
+                m2=p;try { ZoneStore.Align(s1,s1,s2,m1,m2);step=4; }catch(ArgumentException ex) { ThemedMessage.Show(DialogOwner,ex.Message);step=0; }
             } else if(step==4 && isSource && draft.Count<512) {
                 PointF mapped=ZoneStore.Align(p,s1,s2,m1,m2);
-                if(mapped.X<0 || mapped.X>1 || mapped.Y<0 || mapped.Y>1) { MessageBox.Show(DialogOwner,Localization.Get("ZeOutsideMapWarning"));return; }
+                if(mapped.X<0 || mapped.X>1 || mapped.Y<0 || mapped.Y>1) { ThemedMessage.Show(DialogOwner,Localization.Get("ZeOutsideMapWarning"));return; }
                 draft.Add(p);
             }
             UpdateInstruction();
@@ -1707,15 +1705,15 @@ namespace ScumMiniMap {
         void AddZone() {
             if(busy)return;
             if(drawingTool.SelectedIndex==1 || drawingTool.SelectedIndex==2 || drawingTool.SelectedIndex==4) {
-                if(manualDraft.Count<3) { MessageBox.Show(DialogOwner,Localization.Get("ZePointsRequirementWarning"));return; }
-                if(string.IsNullOrWhiteSpace(name.Text) || name.Text.Length>80 || zones.Count>=500) { MessageBox.Show(DialogOwner,Localization.Get("ZeZonesMaxWarning"));return; }
+                if(manualDraft.Count<3) { ThemedMessage.Show(DialogOwner,Localization.Get("ZePointsRequirementWarning"));return; }
+                if(string.IsNullOrWhiteSpace(name.Text) || name.Text.Length>80 || zones.Count>=500) { ThemedMessage.Show(DialogOwner,Localization.Get("ZeZonesMaxWarning"));return; }
                 string layer=GetSelectedLayer()??"Default";
                 var zone=new MapZone { Name=name.Text.Trim(),Argb=color.ToArgb(),FillArgb=draftFillArgb,Points=manualDraft.ToArray(),Category=ZoneCategory.Custom,Layer=layer };
                 zones.Add(zone);manualDraft.Clear();PopulateLayerCombo(layer);RefreshViews();SetSelectedZoneIndex(zones.Count-1);UpdateInstruction();return;
             }
             if(automatic || busy)return;
-            if(step!=4 || draft.Count<3) { MessageBox.Show(DialogOwner,Localization.Get("ZePointsRequirementWarning"));return; }
-            if(string.IsNullOrWhiteSpace(name.Text) || name.Text.Length>80 || zones.Count>=500) { MessageBox.Show(DialogOwner,Localization.Get("ZeZonesMaxWarning"));return; }
+            if(step!=4 || draft.Count<3) { ThemedMessage.Show(DialogOwner,Localization.Get("ZePointsRequirementWarning"));return; }
+            if(string.IsNullOrWhiteSpace(name.Text) || name.Text.Length>80 || zones.Count>=500) { ThemedMessage.Show(DialogOwner,Localization.Get("ZeZonesMaxWarning"));return; }
             string targetLayer = GetSelectedLayer() ?? "Default";
             zones.Add(new MapZone { Name=name.Text.Trim(),Argb=color.ToArgb(),FillArgb=draftFillArgb,Points=draft.Select(p=>ZoneStore.Align(p,s1,s2,m1,m2)).ToArray(),Category=ZoneCategory.Custom,Layer=targetLayer });
             draft.Clear();

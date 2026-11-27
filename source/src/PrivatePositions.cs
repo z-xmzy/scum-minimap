@@ -120,6 +120,10 @@ namespace ScumMiniMap {
         internal void Update(Position p,DateTime timestamp) { if(!Monitor.TryEnter(gate))return;try { local=p==null?null:new Position { X=p.X,Y=p.Y,Z=p.Z,Yaw=p.Yaw };updated=timestamp.ToUniversalTime(); }finally { Monitor.Exit(gate); } }
         internal Peer[] Snapshot() { if(stopped)return new Peer[0];return peers.Where(p=>Fresh(p.Updated,DateTime.UtcNow)).ToArray(); }
         internal static bool Fresh(DateTime timestamp,DateTime now) { double age=(now-timestamp).TotalSeconds;return age>=-5&&age<=30; }
+        // A teammate whose location has not been re-read for this long is drawn
+        // faded at the last known spot (inventory, chat, map or alt-tab).
+        internal const int LiveSeconds=8;
+        internal static bool Live(DateTime timestamp,DateTime now) { double age=(now-timestamp).TotalSeconds;return age>=-5&&age<=LiveSeconds; }
         static byte[] Derive(byte[] key,string purpose) { using(var hash=new HMACSHA256(key))return hash.ComputeHash(Encoding.UTF8.GetBytes(purpose)); }
         internal static byte[] Seal(byte[] key,string payload) {
             using(var aes=Aes.Create()) { aes.Key=Derive(key,"positions encryption v1");aes.GenerateIV();byte[] plain=Encoding.UTF8.GetBytes(payload),cipher;
@@ -172,7 +176,16 @@ namespace ScumMiniMap {
     // Direct TCP transport: a private group key authenticates and encrypts every
     // framed message. The host forwards only authenticated, fresh publications.
     internal sealed class DirectPositions:IDisposable {
-        sealed class Publication { internal string Id;internal PrivatePositions.Peer Peer;internal long Sequence;internal DateTime Seen;internal SharedMapMarker[] Markers;internal bool Compact,IncludeMarkers=true; }
+        sealed class Publication { internal string Id;internal PrivatePositions.Peer Peer;internal long Sequence;internal DateTime Seen;internal SharedMapMarker[] Markers;internal bool Compact,IncludeMarkers=true,Gone; }
+        // Last-known locations keep a connected teammate on the map while their
+        // game cannot be read. Senders from this version keep publishing the last
+        // location while SCUM runs (capture age capped below the 30 s freshness
+        // limit so older clients keep showing it too) and mark an intentional
+        // withdrawal with an age of 1 ms on an empty location. Older senders only
+        // send an empty location, so those are held for a bounded time instead.
+        internal const int HeldAgeMilliseconds=20000,LegacyHoldSeconds=180;
+        readonly System.Collections.Generic.Dictionary<string,PrivatePositions.Peer> lastKnown=new System.Collections.Generic.Dictionary<string,PrivatePositions.Peer>(StringComparer.Ordinal);
+        bool holdLocal;
         sealed class Link { internal System.Net.Sockets.TcpClient Client;internal Stream Stream;internal string Id;internal readonly System.Collections.Generic.Dictionary<string,long> Sequences=new System.Collections.Generic.Dictionary<string,long>(); }
         readonly object gate=new object();readonly byte[] key;readonly string id=Guid.NewGuid().ToString("N"),name;
         readonly System.Collections.Generic.Dictionary<string,Publication> publications=new System.Collections.Generic.Dictionary<string,Publication>();
@@ -229,15 +242,25 @@ namespace ScumMiniMap {
                 lock(gate) { if(stopped) { if(mapping!=null)mapping.Dispose();return; }router=mapping;if(mapping!=null&&string.IsNullOrWhiteSpace(Address))Address=mapping.Address;routerFinished=true; }
             });
         }
-        internal void Update(Position p,DateTime timestamp) { lock(gate) { local=p==null?null:new Position { X=p.X,Y=p.Y,Z=p.Z,Yaw=p.Yaw };updated=timestamp.ToUniversalTime(); } }
+        internal void Update(Position p,DateTime timestamp) { SetLocal(p,timestamp,false); }
+        // While the game is still running, keep sharing the last read location
+        // even after it stops being refreshed; Update(null) withdraws it.
+        internal void UpdateHolding(Position p,DateTime timestamp) { SetLocal(p,timestamp,true); }
+        void SetLocal(Position p,DateTime timestamp,bool hold) { lock(gate) { local=p==null?null:new Position { X=p.X,Y=p.Y,Z=p.Z,Yaw=p.Yaw };updated=timestamp.ToUniversalTime();holdLocal=hold&&p!=null; } }
+        PrivatePositions.Peer Visible(Publication publication,DateTime now) {
+            if(publication.Peer.Position!=null&&PrivatePositions.Fresh(publication.Peer.Updated,now))return publication.Peer;
+            PrivatePositions.Peer held;
+            if(publication.Gone||!PrivatePositions.Fresh(publication.Seen,now)||!lastKnown.TryGetValue(publication.Id,out held)||(now-held.Updated).TotalSeconds>LegacyHoldSeconds)return null;
+            return new PrivatePositions.Peer { Id=publication.Peer.Id,Name=publication.Peer.Name,Position=held.Position,Updated=held.Updated };
+        }
         internal void UpdateMarkers(SharedMapMarker[] markers) { lock(gate) {
             var next=(markers??new SharedMapMarker[0]).Where(SharedMapMarker.Valid).Take(128).GroupBy(marker=>marker.Id,StringComparer.Ordinal).Select(group=>group.First().Copy()).ToArray();
             if(next.Length!=localMarkers.Length||next.Where((m,i)=>m.Id!=localMarkers[i].Id||m.Name!=localMarkers[i].Name||m.X!=localMarkers[i].X||m.Y!=localMarkers[i].Y||m.Death!=localMarkers[i].Death).Any())markerRevision++;
             localMarkers=next;
         } }
-        internal PrivatePositions.Peer[] Snapshot() { lock(gate)return stopped||!ready?new PrivatePositions.Peer[0]:publications.Values.Where(p=>p.Id!=id&&p.Peer.Position!=null&&PrivatePositions.Fresh(p.Peer.Updated,clock())).Select(p=>p.Peer).ToArray(); }
+        internal PrivatePositions.Peer[] Snapshot() { lock(gate) { if(stopped||!ready)return new PrivatePositions.Peer[0];var now=clock();return publications.Values.Where(p=>p.Id!=id).Select(p=>Visible(p,now)).Where(p=>p!=null).ToArray(); } }
         internal SharedMapMarker[] SnapshotMarkers() { lock(gate)return stopped||!ready?new SharedMapMarker[0]:publications.Values.Where(p=>p.Id!=id&&PrivatePositions.Fresh(p.Seen,clock())).SelectMany(p=>p.Markers).Select(marker=>marker.Copy()).ToArray(); }
-        internal PrivatePositions.Peer[] Roster() { lock(gate)return stopped||!ready?new PrivatePositions.Peer[0]:publications.Values.Where(p=>p.Id!=id&&PrivatePositions.Fresh(p.Seen,clock())).Select(p=>new PrivatePositions.Peer { Id=p.Id,Name=p.Peer.Name,Position=p.Peer.Position!=null&&PrivatePositions.Fresh(p.Peer.Updated,clock())?p.Peer.Position:null,Updated=p.Peer.Updated }).OrderBy(p=>p.Name,StringComparer.CurrentCultureIgnoreCase).ThenBy(p=>p.Id,StringComparer.Ordinal).ToArray(); }
+        internal PrivatePositions.Peer[] Roster() { lock(gate) { if(stopped||!ready)return new PrivatePositions.Peer[0];var now=clock();return publications.Values.Where(p=>p.Id!=id&&PrivatePositions.Fresh(p.Seen,now)).Select(p=> { var shown=Visible(p,now);return new PrivatePositions.Peer { Id=p.Id,Name=p.Peer.Name,Position=shown==null?null:shown.Position,Updated=shown==null?p.Peer.Updated:shown.Updated }; }).OrderBy(p=>p.Name,StringComparer.CurrentCultureIgnoreCase).ThenBy(p=>p.Id,StringComparer.Ordinal).ToArray(); } }
         void Accept() {
             while(!stopped)try { var client=listener.AcceptTcpClient();lock(gate) { if(stopped||links.Count>=8) { client.Close();continue; }Attach(client); } }catch(Exception e) { if(!stopped)error=e.Message;break; }
         }
@@ -295,11 +318,11 @@ namespace ScumMiniMap {
                 if(!SharedMapMarker.Valid(marker)||!markerIds.Add(marker.Id))throw new InvalidDataException();markers.Add(marker);
             }
             if(compact&&fields[10]=="="&&markers.Count!=0)throw new InvalidDataException();
-            return new Publication { Id=fields[1],Peer=new PrivatePositions.Peer { Id=fields[1],Name=fields[2],Position=position,Updated=stamp },Sequence=incomingSequence,Seen=now.AddMilliseconds(-heartbeatAge),Markers=compact&&fields[10]=="="?null:markers.ToArray() };
+            return new Publication { Id=fields[1],Peer=new PrivatePositions.Peer { Id=fields[1],Name=fields[2],Position=position,Updated=stamp },Sequence=incomingSequence,Seen=now.AddMilliseconds(-heartbeatAge),Markers=compact&&fields[10]=="="?null:markers.ToArray(),Gone=position==null&&age==1 };
         }
         byte[] Encode(Publication publication,DateTime now) {
             var peer=publication.Peer;var p=PrivatePositions.Fresh(peer.Updated,now)?peer.Position:null;
-            int age=p==null?0:(int)Math.Max(0,Math.Min(30000,(now-peer.Updated).TotalMilliseconds));
+            int age=p==null?(publication.Gone?1:0):(int)Math.Max(0,Math.Min(30000,(now-peer.Updated).TotalMilliseconds));
             var fields=new[]{publication.Compact?"4":"3",publication.Id,peer.Name,publication.Sequence.ToString(CultureInfo.InvariantCulture),age.ToString(CultureInfo.InvariantCulture),((int)Math.Max(0,(now-publication.Seen).TotalMilliseconds)).ToString(CultureInfo.InvariantCulture),p!=null?p.X.ToString("R",CultureInfo.InvariantCulture):"-",p!=null?p.Y.ToString("R",CultureInfo.InvariantCulture):"-",p!=null?p.Z.ToString("R",CultureInfo.InvariantCulture):"-",p!=null?p.Yaw.ToString("R",CultureInfo.InvariantCulture):"-"};
             if(publication.Compact)fields=fields.Concat(new[]{publication.IncludeMarkers?"M":"="}).ToArray();
             string markerRows=string.Concat((publication.IncludeMarkers?publication.Markers:new SharedMapMarker[0]).Select(marker=>"\n"+marker.Id+"\t"+(marker.Death?"D":"W")+"\t"+Convert.ToBase64String(Encoding.UTF8.GetBytes(marker.Name))+"\t"+marker.X.ToString("R",CultureInfo.InvariantCulture)+"\t"+marker.Y.ToString("R",CultureInfo.InvariantCulture)));
@@ -320,6 +343,8 @@ namespace ScumMiniMap {
                         if(publications.Count>=32&&!publications.ContainsKey(publication.Id))throw new InvalidDataException();
                         if(publication.Markers==null) { Publication previousPublication;publication.Markers=publications.TryGetValue(publication.Id,out previousPublication)?previousPublication.Markers:new SharedMapMarker[0]; }
                         publications[publication.Id]=publication;ready=true;
+                        if(publication.Peer.Position!=null)lastKnown[publication.Id]=new PrivatePositions.Peer { Position=publication.Peer.Position,Updated=publication.Peer.Updated };
+                        else if(publication.Gone)lastKnown.Remove(publication.Id);
                     }
                 }
             }catch(Exception e) { if(!host&&!stopped)lock(gate) { error=e.Message;if(e is InvalidDataException)ReconnectBlocked=true;ready=false;publications.Clear(); } }
@@ -332,10 +357,12 @@ namespace ScumMiniMap {
                 lock(gate) {
                     if(stopped)return;
                     foreach(var stale in publications.Where(pair=>!PrivatePositions.Fresh(pair.Value.Seen,now)).Select(pair=>pair.Key).ToArray())publications.Remove(stale);
-                    bool valid=local!=null&&PrivatePositions.Fresh(updated,now);var p=local;
+                    foreach(var gone in lastKnown.Keys.Where(key=>!publications.ContainsKey(key)).ToArray())lastKnown.Remove(gone);
+                    var captured=updated;if(local!=null&&holdLocal&&(now-captured).TotalMilliseconds>HeldAgeMilliseconds)captured=now.AddMilliseconds(-HeldAgeMilliseconds);
+                    bool valid=local!=null&&PrivatePositions.Fresh(captured,now);var p=local;
                     compact=Relay&&persistentMember&&compactUpdates;bool includeMarkers=!compact||markerRevision!=lastMarkerRevision||now>=nextFullMarkers;
                     if(includeMarkers) { lastMarkerRevision=markerRevision;nextFullMarkers=now.AddSeconds(5); }
-                    var own=new Publication { Compact=compact,IncludeMarkers=includeMarkers,Id=id,Peer=new PrivatePositions.Peer { Name=name,Updated=valid?updated:now,Position=valid?p:null },Sequence=++sequence,Seen=now,Markers=localMarkers };publications[id]=own;
+                    var own=new Publication { Compact=compact,IncludeMarkers=includeMarkers,Id=id,Peer=new PrivatePositions.Peer { Name=name,Updated=valid?captured:now,Position=valid?p:null },Sequence=++sequence,Seen=now,Markers=localMarkers,Gone=!valid };publications[id]=own;
                     // Re-encode relayed publications with their current age so
                     // forwarding never makes an old captured location fresh.
                     packets=host?publications.Values.Select(value=>Encode(value,now)).ToArray():new[]{Encode(own,now)};connections=links.ToArray();
@@ -345,7 +372,7 @@ namespace ScumMiniMap {
         }
         public void Dispose() {
             stopped=true;ready=false;timer.Dispose();if(listener!=null)listener.Stop();
-            lock(gate) { if(router!=null) { router.Dispose();router=null; }foreach(var link in links)link.Client.Close();publications.Clear();local=null;localMarkers=new SharedMapMarker[0];Array.Clear(key,0,key.Length); }
+            lock(gate) { if(router!=null) { router.Dispose();router=null; }foreach(var link in links)link.Client.Close();publications.Clear();lastKnown.Clear();local=null;localMarkers=new SharedMapMarker[0];Array.Clear(key,0,key.Length); }
         }
     }
 }

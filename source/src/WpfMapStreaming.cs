@@ -147,7 +147,14 @@ namespace ScumMiniMap {
             var viewport=ViewBounds(State,ActualWidth,ActualHeight,Compact,8);int first=-1,last=-1;
             Action flush=()=> {
                 if(first<0)return;var pen=new Pen(ink,RouteThickness);if(!verified)pen.DashStyle=DashStyles.Dash;
-                RouteVerticesDrawn+=last-first+1;DrawLine(dc,Enumerable.Range(first,last-first+1).Select(i=>point(points[i])),pen);first=-1;
+                RouteVerticesDrawn+=last-first+1;var line=Enumerable.Range(first,last-first+1).Select(i=>point(points[i])).ToArray();
+                // Theme route styling: soft glow (glass), dark casing for contrast, then a fine light core on verified roads.
+                var theme=WpfFieldTheme.Current;
+                if(theme.RouteGlow!=null&&verified&&!Compact)DrawLine(dc,line,new Pen(theme.Brush(theme.RouteGlow),RouteThickness+7));
+                if(theme.RouteCasing!=null)DrawLine(dc,line,new Pen(theme.Brush(theme.RouteCasing),RouteThickness+2.5) { DashStyle=verified?DashStyles.Solid:DashStyles.Dash });
+                DrawLine(dc,line,pen);
+                if(verified&&!Compact&&(theme.GradientAccent||theme.Uppercase))DrawLine(dc,line,new Pen(theme.Alpha("#FFFFFF",0xCC),1.3) { DashStyle=new DashStyle(new double[]{1.5,3.5},0) });
+                first=-1;
             };
             // Contiguous visible chunks stay in one figure, preserving joins.
             // Segments crossing the viewport survive even if both ends are outside.

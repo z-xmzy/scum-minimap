@@ -41,7 +41,7 @@ namespace ScumMiniMap {
         StackPanel ScreenFilterSidebarPage() {
             if(screenFilterPage!=null)return screenFilterPage;
             screenFilterPage=new StackPanel { Tag="sidebar-page:screen-filter" };screenFilterDraft=screenFilter.Settings.Clone();var draft=screenFilterDraft;
-            screenFilterPage.Children.Add(WpfFieldTheme.Text(Localization.Get("ScreenFilter"),23,null,true));
+            screenFilterPage.Children.Add(WpfFieldTheme.Heading(Localization.Get("ScreenFilter"),23));
             screenFilterSave=new DispatcherTimer { Interval=TimeSpan.FromMilliseconds(400) };screenFilterSave.Tick+=(s,e)=> { screenFilterSave.Stop();screenFilter.Save(); };
             bool loading=false;
             Action changed=()=> { if(loading)return;draft.Clamp();screenFilter.Apply(draft.Clone());screenFilterSave.Stop();screenFilterSave.Start(); };
@@ -52,8 +52,8 @@ namespace ScumMiniMap {
             var help=para(Localization.Get("ScreenFilterHelp"),12,WpfFieldTheme.Muted);help.Margin=new Thickness(0,0,0,8);screenFilterPage.Children.Add(help);
             var status=para("",12,WpfFieldTheme.Amber);status.Tag="screen-filter-status";status.Margin=new Thickness(0,0,0,4);screenFilterPage.Children.Add(status);
             var unlock=WpfFieldTheme.Button(Localization.Get("ScreenFilterUnlock"),()=> {
-                if(MessageBox.Show(Localization.Get("ScreenFilterUnlockConfirm"),Localization.Get("ScreenFilter"),MessageBoxButton.OKCancel,MessageBoxImage.Information)!=MessageBoxResult.OK)return;
-                MessageBox.Show(Localization.Get(GammaDevice.AllowFullRange()?"ScreenFilterUnlockDone":"ScreenFilterUnlockFailed"),Localization.Get("ScreenFilter"));
+                if(WpfKit.Ask(null,Localization.Get("ScreenFilterUnlockConfirm"),Localization.Get("ScreenFilter"),MessageBoxButton.OKCancel,MessageBoxImage.Information)!=MessageBoxResult.OK)return;
+                WpfKit.Ask(null,Localization.Get(GammaDevice.AllowFullRange()?"ScreenFilterUnlockDone":"ScreenFilterUnlockFailed"),Localization.Get("ScreenFilter"));
                 screenFilter.Apply(screenFilter.Settings.Clone());SyncScreenFilterPage();
             });
             unlock.Tag="screen-filter-unlock";unlock.HorizontalAlignment=HorizontalAlignment.Left;unlock.Margin=new Thickness(0,4,0,4);screenFilterPage.Children.Add(unlock);

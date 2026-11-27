@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.7.0] - 2026-11-26
+
+- New interface with three themes, switched in one click under Settings → Appearance → Interface theme: Tactical (default; condensed caps, compass tape, key hints, chamfered panels), Glass (frosted rounded panels, gradient accent, segmented tabs) and Minimal (left sidebar, hairlines, status bar). Every window and the in-game minimap follow the chosen theme, and the choice is remembered.
+- Full map: a navigation card with large distance, estimated minutes and road/direct route kind; a squad card with online count, distance and follow buttons per player and quick pings; category tiles for map points; zoom level bars; a docked or floating side panel with tabs for map, squad, crosshair and screen filter.
+- Settings are reorganised per theme (tabs, or an icon sidebar with grouped sections). The in-game minimap gains a themed frame and a status card showing sector, location, distance, minutes and destination.
+- Line icons from Lucide replace the previous glyph font; Inter and Barlow Condensed fonts are bundled (SIL Open Font License, see ATTRIBUTION.md). All existing features and shortcuts are unchanged.
+
 ## [2.6.1] - 2026-11-24
 
 - Add a screen filter for dark nights and bunkers: gamma (shadow lift), brightness, contrast and saturation, with Night, Bunker, Fog and Custom presets that can each be tuned and reset, and a curve preview. Edit it from the new page in the full map's icon rail. Bind "Screen filter on/off" and "Next screen filter preset" under Shortcuts.

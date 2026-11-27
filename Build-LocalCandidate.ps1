@@ -7,6 +7,8 @@ $resources=Join-Path $root 'resources'
 $output=Join-Path $PSScriptRoot 'package/SCUM-MiniMap/app'
 if (!(Test-Path -LiteralPath (Join-Path $output 'assets/map-tiles.bin'))) { throw 'Prepare the local app assets in app/ before building.' }
 # The complete existing bunker atlas is retained in this isolated app/assets directory.
+Copy-Item -LiteralPath (Join-Path $root 'ATTRIBUTION.md') -Destination $output -Force
+Copy-Item -LiteralPath (Join-Path $resources 'fonts/OFL-Inter.txt') -Destination $output -Force
 Copy-Item -LiteralPath (Join-Path $resources 'marker-icons\LICENSE.txt') -Destination (Join-Path $output 'Lucide-LICENSE.txt') -Force
 $manifest=Join-Path $PSScriptRoot 'checks\installation-assets.txt'
 $assetLines=@('map-tiles.bin','roads.bin' | ForEach-Object { $_+'='+(Get-FileHash -LiteralPath (Join-Path $output ('assets\'+$_)) -Algorithm SHA256).Hash.ToLowerInvariant() })
@@ -22,7 +24,7 @@ $stampedPath=Join-Path $PSScriptRoot 'checks\MiniMap.build.cs'
 [IO.File]::WriteAllText($stampedPath,$stamped,[Text.UTF8Encoding]::new($false))
 $sources=@($sources | ForEach-Object { if([IO.Path]::GetFullPath($_) -eq $mainSource) { $stampedPath } else { $_ } })
 $embedded=@('nav-world-grid.bin','nav-world-terrain.bin','nav-world-grade.bin','nav-bridges.bin','zones.tsv','water-mask.bin','scummap.bin','spawn-items.tsv','spawn-compatibility.tsv','spawn-item-names-pl.tsv','keyboard-setup.png','steam-logo.png' | ForEach-Object { '/resource:'+(Join-Path $resources $_)+','+$_ })
-$embedded+=@('BarlowSemiCondensed-Regular.ttf','BarlowSemiCondensed-SemiBold.ttf' | ForEach-Object { '/resource:'+(Join-Path $resources ('fonts\'+$_))+','+$_ })
+$embedded+=@('BarlowSemiCondensed-Regular.ttf','BarlowSemiCondensed-SemiBold.ttf','Inter-Regular.otf','Inter-SemiBold.otf','Inter-Bold.otf','BarlowCondensed-SemiBold.ttf','BarlowCondensed-Bold.ttf','BarlowCondensed-ExtraBold.ttf' | ForEach-Object { '/resource:'+(Join-Path $resources ('fonts\'+$_))+','+$_ })
 $embedded+='/resource:'+$manifest+',installation-assets.txt'
 $embedded+='/resource:'+(Join-Path $root 'packaging\detect_zones.py')+',detect_zones.py'
 $embedded+=@(& (Join-Path $root 'scripts\Get-LocalizationResources.ps1'))

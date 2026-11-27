@@ -480,7 +480,7 @@ namespace ScumMiniMap {
                 : GameBindingsConflict() ? Localization.Get("KeyWizardDifferentKeys")
                 : appControls.BindingError(mapKey,mapScanCode,chatKey,chatScanCode,copyKey,copyScanCode);
             if(error != null) {
-                if(requireValid) MessageBox.Show(this,error,Localization.Get("KeyWizardTitle"),MessageBoxButtons.OK,MessageBoxIcon.Warning);
+                if(requireValid) ThemedMessage.Show(this,error,Localization.Get("KeyWizardTitle"),MessageBoxButtons.OK,MessageBoxIcon.Warning);
                 return false;
             }
             if (onSaveKeybinds != null) {

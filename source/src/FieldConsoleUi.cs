@@ -174,11 +174,21 @@ namespace ScumMiniMap {
             double distance=road?activeRoute.TotalDistanceMeters:DestinationSearch.Metres(ToMap(position),searchTarget.Centroid);
             return WpfTravelSummary(distance,road,routeCalculating,road?(double?)activeRoute.EstimatedSeconds:null);
         }
+        void WpfApplyTravel(WpfMapState state) {
+            if(searchTarget==null||position==null)return;
+            bool road=activeRoute!=null&&activeRoute.Success;
+            double distance=road?activeRoute.TotalDistanceMeters:DestinationSearch.Metres(ToMap(position),searchTarget.Centroid);
+            state.TravelMeters=distance;state.TravelRoad=road;state.TravelCalculating=routeCalculating;
+            state.TravelMinutes=WpfTravelMinutes(distance,road,road?(double?)activeRoute.EstimatedSeconds:null);
+        }
+        internal int WpfTravelMinutes(double distance,bool road,double? estimatedSeconds) {
+            double speed=wpfRouteMode==RoadRouteMode.Walking?5/3.6:filteredSpeed>1.2?filteredSpeed:13.9;
+            return Math.Max(1,(int)Math.Ceiling((road&&estimatedSeconds.HasValue?estimatedSeconds.Value:distance/Math.Max(.5,speed))/60));
+        }
         internal string WpfTravelSummary(double distance,bool road,bool calculating=false,double? estimatedSeconds=null,int unplannedLegs=0,bool allFailed=false) {
             if(allFailed)return Localization.Get("FieldNoUsableRoute")+" · "+DestinationSearch.Distance(distance)+" ("+Localization.Get("FieldDirect")+")";
             if(unplannedLegs>0)return DestinationSearch.Distance(distance)+" · "+Localization.T("FieldEstimatedLegs",unplannedLegs);
-            double speed=wpfRouteMode==RoadRouteMode.Walking?5/3.6:filteredSpeed>1.2?filteredSpeed:13.9;
-            int minutes=Math.Max(1,(int)Math.Ceiling((road&&estimatedSeconds.HasValue?estimatedSeconds.Value:distance/Math.Max(.5,speed))/60));
+            int minutes=WpfTravelMinutes(distance,road,estimatedSeconds);
             return DestinationSearch.Distance(distance)+(road?Localization.Get("RoadSuffix"):" ("+Localization.Get("FieldDirect")+")")+" · "+Localization.Get("NavigationEta")+" "+Localization.T("FieldMinutes",minutes)+(calculating?" · "+Localization.Get("FieldCalculating"):road?"":" · "+Localization.Get("FieldNoRoad"));
         }
         void DrawFieldConsoleSidebar(Graphics g,int x,int w,int h) {
