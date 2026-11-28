@@ -61,28 +61,53 @@ namespace ScumMiniMap {
             if(poiBuild!=null) { poiBuild.Cancel();poiBuild=null; }
             System.Threading.Interlocked.Increment(ref poiGeneration);poiBatchRunning=false;
             requestedPoiLayout=drawnPoiLayout=null;streamedPoiTiles.Clear();poiSceneTiles=null;PoiViewportReady=false;PoiStreamResets++;
+            placeholderPoiTiles=null;
         }
+        // After a zoom the previous zoom's POI tiles stand in, scaled, until the
+        // new zoom's visible cells are all ready. Swapping on a partial set made
+        // every icon vanish at the settled frame and reappear in batches.
+        StreamedPoiTile[] placeholderPoiTiles;
+        double placeholderPoiSide;
+        string streamedPoiFilter;
         void StreamPois(DrawingContext dc,double side,double left,double top,double width,double height) {
             Dispatcher.VerifyAccess();PoiTilesDrawn=0;
             var layout=PoiClusters(State,width,height,false);double dpi=PoiRasterDensity(width,height,VisualTreeHelper.GetDpi(this).DpiScaleX);
             double span=Math.Max(512,Math.Ceiling(Math.Max(width,height)/2048)*512);
+            string filter=State.Store==null?"":State.Store.GetFilterHashKey()+"|"+State.PoiClustering;
             if(!object.ReferenceEquals(layout,requestedPoiLayout)||requestedPoiSide!=side||streamedPoiDpi!=dpi||streamedPoiSpan!=span) {
+                // Only a camera change may keep stand-ins; a filter change must not
+                // show icons from a disabled category.
+                StreamedPoiTile[] previous=null;double previousSide=0;
+                if(filter==streamedPoiFilter&&streamedPoiDpi==dpi&&streamedPoiSpan==span&&requestedPoiSide>0) {
+                    if(PoiViewportReady&&streamedPoiTiles.Count>0) { previous=streamedPoiTiles.Values.ToArray();previousSide=requestedPoiSide; }
+                    else if(placeholderPoiTiles!=null) { previous=placeholderPoiTiles;previousSide=placeholderPoiSide; }
+                }
                 ResetPoiStream();requestedPoiLayout=layout;requestedPoiSide=drawnPoiSide=side;streamedPoiDpi=dpi;streamedPoiSpan=span;
+                placeholderPoiTiles=previous;placeholderPoiSide=previousSide;
             }
+            streamedPoiFilter=filter;
             var bounds=new Rect((-left-24)/side,(-top-24)/side,(width+48)/side,(height+48)/side);
             var wanted=Index(layout).Query(bounds).GroupBy(cluster=>new Point(Math.Floor(cluster.Point.X*side/span),Math.Floor(cluster.Point.Y*side/span))).OrderBy(cell=>cell.Key.Y).ThenBy(cell=>cell.Key.X).ToArray();
             var missing=new List<IGrouping<Point,WpfPoiCluster>>();
-            foreach(var cell in wanted) {
-                StreamedPoiTile tile;if(streamedPoiTiles.TryGetValue(cell.Key,out tile)) { tile.Used=++poiUse;dc.PushTransform(new TranslateTransform(left,top));dc.DrawDrawing(tile.Drawing);dc.Pop();PoiTilesDrawn++; }
-                else missing.Add(cell);
-            }
+            foreach(var cell in wanted)if(!streamedPoiTiles.ContainsKey(cell.Key))missing.Add(cell);
             PoiViewportReady=missing.Count==0;
-            if(PoiViewportReady)drawnPoiLayout=layout;
-            // There is one small batch in flight. The next frame requests the
-            // latest viewport, never a backlog of cells from earlier camera positions.
+            if(PoiViewportReady) { drawnPoiLayout=layout;placeholderPoiTiles=null; }
+            if(placeholderPoiTiles!=null) {
+                // Each tile was recorded in its own zoom's map pixels.
+                double scale=side/placeholderPoiSide;var view=new Rect(-left,-top,width,height);
+                dc.PushTransform(new MatrixTransform(scale,0,0,scale,left,top));
+                foreach(var tile in placeholderPoiTiles) { var area=new Rect(tile.Bounds.X*scale,tile.Bounds.Y*scale,tile.Bounds.Width*scale,tile.Bounds.Height*scale);if(area.IntersectsWith(view))dc.DrawDrawing(tile.Drawing); }
+                dc.Pop();
+            } else foreach(var cell in wanted) {
+                StreamedPoiTile tile;if(streamedPoiTiles.TryGetValue(cell.Key,out tile)) { tile.Used=++poiUse;dc.PushTransform(new TranslateTransform(left,top));dc.DrawDrawing(tile.Drawing);dc.Pop();PoiTilesDrawn++; }
+            }
+            // There is one batch in flight. The next frame requests the latest
+            // viewport, never a backlog of cells from earlier camera positions.
+            // A settled camera prepares the whole viewport in one batch so it
+            // replaces the stand-ins in a single step.
             if(!poiBatchRunning&&missing.Count>0) {
                 var batch=new List<Tuple<StreamedPoiTile,PoiStamp[]>>();
-                foreach(var cell in missing.OrderBy(cell=>Math.Abs((cell.Key.X+.5)*span+left-width/2)+Math.Abs((cell.Key.Y+.5)*span+top-height/2)).Take(4)) {
+                foreach(var cell in missing.OrderBy(cell=>Math.Abs((cell.Key.X+.5)*span+left-width/2)+Math.Abs((cell.Key.Y+.5)*span+top-height/2)).Take(CameraInteracting?4:missing.Count)) {
                     var tile=new StreamedPoiTile { Key=cell.Key,Bounds=new Rect(cell.Key.X*span-24,cell.Key.Y*span-24,span+48,span+48) };
                     var cellBounds=new Rect(cell.Key.X*span/side,cell.Key.Y*span/side,span/side,span/side);cellBounds.Inflate(1e-7,1e-7);
                     var stamps=new List<PoiStamp>();

@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.7.2] - 2026-11-28
+
+- 大地图滚轮缩放更顺滑：从 1 倍放大时不再每一帧重画全部图标和文字（之前 1 倍时的透明预览图用不上，改为提前备好一张不透明预览图）。Smoother wheel zoom on the main map: zooming in from 1x no longer redraws every icon and label each frame.
+- 缩放动画与屏幕刷新同步，按实际时间平滑过渡，不再出现画面停一帧再跳一大步。Zoom animation now advances once per displayed frame, so it no longer stalls and jumps.
+- 缩放停下后，地图瓦片和 POI 图标一次切换到清晰画面，不再先消失再分批出现；目标缩放的瓦片在滚动时就提前加载。After zooming stops, terrain tiles and POI icons switch to the sharp view in one step instead of vanishing and reappearing in batches.
+
 ## [2.7.1] - 2026-11-27
 
 - An error inside the keyboard or mouse input hooks is now written to automatic.log (at most once every 10 seconds) instead of opening a .NET error dialog that could not be clicked. Input keeps working either way.

@@ -312,7 +312,7 @@ namespace ScumMiniMap {
             return string.Join("|",new object[]{ActualWidth,ActualHeight,Compact,State.Shape,State.Zoom,Identity(State.Bunker),Identity(State.BunkerImage),centre.X,centre.Y,Rotation(State,Compact),VisualTreeHelper.GetDpi(this).DpiScaleX});
         }
         static int Identity(object value) { return value==null?0:System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(value); }
-        string SceneContentKey() { return OverlayContentKey()+"|"+(State==null?0:State.Opacity)+"|"+TerrainRevision; }
+        string SceneContentKey() { return SceneContentKeyFor(State==null?0:State.Opacity); }
         string OverlayContentKey() {
             if(State==null)return "";
             return string.Join("|",new object[]{Identity(State.Store),State.Store==null?"":State.Store.GetFilterHashKey(),State.Store!=null&&State.Store.MasterEnabled,State.Shape,State.Grid,State.GridLabels,State.GridOpacity,State.LabelSize,State.SmartLabels,Identity(Terrain),Identity(BaseMap),Identity(State.Bunker),Identity(State.BunkerImage),State.History,State.HistoryColor,Identity(State.Trail),State.Zones,State.Waypoints,State.Labels,State.PoiClustering,State.ZoneRevision,Identity(State.Saved),Localization.CurrentCode});
@@ -324,6 +324,9 @@ namespace ScumMiniMap {
             }
             string overlayKey=OverlayContentKey();
             if(cameraScene!=null&&(cameraScene.Opacity!=State.Opacity||cameraScene.OverlayKey!=overlayKey))cameraScene=null;
+            // Zooming in from 1x switches the terrain from transparent to opaque on
+            // the first notch; the opaque stand-by snapshot covers that gesture.
+            if(cameraScene==null&&CameraInteracting&&State.Bunker==null)cameraScene=ReadyCameraScene(overlayKey);
             // During a zoom gesture keep reprojecting the last complete snapshot even
             // while its replacement is being built: rebuilding the vector terrain every
             // wheel step is what made seamless zoom stutter.
@@ -365,7 +368,8 @@ namespace ScumMiniMap {
                 UpdateSharedLayer(preview);using(var dc=liveLayer.RenderOpen())DrawMapPass(dc,MapPass.Live);LiveLayerBuilds++;layersDrawn=true;return;
             }
             string camera=CameraLayerKey(),store=Identity(State.Store)+"|"+(State.Store==null?"":State.Store.GetFilterHashKey()+"|"+State.Store.MasterEnabled);
-            string terrainKey=string.Join("|",new object[]{camera,store,State.Opacity,State.Grid,State.GridLabels,State.GridOpacity,State.LabelSize,TerrainRevision,Identity(Terrain),Identity(BaseMap),Localization.CurrentCode});
+            // Transparent terrain draws no tiles, so tile arrival cannot change it.
+            string terrainKey=string.Join("|",new object[]{camera,store,State.Opacity,State.Grid,State.GridLabels,State.GridOpacity,State.LabelSize,State.Opacity>0?TerrainRevision:0,Identity(Terrain),Identity(BaseMap),Localization.CurrentCode});
             if(terrainDrawing==null||terrainDrawingKey!=terrainKey) {
                 terrainDrawing=new DrawingGroup();using(var dc=terrainDrawing.Open())DrawMapPass(dc,MapPass.Terrain);terrainDrawing.Freeze();terrainDrawingKey=terrainKey;TerrainLayerBuilds++;
             }
@@ -386,6 +390,7 @@ namespace ScumMiniMap {
                 staticDrawing=new DrawingGroup();staticDrawing.Children.Add(terrainDrawing);staticDrawing.Children.Add(trailDrawing);staticDrawing.Children.Add(annotationDrawing);staticDrawing.Freeze();
                 QueueCameraScene(staticDrawing,ActualWidth,ActualHeight);queuedTerrainKey=staticKey;
             }
+            if(State.Bunker==null&&!Compact&&!DirectTerrain&&State.Opacity==0&&Terrain!=null)QueueStandbyScene(camera,store,trailKey);
             bool raster=State.Bunker==null&&CameraInteracting&&!DirectTerrain;
             string presentation=(raster?staticKey:terrainKey)+"|"+raster;
             if(terrainLayerKey!=presentation||raster&&!object.ReferenceEquals(presentedCameraScene,cameraScene)) {
@@ -413,6 +418,19 @@ namespace ScumMiniMap {
             if(!CameraInteracting)return;
             CameraFramesPresented++;InvalidateVisual();
         }
+        // A zoom animation advanced inside this composition callback; render it
+        // in the same frame instead of waiting for the next one.
+        internal void PresentPendingCameraFrame() { if(cameraFramePending)PresentCameraFrame(); }
+        // Queues decoding of the terrain tiles a tactical frame at this zoom would
+        // draw. Returns true once every one of them is cached.
+        internal bool PrefetchTerrain(float zoom,bool transparentToo=false) {
+            if(Terrain==null||State==null||State.Bunker!=null||Compact||State.Opacity<=0&&!transparentToo||ActualWidth<1||ActualHeight<1)return true;
+            double width=ActualWidth,height=ActualHeight,side=Math.Min(width,height)*Math.Max(1,zoom)*State.BunkerScale;if(side<=0)return true;
+            double halfX=Math.Min(.5,width/(2*side)),halfY=Math.Min(.5,height/(2*side));
+            double x=Math.Max(halfX,Math.Min(1-halfX,(double)State.Pan.X)),y=Math.Max(halfY,Math.Min(1-halfY,(double)State.Pan.Y));
+            return Terrain.Prefetch(width,height,width/2-side*x,height/2-side*y,side,VisualTreeHelper.GetDpi(this).DpiScaleX);
+        }
+        internal bool TerrainReady() { return State==null||PrefetchTerrain(State.Zoom); }
         void CameraCompositionFrame(object sender,EventArgs args) {
             var frame=args as RenderingEventArgs;
             // WPF can raise Rendering more than once for the same composition
@@ -421,14 +439,37 @@ namespace ScumMiniMap {
             PresentCameraFrame();
         }
         sealed class CameraScene {
-            internal DrawingGroup Drawing;internal BitmapSource Image;internal double Width,Height,Side;internal DrawingPoint Centre;internal int Generation,Opacity;internal string ContentKey,OverlayKey;
+            internal DrawingGroup Drawing;internal BitmapSource Image;internal double Width,Height,Side;internal DrawingPoint Centre;internal int Generation,Opacity;internal string ContentKey,OverlayKey;internal bool Standby;
         }
         readonly object cameraGate=new object();
         CameraScene pendingCameraScene,completedCameraScene,cameraScene,idleCameraScene;
+        // At 1x the tactical terrain is transparent over SCUM's own map; the first
+        // zoom-in notch makes it opaque. Without an opaque snapshot that gesture
+        // replayed every label and icon vector at a new scale each frame.
+        CameraScene pendingStandbyScene,completedStandbyScene,standbyCameraScene;
+        string queuedStandbyKey;
+        internal bool StandbyPending;
+        internal int StandbySceneBuilds;
         bool cameraWorker,cameraApplyPosted;
         int cameraGeneration;
         internal int CameraSceneBuilds;
-        internal void BeginCameraFrames() { if(!CameraInteracting)cameraScene=idleCameraScene!=null&&State!=null&&idleCameraScene.Opacity==State.Opacity&&idleCameraScene.OverlayKey==OverlayContentKey()?idleCameraScene:null;CameraInteracting=true; }
+        CameraScene ReadyCameraScene(string overlayKey) {
+            foreach(var scene in new[]{idleCameraScene,standbyCameraScene})
+                if(scene!=null&&scene.Opacity==State.Opacity&&scene.OverlayKey==overlayKey&&scene.Width==ActualWidth&&scene.Height==ActualHeight)return scene;
+            return null;
+        }
+        string SceneContentKeyFor(int opacity) { return OverlayContentKey()+"|"+opacity+"|"+(opacity>0?TerrainRevision:0); }
+        void QueueStandbyScene(string camera,string store,string trailKey) {
+            string key=string.Join("|",new object[]{camera,store,State.Grid,State.GridLabels,State.GridOpacity,State.LabelSize,TerrainRevision,Identity(Terrain),Identity(BaseMap),Localization.CurrentCode,trailKey,annotationLayerKey});
+            if(queuedStandbyKey==key)return;
+            // Wait for every visible tile; their arrival redraws while this is pending.
+            StandbyPending=!PrefetchTerrain(State.Zoom,true);if(StandbyPending)return;
+            var terrain=new DrawingGroup();int opacity=State.Opacity;
+            try { State.Opacity=100;using(var dc=terrain.Open())DrawMapPass(dc,MapPass.Terrain); }finally { State.Opacity=opacity; }
+            var drawing=new DrawingGroup();drawing.Children.Add(terrain);drawing.Children.Add(trailDrawing);drawing.Children.Add(annotationDrawing);
+            QueueCameraScene(drawing,ActualWidth,ActualHeight,100,true);queuedStandbyKey=key;StandbySceneBuilds++;
+        }
+        internal void BeginCameraFrames() { if(!CameraInteracting)cameraScene=State!=null?ReadyCameraScene(OverlayContentKey()):null;CameraInteracting=true; }
         internal void EndCameraFrames() {
             CameraInteracting=false;CancelCameraFrame();lastCameraComposition=TimeSpan.MinValue;
             // A short pause must not discard the only ready snapshot before its replacement arrives.
@@ -436,13 +477,14 @@ namespace ScumMiniMap {
             cameraScene=null;
         }
         void ResetCameraScenes() {
-            lock(cameraGate) { cameraGeneration++;pendingCameraScene=null;completedCameraScene=null; }
-            cameraScene=null;idleCameraScene=null;queuedTerrainKey=null;staticOverlayKey=null;ZoomGestureActive=false;
+            lock(cameraGate) { cameraGeneration++;pendingCameraScene=null;completedCameraScene=null;pendingStandbyScene=null;completedStandbyScene=null; }
+            cameraScene=null;idleCameraScene=null;standbyCameraScene=null;queuedTerrainKey=null;queuedStandbyKey=null;StandbyPending=false;staticOverlayKey=null;ZoomGestureActive=false;
         }
-        void QueueCameraScene(DrawingGroup drawing,double width,double height) {
-            drawing.Freeze();var scene=new CameraScene { Drawing=drawing,Width=width,Height=height,Side=MapSide(State,width,height,false),Centre=CameraCentre(State,width,height,false),Opacity=State.Opacity,ContentKey=SceneContentKey(),OverlayKey=OverlayContentKey() };
+        void QueueCameraScene(DrawingGroup drawing,double width,double height) { QueueCameraScene(drawing,width,height,State.Opacity,false); }
+        void QueueCameraScene(DrawingGroup drawing,double width,double height,int opacity,bool standby) {
+            drawing.Freeze();var scene=new CameraScene { Drawing=drawing,Width=width,Height=height,Side=MapSide(State,width,height,false),Centre=CameraCentre(State,width,height,false),Opacity=opacity,ContentKey=SceneContentKeyFor(opacity),OverlayKey=OverlayContentKey(),Standby=standby };
             lock(cameraGate) {
-                scene.Generation=cameraGeneration;pendingCameraScene=scene;
+                scene.Generation=cameraGeneration;if(standby)pendingStandbyScene=scene;else pendingCameraScene=scene;
                 if(cameraWorker)return;cameraWorker=true;
             }
             var dispatcher=Dispatcher;
@@ -451,16 +493,21 @@ namespace ScumMiniMap {
                 try {
                     thread.Priority=System.Threading.ThreadPriority.BelowNormal;
                     while(true) {
-                        CameraScene next;lock(cameraGate) { next=pendingCameraScene;pendingCameraScene=null;if(next==null) { cameraWorker=false;return; } }
+                        // The current view's snapshot always renders before the stand-by.
+                        CameraScene next;lock(cameraGate) { next=pendingCameraScene??pendingStandbyScene;if(next==pendingCameraScene)pendingCameraScene=null;else pendingStandbyScene=null;if(next==null) { cameraWorker=false;return; } }
                         try {
                             // Bound software sampling even on a 4K/high-DPI layered window.
                             // Only immutable drawings cross to this worker.
                             double scale=Math.Min(1,(CameraInteracting?1200:1600)/Math.Max(next.Width,next.Height));int pixelsWide=Math.Max(1,(int)Math.Ceiling(next.Width*scale)),pixelsHigh=Math.Max(1,(int)Math.Ceiling(next.Height*scale));
                             var visual=new DrawingVisual();using(var dc=visual.RenderOpen()) { dc.PushTransform(new ScaleTransform(scale,scale));dc.DrawDrawing(next.Drawing);dc.Pop(); }
                             var bitmap=new RenderTargetBitmap(pixelsWide,pixelsHigh,96,96,PixelFormats.Pbgra32);bitmap.Render(visual);bitmap.Freeze();next.Image=bitmap;next.Drawing=null;
-                            bool post=false;lock(cameraGate) { if(next.Generation!=cameraGeneration)continue;completedCameraScene=next;if(!cameraApplyPosted) { cameraApplyPosted=true;post=true; } }
+                            bool post=false;lock(cameraGate) { if(next.Generation!=cameraGeneration)continue;if(next.Standby)completedStandbyScene=next;else completedCameraScene=next;if(!cameraApplyPosted) { cameraApplyPosted=true;post=true; } }
                             if(post&&!dispatcher.HasShutdownStarted)dispatcher.BeginInvoke(new Action(()=> {
-                                CameraScene completed;lock(cameraGate) { completed=completedCameraScene;completedCameraScene=null;cameraApplyPosted=false; }
+                                CameraScene completed,ready;lock(cameraGate) { completed=completedCameraScene;completedCameraScene=null;ready=completedStandbyScene;completedStandbyScene=null;cameraApplyPosted=false; }
+                                if(ready!=null&&ready.Generation==cameraGeneration&&ready.ContentKey==SceneContentKeyFor(ready.Opacity)) {
+                                    standbyCameraScene=ready;
+                                    if(CameraInteracting&&cameraScene==null&&State!=null&&ready.Opacity==State.Opacity)RequestRedraw();
+                                }
                                 if(completed==null||completed.Generation!=cameraGeneration||completed.ContentKey!=SceneContentKey())return;
                                 CameraSceneBuilds++;
                                 if(CameraInteracting) { cameraScene=completed;RequestRedraw(); }else idleCameraScene=completed;
@@ -1214,21 +1261,35 @@ namespace ScumMiniMap {
             }
         }
         internal void Draw(DrawingContext dc,double width,double height,double left,double top,double side,double dpi=1) { DrawRotated(dc,width,height,left,top,side,dpi,0); }
-        internal void DrawRotated(DrawingContext dc,double width,double height,double left,double top,double side,double dpi,double margin) {
-            dispatcher.VerifyAccess();
-            int index=0;for(int i=1;i<levels.Count;i++) { if(levels[i].Width<side*dpi)break;index=i; }
-            Level level;double scale;int firstX,firstY,lastX,lastY;
+        bool SelectTiles(double width,double height,double left,double top,double side,double dpi,double margin,out int index,out int firstX,out int firstY,out int lastX,out int lastY) {
+            index=0;for(int i=1;i<levels.Count;i++) { if(levels[i].Width<side*dpi)break;index=i; }
             while(true) {
-                level=levels[index];scale=side/level.Width;
+                var level=levels[index];double scale=side/level.Width;
                 double x1=Math.Max(0,(-margin-left)/scale),y1=Math.Max(0,(-margin-top)/scale),x2=Math.Min(level.Width,(width+margin-left)/scale),y2=Math.Min(level.Height,(height+margin-top)/scale);
-                if(x2<=x1||y2<=y1)return;
+                if(x2<=x1||y2<=y1) { firstX=firstY=lastX=lastY=0;return false; }
                 firstX=Math.Max(0,(int)Math.Floor(x1/512));firstY=Math.Max(0,(int)Math.Floor(y1/512));
                 lastX=Math.Min(level.Columns-1,(int)Math.Ceiling(x2/512)-1);lastY=Math.Min(level.Rows-1,(int)Math.Ceiling(y2/512)-1);
                 // A high-DPI overview can otherwise request more tiles than fit
                 // in the cache, continually evicting and decoding its own frame.
-                if((lastX-firstX+1)*(lastY-firstY+1)<=64||index==levels.Count-1)break;
+                if((lastX-firstX+1)*(lastY-firstY+1)<=64||index==levels.Count-1)return true;
                 index++;
             }
+        }
+        // Requests the tiles DrawRotated would use without drawing. Tiles decode
+        // on the worker; true means the whole viewport is already cached.
+        internal bool Prefetch(double width,double height,double left,double top,double side,double dpi) {
+            dispatcher.VerifyAccess();
+            int index,firstX,firstY,lastX,lastY;
+            if(!interactive||disposed||!SelectTiles(width,height,left,top,side,dpi,0,out index,out firstX,out firstY,out lastX,out lastY))return true;
+            bool ready=true;
+            for(int row=firstY;row<=lastY;row++)for(int column=firstX;column<=lastX;column++)ready&=ReadTile(index,column,row)!=null;
+            return ready;
+        }
+        internal void DrawRotated(DrawingContext dc,double width,double height,double left,double top,double side,double dpi,double margin) {
+            dispatcher.VerifyAccess();
+            int index,firstX,firstY,lastX,lastY;
+            if(!SelectTiles(width,height,left,top,side,dpi,margin,out index,out firstX,out firstY,out lastX,out lastY))return;
+            var level=levels[index];double scale=side/level.Width;
             var images=new BitmapSource[(lastX-firstX+1)*(lastY-firstY+1)];int imageIndex=0;bool missing=false;
             for(int row=firstY;row<=lastY;row++)for(int column=firstX;column<=lastX;column++) { var image=ReadTile(index,column,row);images[imageIndex++]=image;missing|=image==null; }
             // The overview fills cold tiles only. Painting it beneath a complete
@@ -1334,6 +1395,7 @@ namespace ScumMiniMap {
         TextBlock tacticalOpacityValue;
         bool syncingOpacity;
         DispatcherTimer cameraSettle;
+        int cameraSettleWaits;
         string filterIdentity,tacticalVisualIdentity,hudVisualIdentity;
         readonly Dictionary<int,CheckBox> poiCategoryControls=new Dictionary<int,CheckBox>();
         readonly Dictionary<string,CheckBox> poiSectionControls=new Dictionary<string,CheckBox>();
@@ -1353,35 +1415,78 @@ namespace ScumMiniMap {
             engine.WpfUpdateCamera(tacticalMap.State,true);tacticalVisualIdentity=null;
             tacticalMap.BeginCameraFrames();tacticalMap.ClearHover();
             RenderOptions.SetBitmapScalingMode(tacticalMap,BitmapScalingMode.Linear);
-            if(cameraSettle==null) { cameraSettle=new DispatcherTimer(DispatcherPriority.Background,application.Dispatcher) { Interval=TimeSpan.FromMilliseconds(200) };cameraSettle.Tick+=(s,e)=> { if(disposed) { cameraSettle.Stop();return; }if(tacticalMap.PointerCameraActive)return;cameraSettle.Stop();EndCameraInteraction(); }; }
-            cameraSettle.Stop();cameraSettle.Start();
+            if(cameraSettle==null) {
+                cameraSettle=new DispatcherTimer(DispatcherPriority.Background,application.Dispatcher) { Interval=TimeSpan.FromMilliseconds(200) };
+                cameraSettle.Tick+=(s,e)=> {
+                    if(disposed) { cameraSettle.Stop();return; }if(tacticalMap.PointerCameraActive)return;
+                    // Keep the moving preview until the destination's terrain tiles
+                    // are decoded (bounded), so the detailed frame replaces it once.
+                    if(!tacticalMap.TerrainReady()&&cameraSettleWaits++<8) { cameraSettle.Interval=TimeSpan.FromMilliseconds(40);return; }
+                    cameraSettle.Stop();EndCameraInteraction();
+                };
+            }
+            cameraSettle.Stop();cameraSettle.Interval=TimeSpan.FromMilliseconds(200);cameraSettleWaits=0;cameraSettle.Start();
             syncMapChrome(tacticalMap.State.Bunker==null && tacticalMap.State.Opacity==0,false);
             SyncCameraControls(tacticalMap.State);tacticalMap.RequestRedraw();
         }
+        // Wheel zoom eases in log-zoom space and advances once per displayed
+        // frame by the real elapsed time. A free-running 15 ms timer beats against
+        // the display refresh: some frames received two steps and others none.
+        const double ZoomEaseSeconds=.045,ZoomFinishLog=.0015;
         float zoomTarget;
-        DispatcherTimer zoomAnimation;
+        double zoomValue;
+        bool zoomAnimating;
+        long zoomTick;
+        TimeSpan zoomComposition=TimeSpan.MinValue;
+        DispatcherTimer zoomFallback;
+        internal int ZoomFramesAdvanced;
         void QueueZoom(int direction,bool tactical) {
             if(disposed||tacticalMap==null)return;
             if(!tactical) { engine.WpfZoom(false,direction);RefreshCamera();return; }
             if(tacticalMap.State!=null&&tacticalMap.State.Bunker!=null) { engine.WpfZoom(true,direction);RefreshCamera();return; }
-            bool animating=zoomAnimation!=null&&zoomAnimation.IsEnabled;
-            float current=animating?zoomTarget:(tacticalMap.State!=null?tacticalMap.State.Zoom:engine.WpfFullMapZoom);
+            float current=zoomAnimating?zoomTarget:(tacticalMap.State!=null?tacticalMap.State.Zoom:engine.WpfFullMapZoom);
             zoomTarget=ClampZoom(current*(float)Math.Pow(1f+engine.WpfZoomStepPercent/100f,direction));
             if(zoomTarget<=1.0001f&&(current<=1.0001f&&direction<0)) { zoomTarget=1f; }
             tacticalMap.ZoomGestureActive=true;
-            if(zoomAnimation==null) {
-                zoomAnimation=new DispatcherTimer(DispatcherPriority.Render,application.Dispatcher) { Interval=TimeSpan.FromMilliseconds(15) };
-                zoomAnimation.Tick+=(s,e)=>AdvanceZoom();
+            // Decode the destination's terrain tiles while the animation runs, so
+            // the settled frame is complete instead of sharpening tile by tile.
+            tacticalMap.PrefetchTerrain(zoomTarget,zoomTarget>1f);
+            if(zoomAnimating)return;
+            zoomAnimating=true;zoomValue=tacticalMap.State!=null?tacticalMap.State.Zoom:engine.WpfFullMapZoom;
+            if(zoomFallback==null) {
+                zoomFallback=new DispatcherTimer(DispatcherPriority.Render,application.Dispatcher) { Interval=TimeSpan.FromMilliseconds(40) };
+                zoomFallback.Tick+=(s,e)=>AdvanceZoom();
             }
-            zoomAnimation.Start();
+            CompositionTarget.Rendering+=ZoomCompositionFrame;
+            // The first notch responds at once with one display frame of motion.
+            zoomTick=System.Diagnostics.Stopwatch.GetTimestamp()-System.Diagnostics.Stopwatch.Frequency/60;
             AdvanceZoom();
         }
+        void ZoomCompositionFrame(object sender,EventArgs args) {
+            var frame=args as RenderingEventArgs;
+            if(frame!=null) { if(zoomComposition==frame.RenderingTime)return;zoomComposition=frame.RenderingTime; }
+            AdvanceZoom();
+            // Present this frame's camera now rather than on the next composition.
+            if(tacticalMap!=null)tacticalMap.PresentPendingCameraFrame();
+        }
+        void StopZoomAnimation() {
+            if(zoomAnimating)CompositionTarget.Rendering-=ZoomCompositionFrame;
+            zoomAnimating=false;if(zoomFallback!=null)zoomFallback.Stop();
+        }
         void AdvanceZoom() {
-            if(disposed||tacticalMap==null||tacticalMap.State==null) { if(zoomAnimation!=null)zoomAnimation.Stop();return; }
-            float current=tacticalMap.State==null?engine.WpfFullMapZoom:tacticalMap.State.Zoom;
-            float next=current+(zoomTarget-current)*0.4f;
-            if(Math.Abs(zoomTarget-next)<=0.01f) { next=zoomTarget;zoomAnimation.Stop(); }
-            engine.WpfZoomTo(true,next);
+            if(!zoomAnimating)return;
+            if(disposed||tacticalMap==null||tacticalMap.State==null) { StopZoomAnimation();return; }
+            long now=System.Diagnostics.Stopwatch.GetTimestamp();
+            double elapsed=Math.Max(0,Math.Min(.1,(now-zoomTick)/(double)System.Diagnostics.Stopwatch.Frequency));zoomTick=now;
+            double remaining=(Math.Log(zoomTarget)-Math.Log(Math.Max(1,zoomValue)))*Math.Exp(-elapsed/ZoomEaseSeconds);
+            if(Math.Abs(remaining)<ZoomFinishLog) { zoomValue=zoomTarget;StopZoomAnimation(); }
+            else {
+                zoomValue=zoomTarget*Math.Exp(-remaining);
+                // Fallback only while Windows composition is not delivering frames.
+                zoomFallback.Stop();zoomFallback.Start();
+            }
+            ZoomFramesAdvanced++;
+            engine.WpfZoomTo(true,(float)zoomValue);
             RefreshCamera();
         }
         float ClampZoom(float value) { return Math.Max(1f,Math.Min(engine.WpfZoomLimit,value)); }
@@ -1474,7 +1579,7 @@ namespace ScumMiniMap {
             foreach(string font in new[]{"BarlowSemiCondensed-Regular.ttf","BarlowSemiCondensed-SemiBold.ttf"})using(var stream=typeof(MapWindow).Assembly.GetManifestResourceStream(font))if(stream!=null)using(var file=File.Create(Path.Combine(fonts,font)))stream.CopyTo(file);
             ApplyWindowStyle();
             tactical=BuildTactical();hud=BuildHud();StartCrosshair();StartScreenFilter();
-            terrain.Changed+=()=> { if(!disposed) { tacticalMap.TerrainRevision++;if(tactical.IsVisible&&tacticalMap.State!=null&&tacticalMap.State.Opacity>0)tacticalMap.RequestRedraw();if(hud.IsVisible)hudMap.InvalidateVisual(); } };
+            terrain.Changed+=()=> { if(!disposed) { tacticalMap.TerrainRevision++;if(tactical.IsVisible&&tacticalMap.State!=null&&(tacticalMap.State.Opacity>0||tacticalMap.StandbyPending))tacticalMap.RequestRedraw();if(hud.IsVisible)hudMap.InvalidateVisual(); } };
             WireTactical();
             refresh=new DispatcherTimer { Interval=TimeSpan.FromMilliseconds(250) };refresh.Tick+=(s,e)=> {
                 // DispatcherTimer does not schedule its next tick if its callback escapes.
